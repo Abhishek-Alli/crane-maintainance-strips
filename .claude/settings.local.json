@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(psql:*)",
+      "Bash(cd:*)",
+      "Bash(npm install:*)",
+      "Bash(if not exist \"c:\\\\Users\\\\abhis\\\\Desktop\\\\main folder\\\\softwares\\\\crane-maintainance\\\\backend\\\\cron\" mkdir \"c:\\\\Users\\\\abhis\\\\Desktop\\\\main folder\\\\softwares\\\\crane-maintainance\\\\backend\\\\cron\")",
+      "Bash(git rm:*)",
+      "Bash(git update-ref:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}
