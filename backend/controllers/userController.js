@@ -9,26 +9,18 @@ class UserController {
    *   username: string (unique),
    *   password: string (plain text),
    *   role: 'ADMIN' | 'OPERATOR',
-   *   department_ids: integer[] (array of department IDs),
    *   is_active: boolean (default: true)
    * }
    */
   static async createUser(req, res) {
     try {
-      const { username, password, role, department_ids, is_active } = req.body;
+      const { username, password, role, is_active } = req.body;
 
       // Validation
       if (!username || !password || !role) {
         return res.status(400).json({
           success: false,
           message: 'Username, password, and role are required'
-        });
-      }
-
-      if (!department_ids || !Array.isArray(department_ids) || department_ids.length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: 'At least one department must be selected'
         });
       }
 
@@ -52,58 +44,30 @@ class UserController {
         });
       }
 
-      // Verify all departments exist
-      const deptResult = await query(
-        'SELECT id, name FROM departments WHERE id = ANY($1) AND is_active = true',
-        [department_ids]
+      // Create user
+      const userResult = await query(
+        `INSERT INTO users (username, password, role, is_active)
+         VALUES ($1, $2, $3, $4)
+         RETURNING id, username, role, is_active, created_at`,
+        [
+          username.trim(),
+          password,
+          role,
+          is_active !== false ? true : false
+        ]
       );
 
-      if (deptResult.rows.length !== department_ids.length) {
-        return res.status(400).json({
-          success: false,
-          message: 'One or more invalid or inactive departments'
-        });
-      }
-
-      // Create user and assign departments in a transaction
-      const result = await transaction(async (client) => {
-        // Create user (keep department_id for backward compatibility, use first one)
-        const userResult = await client.query(
-          `INSERT INTO users (username, password, role, department_id, is_active)
-           VALUES ($1, $2, $3, $4, $5)
-           RETURNING id, username, role, is_active, created_at`,
-          [
-            username.trim(),
-            password,
-            role,
-            department_ids[0], // First department for backward compatibility
-            is_active !== false ? true : false
-          ]
-        );
-
-        const newUser = userResult.rows[0];
-
-        // Insert user-department relationships
-        for (const deptId of department_ids) {
-          await client.query(
-            'INSERT INTO user_departments (user_id, department_id) VALUES ($1, $2)',
-            [newUser.id, deptId]
-          );
-        }
-
-        return newUser;
-      });
+      const newUser = userResult.rows[0];
 
       res.status(201).json({
         success: true,
         message: 'User created successfully',
         data: {
-          id: result.id,
-          username: result.username,
-          role: result.role,
-          departments: deptResult.rows,
-          is_active: result.is_active,
-          created_at: result.created_at
+          id: newUser.id,
+          username: newUser.username,
+          role: newUser.role,
+          is_active: newUser.is_active,
+          created_at: newUser.created_at
         }
       });
 
