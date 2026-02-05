@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e40af;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Background Circle -->
+  <circle cx="100" cy="100" r="95" fill="url(#grad1)" />
+  <!-- SRJ Text -->
+  <text x="100" y="115" font-family="Arial Black, sans-serif" font-size="60" font-weight="900" fill="white" text-anchor="middle">SRJ</text>
+  <!-- Crane icon (simplified) -->
+  <path d="M40 155 L50 155 L50 145 L90 145 L90 155 L160 155 L160 145 L170 130 L160 130 L160 140 L90 140 L90 130 L50 130 L50 140 L40 140 Z" fill="white" opacity="0.9"/>
+</svg>

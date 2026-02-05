@@ -345,12 +345,28 @@ class ReportController {
         if (!isFirstPage) doc.addPage();
         isFirstPage = false;
 
-        // -- Title --
-        doc.font('Helvetica-Bold').fontSize(16)
-          .text('CRANE MAINTENANCE REPORT', colX, 40, { align: 'center', width: pageWidth });
+        // -- Company Header --
+        // Draw SRJ logo circle
+        doc.circle(70, 55, 25).fill('#1e40af');
+        doc.font('Helvetica-Bold').fontSize(14).fillColor('#FFFFFF')
+          .text('SRJ', 55, 48, { width: 30, align: 'center' });
+        doc.fillColor('#000000');
+
+        // Company Name
+        doc.font('Helvetica-Bold').fontSize(14)
+          .text('SRJ STRIPS AND PIPES PVT LTD', 105, 40, { width: pageWidth - 65 });
+
+        // Report Title
+        doc.font('Helvetica-Bold').fontSize(12).fillColor('#1e40af')
+          .text('CRANE MAINTENANCE REPORT', 105, 58, { width: pageWidth - 65 });
+        doc.fillColor('#000000');
+
         doc.fontSize(9).font('Helvetica')
-          .text(`Report Period: ${fromDate} to ${toDate}`, { align: 'center', width: pageWidth });
-        doc.moveDown(1);
+          .text(`Report Period: ${fromDate} to ${toDate}`, 105, 74, { width: pageWidth - 65 });
+
+        // Horizontal line
+        doc.moveTo(colX, 92).lineTo(colX + pageWidth, 92).stroke('#1e40af');
+        doc.y = 100;
 
         // -- Inspection header --
         const headerY = doc.y;

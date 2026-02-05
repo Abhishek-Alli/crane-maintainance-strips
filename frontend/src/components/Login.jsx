@@ -72,27 +72,26 @@ const Login = ({ onLoginSuccess }) => {
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 px-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 border border-blue-100">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="w-14 h-14 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg
-              className="w-8 h-8 text-white"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
+        {/* Company Logo & Name */}
+        <div className="text-center mb-6">
+          {/* SRJ Logo */}
+          <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-blue-800 to-blue-500 flex items-center justify-center shadow-lg">
+            <span className="text-2xl font-black text-white tracking-tight">SRJ</span>
           </div>
-          <h2 className="text-3xl font-extrabold text-gray-900">
-            Crane Maintenance
+
+          {/* Company Name */}
+          <h1 className="text-lg font-bold text-blue-900 tracking-wide">
+            SRJ STRIPS AND PIPES PVT LTD
+          </h1>
+          <div className="w-24 h-1 bg-gradient-to-r from-blue-600 to-blue-400 mx-auto mt-2 rounded-full"></div>
+        </div>
+
+        {/* System Title */}
+        <div className="text-center mb-8">
+          <h2 className="text-2xl font-extrabold text-gray-900">
+            Crane Maintenance System
           </h2>
-          <p className="text-gray-500 mt-2">Inspection Portal</p>
+          <p className="text-gray-500 mt-1">Inspection Portal</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -145,14 +144,10 @@ const Login = ({ onLoginSuccess }) => {
           </button>
         </form>
 
-        {/* Footer Info */}
-        <div className="mt-6 pt-6 border-t border-gray-200">
-          <p className="text-xs text-gray-500 text-center">
-            Default Credentials for Testing:
-            <br />
-            <span className="font-semibold">Operator:</span> operator_a1 / password123
-            <br />
-            <span className="font-semibold">Admin:</span> admin_a / password123
+        {/* Footer */}
+        <div className="mt-6 pt-4 border-t border-gray-200">
+          <p className="text-xs text-gray-400 text-center">
+            Powered by SRJ Strips and Pipes Pvt Ltd
           </p>
         </div>
       </div>
