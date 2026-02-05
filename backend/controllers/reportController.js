@@ -7,6 +7,11 @@
 const { query } = require('../config/database');
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
+const path = require('path');
+const fs = require('fs');
+
+// Logo path for PDF
+const LOGO_PATH = path.join(__dirname, '../assets/srj-logo.png');
 
 class ReportController {
 
@@ -346,27 +351,26 @@ class ReportController {
         isFirstPage = false;
 
         // -- Company Header --
-        // Draw SRJ logo circle
-        doc.circle(70, 55, 25).fill('#1e40af');
-        doc.font('Helvetica-Bold').fontSize(14).fillColor('#FFFFFF')
-          .text('SRJ', 55, 48, { width: 30, align: 'center' });
-        doc.fillColor('#000000');
+        // SRJ Logo (actual image)
+        if (fs.existsSync(LOGO_PATH)) {
+          doc.image(LOGO_PATH, colX, 30, { width: 60, height: 60 });
+        }
 
         // Company Name
         doc.font('Helvetica-Bold').fontSize(14)
-          .text('SRJ STRIPS AND PIPES PVT LTD', 105, 40, { width: pageWidth - 65 });
+          .text('SRJ STRIPS AND PIPES PVT LTD', 110, 35, { width: pageWidth - 70 });
 
         // Report Title
         doc.font('Helvetica-Bold').fontSize(12).fillColor('#1e40af')
-          .text('CRANE MAINTENANCE REPORT', 105, 58, { width: pageWidth - 65 });
+          .text('CRANE MAINTENANCE REPORT', 110, 55, { width: pageWidth - 70 });
         doc.fillColor('#000000');
 
         doc.fontSize(9).font('Helvetica')
-          .text(`Report Period: ${fromDate} to ${toDate}`, 105, 74, { width: pageWidth - 65 });
+          .text(`Report Period: ${fromDate} to ${toDate}`, 110, 72, { width: pageWidth - 70 });
 
         // Horizontal line
-        doc.moveTo(colX, 92).lineTo(colX + pageWidth, 92).stroke('#1e40af');
-        doc.y = 100;
+        doc.moveTo(colX, 95).lineTo(colX + pageWidth, 95).stroke('#1e40af');
+        doc.y = 105;
 
         // -- Inspection header --
         const headerY = doc.y;

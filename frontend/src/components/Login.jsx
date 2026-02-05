@@ -75,9 +75,11 @@ const Login = ({ onLoginSuccess }) => {
         {/* Company Logo & Name */}
         <div className="text-center mb-6">
           {/* SRJ Logo */}
-          <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-blue-800 to-blue-500 flex items-center justify-center shadow-lg">
-            <span className="text-2xl font-black text-white tracking-tight">SRJ</span>
-          </div>
+          <img
+            src="/srj-logo.png"
+            alt="SRJ Logo"
+            className="w-24 h-24 mx-auto mb-4 object-contain"
+          />
 
           {/* Company Name */}
           <h1 className="text-lg font-bold text-blue-900 tracking-wide">
