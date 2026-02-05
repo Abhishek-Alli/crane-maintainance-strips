@@ -7,7 +7,15 @@
       "Bash(if not exist \"c:\\\\Users\\\\abhis\\\\Desktop\\\\main folder\\\\softwares\\\\crane-maintainance\\\\backend\\\\cron\" mkdir \"c:\\\\Users\\\\abhis\\\\Desktop\\\\main folder\\\\softwares\\\\crane-maintainance\\\\backend\\\\cron\")",
       "Bash(git rm:*)",
       "Bash(git update-ref:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash(nslookup:*)",
+      "Bash(powershell -Command \"Invoke-RestMethod -Uri ''https://dns.google/resolve?name=db.cqsprbnztayrxnfslaoa.supabase.co&type=A''\")",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd complete database schema for Supabase deployment\n\n- 000_complete_schema.sql: Full schema with all 16 tables\n- fix_inspections_table.sql: Migration fix for form_id column\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nMove react-scripts to dependencies for Vercel build\n\nVercel skips devDependencies in production mode\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nFix ESLint warnings for Vercel CI build\n\n- Disable unused-vars warning for allCranes state\n- Disable exhaustive-deps warning for crane history effect\n- Disable unused-vars for maintenance schedule imports\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit:*)",
+      "Bash(node scripts/migrate-to-supabase.js:*)"
     ]
   }
 }
