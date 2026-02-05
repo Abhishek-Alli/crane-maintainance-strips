@@ -18,6 +18,7 @@ const Dashboard = () => {
   const [selectedCrane, setSelectedCrane] = useState('');
 
   // Data states
+  // eslint-disable-next-line no-unused-vars
   const [allCranes, setAllCranes] = useState([]);
   const [craneMaintenanceData, setCraneMaintenanceData] = useState([]);
   const [selectedCraneHistory, setSelectedCraneHistory] = useState([]);
@@ -74,6 +75,7 @@ const Dashboard = () => {
     } else {
       setSelectedCraneHistory([]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCrane]);
 
   // Load all data based on filters
