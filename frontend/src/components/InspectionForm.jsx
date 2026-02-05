@@ -15,12 +15,13 @@ import {
 
 } from '../services/api';
 
-// eslint-disable-next-line no-unused-vars
+/* eslint-disable no-unused-vars */
 import {
   getWindowWarningMessage,
   resolveDepartmentByDate,
   DEPARTMENT_COLORS
 } from '../utils/maintenanceSchedule';
+/* eslint-enable no-unused-vars */
 
 const InspectionForm = ({ onSuccess }) => {
   const user = JSON.parse(localStorage.getItem('user'));
