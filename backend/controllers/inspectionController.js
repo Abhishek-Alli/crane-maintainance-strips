@@ -157,7 +157,7 @@ class InspectionController {
       SELECT
         i.inspection_date,
         i.has_alerts,
-        i.recorded_by,
+        u.username AS recorded_by,
         d.name AS department,
         s.name AS shed,
         c.crane_number
@@ -165,6 +165,7 @@ class InspectionController {
       JOIN departments d ON d.id = i.department_id
       JOIN sheds s ON s.id = i.shed_id
       JOIN cranes c ON c.id = i.crane_id
+      LEFT JOIN users u ON u.id = i.recorded_by
       WHERE i.id = $1
     `, [inspectionId]);
 
