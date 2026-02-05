@@ -146,15 +146,15 @@ class ReportController {
         d.name AS department,
         s.name AS shed,
         c.crane_number,
-        isec.name AS section,
-        ii.item_name AS item_name,
+        fs.name AS section,
+        fi.field_name AS item_name,
         iv.selected_value AS status,
         iv.remarks,
         u.username AS recorded_by
       FROM inspections i
       LEFT JOIN inspection_values iv ON iv.inspection_id = i.id
-      LEFT JOIN inspection_sections isec ON isec.id = iv.section_id
-      LEFT JOIN inspection_items ii ON ii.id = iv.item_id
+      LEFT JOIN form_sections fs ON fs.id = iv.section_id
+      LEFT JOIN form_items fi ON fi.id = iv.item_id
       LEFT JOIN users u ON u.id = i.recorded_by
       JOIN departments d ON d.id = i.department_id
       JOIN sheds s ON s.id = i.shed_id
@@ -162,7 +162,7 @@ class ReportController {
       WHERE DATE(i.inspection_date) BETWEEN $1 AND $2
       ${filters}
       ORDER BY i.inspection_date DESC, d.name, s.name, c.crane_number,
-               isec.display_order, ii.display_order
+               fs.display_order, fi.display_order
     `;
 
     const { rows } = await query(sql, values);
