@@ -3,7 +3,7 @@ import { configAPI, craneAPI, inspectionAPI } from '../services/api';
 import { toast } from 'react-toastify';
 import { format } from 'date-fns';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
+const API_URL = process.env.REACT_APP_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5001/api' : '/api');
 
 const Dashboard = () => {
   const [user, setUser] = useState(null);
