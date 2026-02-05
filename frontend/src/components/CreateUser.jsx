@@ -6,8 +6,6 @@ const API_URL = process.env.REACT_APP_API_URL || (window.location.hostname === '
 
 const CreateUser = ({ user }) => {
   const token = localStorage.getItem('token');
-  const [departments, setDepartments] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [createdUsers, setCreatedUsers] = useState([]);
 
@@ -15,29 +13,8 @@ const CreateUser = ({ user }) => {
     username: '',
     password: '',
     role: 'OPERATOR',
-    department_ids: [],
     is_active: true
   });
-
-  // Fetch departments on mount
-  useEffect(() => {
-    const fetchDepartments = async () => {
-      setLoading(true);
-      try {
-        const response = await axios.get(`${API_URL}/config/departments`);
-        if (response.data.success) {
-          setDepartments(response.data.data);
-        }
-      } catch (error) {
-        console.error('Failed to fetch departments:', error);
-        toast.error('Failed to load departments');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDepartments();
-  }, []);
 
   // Fetch all users
   useEffect(() => {
@@ -67,27 +44,12 @@ const CreateUser = ({ user }) => {
     }));
   };
 
-  const handleDepartmentChange = (deptId) => {
-    const id = parseInt(deptId);
-    setFormData(prev => ({
-      ...prev,
-      department_ids: prev.department_ids.includes(id)
-        ? prev.department_ids.filter(d => d !== id)
-        : [...prev.department_ids, id]
-    }));
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     // Validation
     if (!formData.username || !formData.password) {
       toast.error('Please fill in all required fields');
-      return;
-    }
-
-    if (formData.department_ids.length === 0) {
-      toast.error('Please select at least one department');
       return;
     }
 
@@ -105,7 +67,6 @@ const CreateUser = ({ user }) => {
           username: formData.username.trim(),
           password: formData.password,
           role: formData.role,
-          department_ids: formData.department_ids,
           is_active: formData.is_active
         },
         {
@@ -124,7 +85,6 @@ const CreateUser = ({ user }) => {
           username: '',
           password: '',
           role: 'OPERATOR',
-          department_ids: [],
           is_active: true
         });
       }
@@ -189,125 +149,98 @@ const CreateUser = ({ user }) => {
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Create New User</h2>
 
-            {loading ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Username */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Username <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  placeholder="e.g., operator_a1"
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
               </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-5">
-                {/* Username */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Username <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="username"
-                    value={formData.username}
-                    onChange={handleChange}
-                    placeholder="e.g., operator_a1"
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
 
-                {/* Password */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Password <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="password"
-                    name="password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    placeholder="Min 6 characters"
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Min 6 characters (plain text)</p>
-                </div>
+              {/* Password */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Password <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="Min 6 characters"
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <p className="text-xs text-gray-500 mt-1">Min 6 characters (plain text)</p>
+              </div>
 
-                {/* Departments (Multi-select) */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Departments <span className="text-red-500">*</span>
-                  </label>
-                  <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-300 rounded-lg p-3">
-                    {departments.map(dept => (
-                      <label key={dept.id} className="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded">
-                        <input
-                          type="checkbox"
-                          checked={formData.department_ids.includes(dept.id)}
-                          onChange={() => handleDepartmentChange(dept.id)}
-                          className="w-4 h-4 text-blue-600 rounded"
-                        />
-                        <span className="ml-3 text-gray-700">{dept.name}</span>
-                      </label>
-                    ))}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">Select departments this user can access</p>
-                </div>
-
-                {/* Role */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Role <span className="text-red-500">*</span>
-                  </label>
-                  <div className="space-y-2">
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        name="role"
-                        value="OPERATOR"
-                        checked={formData.role === 'OPERATOR'}
-                        onChange={handleChange}
-                        className="w-4 h-4"
-                      />
-                      <span className="ml-3 text-gray-700">
-                        Operator <span className="text-xs text-gray-500">(Can perform inspections)</span>
-                      </span>
-                    </label>
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        name="role"
-                        value="ADMIN"
-                        checked={formData.role === 'ADMIN'}
-                        onChange={handleChange}
-                        className="w-4 h-4"
-                      />
-                      <span className="ml-3 text-gray-700">
-                        Admin <span className="text-xs text-gray-500">(Full access + user management)</span>
-                      </span>
-                    </label>
-                  </div>
-                </div>
-
-                {/* Active Status */}
-                <div>
+              {/* Role */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Role <span className="text-red-500">*</span>
+                </label>
+                <div className="space-y-2">
                   <label className="flex items-center">
                     <input
-                      type="checkbox"
-                      name="is_active"
-                      checked={formData.is_active}
+                      type="radio"
+                      name="role"
+                      value="OPERATOR"
+                      checked={formData.role === 'OPERATOR'}
                       onChange={handleChange}
-                      className="w-4 h-4 text-blue-600 rounded"
+                      className="w-4 h-4"
                     />
-                    <span className="ml-3 text-sm font-medium text-gray-700">Active</span>
+                    <span className="ml-3 text-gray-700">
+                      Operator <span className="text-xs text-gray-500">(Can perform inspections)</span>
+                    </span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="role"
+                      value="ADMIN"
+                      checked={formData.role === 'ADMIN'}
+                      onChange={handleChange}
+                      className="w-4 h-4"
+                    />
+                    <span className="ml-3 text-gray-700">
+                      Admin <span className="text-xs text-gray-500">(Full access + user management)</span>
+                    </span>
                   </label>
                 </div>
+              </div>
 
-                {/* Submit Button */}
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full py-2 px-4 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {submitting ? 'Creating...' : 'Create User'}
-                </button>
-              </form>
-            )}
+              {/* Active Status */}
+              <div>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    name="is_active"
+                    checked={formData.is_active}
+                    onChange={handleChange}
+                    className="w-4 h-4 text-blue-600 rounded"
+                  />
+                  <span className="ml-3 text-sm font-medium text-gray-700">Active</span>
+                </label>
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full py-2 px-4 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {submitting ? 'Creating...' : 'Create User'}
+              </button>
+            </form>
           </div>
 
           {/* Users List */}
@@ -345,13 +278,6 @@ const CreateUser = ({ user }) => {
                           }`}>
                             {u.is_active ? 'Active' : 'Inactive'}
                           </span>
-                        </div>
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {u.departments && u.departments.map(dept => (
-                            <span key={dept.id} className="text-xs px-2 py-1 bg-purple-100 text-purple-800 rounded">
-                              {dept.name}
-                            </span>
-                          ))}
                         </div>
                         {u.last_login && (
                           <p className="text-xs text-gray-500 mt-2">
