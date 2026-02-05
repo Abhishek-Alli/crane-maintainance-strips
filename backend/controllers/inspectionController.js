@@ -67,15 +67,19 @@ class InspectionController {
 
       await client.query('COMMIT');
 
-      // Send response immediately – don't wait for Telegram
+      // Send Telegram notification (must await in serverless environment)
+      try {
+        await InspectionController.sendInspectionTelegram(inspection.id);
+        console.log('Telegram notification sent for inspection:', inspection.id);
+      } catch (telegramErr) {
+        // Don't fail the inspection if Telegram fails
+        console.error('Telegram notification failed:', telegramErr.message);
+      }
+
+      // Send response after Telegram
       res.status(201).json({
         success: true,
         data: inspection
-      });
-
-      // Fire-and-forget: send Telegram notification with full report
-      InspectionController.sendInspectionTelegram(inspection.id).catch((err) => {
-        console.error('Telegram inspection notification failed:', err.message);
       });
 
     } catch (error) {
@@ -152,6 +156,8 @@ class InspectionController {
 
   // SEND TELEGRAM NOTIFICATION AFTER INSPECTION SUBMIT
   static async sendInspectionTelegram(inspectionId) {
+    console.log('Sending Telegram for inspection ID:', inspectionId);
+
     // Fetch inspection header with names
     const { rows: headerRows } = await query(`
       SELECT
