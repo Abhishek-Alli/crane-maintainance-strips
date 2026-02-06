@@ -206,66 +206,37 @@ const Dashboard = () => {
   const loadDashboardData = useCallback(async () => {
     setLoading(true);
     try {
-      // Build query params
-      const params = new URLSearchParams();
-      if (selectedDepartment) params.append('department_id', selectedDepartment);
-      if (selectedShed) params.append('shed_id', selectedShed);
+      const headers = { 'Authorization': `Bearer ${localStorage.getItem('token')}` };
 
-      // Fetch all cranes with maintenance info
-      const response = await fetch(
-        `${API_URL}/cranes?${params.toString()}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        }
-      );
+      // Fetch cranes list and dashboard stats in parallel
+      const [cranesRes, statsRes] = await Promise.all([
+        fetch(`${API_URL}/cranes`, { headers }),
+        fetch(`${API_URL}/cranes/dashboard/stats`, { headers })
+      ]);
 
-      if (response.ok) {
-        const data = await response.json();
+      // Process cranes for the maintenance table
+      if (cranesRes.ok) {
+        const data = await cranesRes.json();
         const cranesData = data.data || [];
         setAllCranes(cranesData);
-
-        // Process crane maintenance data
-        const maintenanceData = cranesData.map(crane => ({
+        setCraneMaintenanceData(cranesData.map(crane => ({
           id: crane.id,
           crane_number: crane.crane_number,
           shed_name: crane.shed_name,
-          department_name: crane.department_name,
-          current_status: crane.current_status || 'UNKNOWN',
-          last_inspection_date: crane.last_inspection_date,
-          next_maintenance_date: crane.next_maintenance_date,
           maintenance_frequency: crane.maintenance_frequency,
-          total_inspections: crane.total_inspections || 0,
-          has_issues: crane.current_status === 'MAINTENANCE_REQUIRED'
-        }));
+        })));
+      }
 
-        setCraneMaintenanceData(maintenanceData);
-
-        // Calculate stats
-        const today = new Date();
-        const currentMonth = today.getMonth();
-        const currentYear = today.getFullYear();
-
-        const inspectedThisMonth = cranesData.filter(c => {
-          if (!c.last_inspection_date) return false;
-          const inspDate = new Date(c.last_inspection_date);
-          return inspDate.getMonth() === currentMonth && inspDate.getFullYear() === currentYear;
-        }).length;
-
-        const overdue = cranesData.filter(c => {
-          if (!c.next_maintenance_date) return false;
-          return new Date(c.next_maintenance_date) < today;
-        }).length;
-
-        const withIssues = cranesData.filter(c => c.current_status === 'MAINTENANCE_REQUIRED').length;
-
+      // Process stats from dedicated endpoint
+      if (statsRes.ok) {
+        const statsData = await statsRes.json();
+        const s = statsData.data || {};
         setStats({
-          total_cranes: cranesData.length,
-          inspected_this_month: inspectedThisMonth,
-          remaining_this_month: cranesData.length - inspectedThisMonth,
-          total_issues: withIssues,
-          overdue: overdue
+          total_cranes: s.total_cranes || 0,
+          inspected_this_month: s.inspected_this_month || 0,
+          remaining_this_month: s.remaining_this_month || 0,
+          total_issues: s.with_issues || 0,
+          overdue: s.overdue || 0
         });
       }
 
@@ -275,7 +246,7 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
-  }, [selectedDepartment, selectedShed]);
+  }, []);
 
   useEffect(() => {
     loadDashboardData();
@@ -362,14 +333,6 @@ const Dashboard = () => {
       case 'MAINTENANCE_REQUIRED': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
-  };
-
-  const getDaysUntilMaintenance = (nextDate) => {
-    if (!nextDate) return null;
-    const today = new Date();
-    const next = new Date(nextDate);
-    const diff = Math.ceil((next - today) / (1000 * 60 * 60 * 24));
-    return diff;
   };
 
   if (loading) {
@@ -548,11 +511,11 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* Crane Maintenance Overview */}
+      {/* Crane List Overview */}
       <div className="bg-white rounded-lg shadow">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-800">Crane-wise Maintenance Status</h2>
-          <p className="text-sm text-gray-600">Overview of all cranes with last and next maintenance dates</p>
+          <h2 className="text-xl font-bold text-gray-800">All Cranes</h2>
+          <p className="text-sm text-gray-600">List of all active cranes</p>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -561,43 +524,16 @@ const Dashboard = () => {
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Crane No</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Shed</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Frequency</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Maintenance</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Next Maintenance</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Days Until</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Inspections</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {craneMaintenanceData.map((crane) => {
-                const daysUntil = getDaysUntilMaintenance(crane.next_maintenance_date);
-                return (
-                  <tr key={crane.id} className={`hover:bg-gray-50 ${crane.has_issues ? 'bg-red-50' : ''}`}>
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{crane.crane_number}</td>
-                    <td className="px-4 py-3 text-sm text-gray-500">{crane.shed_name}</td>
-                    <td className="px-4 py-3 text-sm text-gray-500">{crane.maintenance_frequency || '-'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
-                      {crane.last_inspection_date ? format(new Date(crane.last_inspection_date), 'dd-MM-yyyy') : 'Never'}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
-                      {crane.next_maintenance_date ? format(new Date(crane.next_maintenance_date), 'dd-MM-yyyy') : '-'}
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      {daysUntil !== null ? (
-                        <span className={`font-bold ${daysUntil < 0 ? 'text-red-600' : daysUntil <= 7 ? 'text-yellow-600' : 'text-green-600'}`}>
-                          {daysUntil < 0 ? `${Math.abs(daysUntil)} days overdue` : daysUntil === 0 ? 'Today' : `${daysUntil} days`}
-                        </span>
-                      ) : '-'}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(crane.current_status)}`}>
-                        {crane.current_status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-500 text-center">{crane.total_inspections}</td>
-                  </tr>
-                );
-              })}
+              {craneMaintenanceData.map((crane) => (
+                <tr key={crane.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{crane.crane_number}</td>
+                  <td className="px-4 py-3 text-sm text-gray-500">{crane.shed_name}</td>
+                  <td className="px-4 py-3 text-sm text-gray-500">{crane.maintenance_frequency || '-'}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
