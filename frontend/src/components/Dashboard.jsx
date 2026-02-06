@@ -1,9 +1,58 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { configAPI, craneAPI, inspectionAPI } from '../services/api';
 import { toast } from 'react-toastify';
-import { format } from 'date-fns';
+import { format, startOfWeek, startOfMonth } from 'date-fns';
 
 const API_URL = process.env.REACT_APP_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5001/api' : '/api');
+
+// Sub-component: Inspection detail panel (sections → items with OK/NOT_OK)
+const InspectionDetailPanel = ({ details }) => {
+  if (!details) {
+    return (
+      <div className="text-center py-4">
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+        <p className="text-sm text-gray-500 mt-1">Loading details...</p>
+      </div>
+    );
+  }
+
+  if (!details.sections || details.sections.length === 0) {
+    return <p className="text-sm text-gray-500 py-2">No inspection items recorded.</p>;
+  }
+
+  return (
+    <div className="space-y-3">
+      {details.sections.map((section) => (
+        <div key={section.section_id} className="bg-white rounded-lg p-3 shadow-sm">
+          <h4 className="font-semibold text-sm text-gray-800 mb-2 border-b pb-1">
+            {section.section_name}
+          </h4>
+          <div className="space-y-1">
+            {section.items.map((item, idx) => (
+              <div key={idx} className="flex items-start justify-between text-sm py-1">
+                <span className="text-gray-700 flex-1">{item.item_name}</span>
+                <div className="flex items-center ml-4 shrink-0">
+                  <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
+                    item.selected_value === 'NOT_OK'
+                      ? 'bg-red-100 text-red-800'
+                      : 'bg-green-100 text-green-800'
+                  }`}>
+                    {item.selected_value || '-'}
+                  </span>
+                  {item.remarks && (
+                    <span className="ml-2 text-xs text-gray-500 italic max-w-[150px] truncate" title={item.remarks}>
+                      ({item.remarks})
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
 
 const Dashboard = () => {
   const [user, setUser] = useState(null);
@@ -22,7 +71,13 @@ const Dashboard = () => {
   const [allCranes, setAllCranes] = useState([]);
   const [craneMaintenanceData, setCraneMaintenanceData] = useState([]);
   const [selectedCraneHistory, setSelectedCraneHistory] = useState([]);
-  const [issuesList, setIssuesList] = useState([]);
+
+  // Recent Inspections states
+  const [activeTab, setActiveTab] = useState('today');
+  const [recentInspections, setRecentInspections] = useState([]);
+  const [expandedInspectionId, setExpandedInspectionId] = useState(null);
+  const [inspectionDetails, setInspectionDetails] = useState({});
+  const [recentLoading, setRecentLoading] = useState(false);
 
   // Stats
   const [stats, setStats] = useState({
@@ -77,6 +132,75 @@ const Dashboard = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCrane]);
+
+  // Date range helper for tabs
+  const getDateRange = (tab) => {
+    const now = new Date();
+    const todayStr = format(now, 'yyyy-MM-dd');
+    switch (tab) {
+      case 'today':
+        return { start_date: todayStr, end_date: todayStr };
+      case 'week':
+        return {
+          start_date: format(startOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd'),
+          end_date: todayStr
+        };
+      case 'month':
+        return {
+          start_date: format(startOfMonth(now), 'yyyy-MM-dd'),
+          end_date: todayStr
+        };
+      default:
+        return { start_date: todayStr, end_date: todayStr };
+    }
+  };
+
+  // Load recent inspections for active tab
+  const loadRecentInspections = useCallback(async (tab) => {
+    setRecentLoading(true);
+    try {
+      const { start_date, end_date } = getDateRange(tab);
+      const params = { start_date, end_date, limit: 200 };
+      if (selectedDepartment) params.department_id = selectedDepartment;
+      if (selectedShed) params.shed_id = selectedShed;
+
+      const res = await inspectionAPI.getAll(params);
+      setRecentInspections(res.data || []);
+    } catch (error) {
+      console.error('Failed to load recent inspections:', error);
+      setRecentInspections([]);
+    } finally {
+      setRecentLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDepartment, selectedShed]);
+
+  // Reload when tab or filters change
+  useEffect(() => {
+    loadRecentInspections(activeTab);
+  }, [activeTab, loadRecentInspections]);
+
+  // Toggle expand inspection detail
+  const toggleInspectionExpand = async (inspectionId) => {
+    if (expandedInspectionId === inspectionId) {
+      setExpandedInspectionId(null);
+      return;
+    }
+    setExpandedInspectionId(inspectionId);
+
+    if (inspectionDetails[inspectionId]) return;
+
+    try {
+      const res = await inspectionAPI.getById(inspectionId);
+      setInspectionDetails(prev => ({
+        ...prev,
+        [inspectionId]: res.data
+      }));
+    } catch (error) {
+      console.error('Failed to load inspection details:', error);
+      toast.error('Failed to load inspection details');
+    }
+  };
 
   // Load all data based on filters
   const loadDashboardData = useCallback(async () => {
@@ -145,9 +269,6 @@ const Dashboard = () => {
         });
       }
 
-      // Load issues (NOT OK items with remarks)
-      await loadIssues();
-
     } catch (error) {
       console.error('Dashboard load error:', error);
       toast.error('Failed to load dashboard data');
@@ -192,41 +313,12 @@ const Dashboard = () => {
       const crane = cranes.find(c => c.id === parseInt(craneId));
       if (!crane) return;
 
-      // Get inspection history from audit trail
       const res = await inspectionAPI.getAll({ crane_id: craneId, limit: 50 });
       const history = (res.data || []).filter(i => i.crane_id === parseInt(craneId));
       setSelectedCraneHistory(history);
     } catch (error) {
-      // Silently handle - history will just be empty if no data yet
       console.log('Crane history not available yet');
       setSelectedCraneHistory([]);
-    }
-  };
-
-  const loadIssues = async () => {
-    try {
-      // Get recent inspections with issues from audit trail
-      const res = await inspectionAPI.getAll({ limit: 100 });
-      const inspections = res.data || [];
-
-      // Filter inspections with issues (has_alerts = true or crane_status = MAINTENANCE_REQUIRED)
-      const issues = inspections
-        .filter(i => i.has_alerts || i.crane_status === 'MAINTENANCE_REQUIRED')
-        .map(i => ({
-          id: i.id,
-          crane_number: i.crane_number,
-          shed_name: i.shed_name,
-          inspection_date: i.inspection_date,
-          alert_count: i.alert_count || 0,
-          remarks: i.remarks,
-          crane_status: i.crane_status
-        }));
-
-      setIssuesList(issues.slice(0, 20)); // Show top 20 issues
-    } catch (error) {
-      // Silently handle - issues list will just be empty if table doesn't exist yet
-      console.log('Issues data not available yet');
-      setIssuesList([]);
     }
   };
 
@@ -511,51 +603,157 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Issues / Problems List */}
-      {issuesList.length > 0 && (
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200 bg-red-50">
-            <h2 className="text-xl font-bold text-red-800">Issues & Problems</h2>
-            <p className="text-sm text-red-600">Cranes with NOT OK items requiring attention</p>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Crane No</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Shed</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Alert Count</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Remarks</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {issuesList.map((issue, idx) => (
-                  <tr key={idx} className="hover:bg-red-50">
-                    <td className="px-4 py-3 text-sm text-gray-900">
-                      {issue.inspection_date ? format(new Date(issue.inspection_date), 'dd-MM-yyyy') : '-'}
-                    </td>
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{issue.crane_number}</td>
-                    <td className="px-4 py-3 text-sm text-gray-500">{issue.shed_name}</td>
-                    <td className="px-4 py-3 text-sm">
-                      <span className="text-red-600 font-bold">{issue.alert_count}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(issue.crane_status)}`}>
-                        {issue.crane_status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-red-700 font-medium max-w-md">
-                      {issue.remarks || 'No remarks'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {/* Recent Inspections with Tabs */}
+      <div className="bg-white rounded-lg shadow">
+        {/* Header with Tabs */}
+        <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
+          <h2 className="text-xl font-bold text-gray-800 mb-3">Recent Inspections</h2>
+          <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+            {[
+              { key: 'today', label: 'Today' },
+              { key: 'week', label: 'This Week' },
+              { key: 'month', label: 'This Month' }
+            ].map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => { setActiveTab(tab.key); setExpandedInspectionId(null); }}
+                className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
+                  activeTab === tab.key
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-200'
+                }`}
+              >
+                {tab.label}
+                {!recentLoading && activeTab === tab.key && recentInspections.length > 0 && (
+                  <span className="ml-1.5 bg-white bg-opacity-30 text-xs px-1.5 py-0.5 rounded-full">
+                    {recentInspections.length}
+                  </span>
+                )}
+              </button>
+            ))}
           </div>
         </div>
-      )}
+
+        {/* Content */}
+        {recentLoading ? (
+          <div className="p-8 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+            <p className="text-gray-500">Loading inspections...</p>
+          </div>
+        ) : recentInspections.length === 0 ? (
+          <div className="p-8 text-center text-gray-500">
+            No inspections found for {activeTab === 'today' ? 'today' : activeTab === 'week' ? 'this week' : 'this month'}
+          </div>
+        ) : (
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Crane No</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Dept</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Shed</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Recorded By</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {recentInspections.map((insp) => (
+                    <React.Fragment key={insp.id}>
+                      <tr
+                        className="hover:bg-blue-50 cursor-pointer transition-colors"
+                        onClick={() => toggleInspectionExpand(insp.id)}
+                      >
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          {insp.inspection_date ? format(new Date(insp.inspection_date), 'dd-MM-yyyy') : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-medium text-blue-600">
+                          <span className="flex items-center">
+                            <span className={`mr-2 text-xs transition-transform ${expandedInspectionId === insp.id ? 'rotate-90' : ''}`}>&#9654;</span>
+                            {insp.crane_number}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-500">{insp.department}</td>
+                        <td className="px-4 py-3 text-sm text-gray-500">{insp.shed}</td>
+                        <td className="px-4 py-3 text-sm text-gray-500">{insp.recorded_by || '-'}</td>
+                        <td className="px-4 py-3">
+                          {insp.has_alerts ? (
+                            <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                              Issues Found
+                            </span>
+                          ) : (
+                            <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                              All OK
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                      {/* Expanded Detail Row */}
+                      {expandedInspectionId === insp.id && (
+                        <tr>
+                          <td colSpan="6" className="px-4 py-4 bg-blue-50 border-l-4 border-blue-500">
+                            <InspectionDetailPanel details={inspectionDetails[insp.id]} />
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-3 p-4">
+              {recentInspections.map((insp) => (
+                <div key={insp.id} className="border rounded-lg overflow-hidden shadow-sm">
+                  <div
+                    className="p-4 bg-white active:bg-gray-50"
+                    onClick={() => toggleInspectionExpand(insp.id)}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-semibold text-blue-700">{insp.crane_number}</span>
+                      {insp.has_alerts ? (
+                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                          Issues
+                        </span>
+                      ) : (
+                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                          OK
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-sm text-gray-600 space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Date</span>
+                        <span>{insp.inspection_date ? format(new Date(insp.inspection_date), 'dd-MM-yyyy') : '-'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Dept / Shed</span>
+                        <span>{insp.department} / {insp.shed}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">By</span>
+                        <span>{insp.recorded_by || '-'}</span>
+                      </div>
+                    </div>
+                    <div className="mt-2 text-xs text-gray-400 flex items-center">
+                      <span className={`mr-1 transition-transform inline-block ${expandedInspectionId === insp.id ? 'rotate-90' : ''}`}>&#9654;</span>
+                      Tap to {expandedInspectionId === insp.id ? 'collapse' : 'view details'}
+                    </div>
+                  </div>
+                  {expandedInspectionId === insp.id && (
+                    <div className="border-t bg-blue-50 p-4">
+                      <InspectionDetailPanel details={inspectionDetails[insp.id]} />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 };

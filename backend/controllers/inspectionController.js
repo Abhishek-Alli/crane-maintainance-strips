@@ -91,26 +91,66 @@ class InspectionController {
     }
   }
 
-  // GET RECENT INSPECTIONS
+  // GET RECENT INSPECTIONS (supports date range + filters)
   static async getAllRecent(req, res) {
     try {
-      const sql = `
+      const { start_date, end_date, department_id, shed_id, crane_id, limit } = req.query;
+
+      let sql = `
         SELECT
           i.id,
           i.inspection_date,
           d.name AS department,
           s.name AS shed,
           c.crane_number,
-          i.has_alerts
+          i.has_alerts,
+          i.alert_count,
+          i.crane_status,
+          i.remarks,
+          u.username AS recorded_by,
+          f.name AS form_name
         FROM inspections i
         JOIN departments d ON d.id = i.department_id
         JOIN sheds s ON s.id = i.shed_id
         JOIN cranes c ON c.id = i.crane_id
-        ORDER BY i.inspection_date DESC
-        LIMIT 50
+        LEFT JOIN users u ON u.id = i.recorded_by
+        LEFT JOIN forms f ON f.id = i.form_id
+        WHERE 1=1
       `;
 
-      const { rows } = await query(sql);
+      const values = [];
+      let paramIdx = 1;
+
+      if (start_date) {
+        sql += ` AND DATE(i.inspection_date) >= $${paramIdx}`;
+        values.push(start_date);
+        paramIdx++;
+      }
+      if (end_date) {
+        sql += ` AND DATE(i.inspection_date) <= $${paramIdx}`;
+        values.push(end_date);
+        paramIdx++;
+      }
+      if (department_id) {
+        sql += ` AND i.department_id = $${paramIdx}`;
+        values.push(department_id);
+        paramIdx++;
+      }
+      if (shed_id) {
+        sql += ` AND i.shed_id = $${paramIdx}`;
+        values.push(shed_id);
+        paramIdx++;
+      }
+      if (crane_id) {
+        sql += ` AND i.crane_id = $${paramIdx}`;
+        values.push(crane_id);
+        paramIdx++;
+      }
+
+      sql += ` ORDER BY i.inspection_date DESC LIMIT $${paramIdx}`;
+      values.push(parseInt(limit) || 200);
+
+      const { rows } = await query(sql, values);
 
       res.json({
         success: true,
@@ -123,29 +163,80 @@ class InspectionController {
     }
   }
 
-  // GET INSPECTION BY ID
+  // GET INSPECTION BY ID (with full sections/items details)
   static async getById(req, res) {
     try {
       const { id } = req.params;
 
-      const sql = `
-        SELECT *
-        FROM inspections
-        WHERE id = $1
-      `;
+      // Fetch header with joined names
+      const { rows: headerRows } = await query(`
+        SELECT
+          i.id, i.inspection_date, i.has_alerts, i.alert_count,
+          i.crane_status, i.remarks,
+          d.name AS department,
+          s.name AS shed,
+          c.crane_number,
+          u.username AS recorded_by,
+          f.name AS form_name
+        FROM inspections i
+        JOIN departments d ON d.id = i.department_id
+        JOIN sheds s ON s.id = i.shed_id
+        JOIN cranes c ON c.id = i.crane_id
+        LEFT JOIN users u ON u.id = i.recorded_by
+        LEFT JOIN forms f ON f.id = i.form_id
+        WHERE i.id = $1
+      `, [id]);
 
-      const { rows } = await query(sql, [id]);
-
-      if (!rows.length) {
+      if (!headerRows.length) {
         return res.status(404).json({
           success: false,
           message: 'Inspection not found'
         });
       }
 
+      const inspection = headerRows[0];
+
+      // Fetch all items grouped by section
+      const { rows: itemRows } = await query(`
+        SELECT
+          fs.id AS section_id,
+          fs.name AS section_name,
+          fs.display_order AS section_order,
+          fi.id AS item_id,
+          fi.field_name AS item_name,
+          fi.display_order AS item_order,
+          iv.selected_value,
+          iv.remarks
+        FROM inspection_values iv
+        JOIN form_sections fs ON fs.id = iv.section_id
+        JOIN form_items fi ON fi.id = iv.item_id
+        WHERE iv.inspection_id = $1
+        ORDER BY fs.display_order, fi.display_order
+      `, [id]);
+
+      // Group items by section
+      const sectionsMap = {};
+      itemRows.forEach(row => {
+        if (!sectionsMap[row.section_id]) {
+          sectionsMap[row.section_id] = {
+            section_id: row.section_id,
+            section_name: row.section_name,
+            items: []
+          };
+        }
+        sectionsMap[row.section_id].items.push({
+          item_id: row.item_id,
+          item_name: row.item_name,
+          selected_value: row.selected_value,
+          remarks: row.remarks
+        });
+      });
+
+      inspection.sections = Object.values(sectionsMap);
+
       res.json({
         success: true,
-        data: rows[0]
+        data: inspection
       });
 
     } catch (error) {
