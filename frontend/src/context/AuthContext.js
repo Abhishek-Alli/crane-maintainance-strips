@@ -45,11 +45,25 @@ export const AuthProvider = ({ children }) => {
   };
 
   const isAdmin = () => {
-    return user?.role === 'ADMIN';
+    return user?.role === 'ADMIN' || user?.user_type === 'ADMIN';
   };
 
   const isOperator = () => {
     return user?.role === 'OPERATOR';
+  };
+
+  const isHBM = () => {
+    const ut = user?.loginType || user?.user_type;
+    return ut === 'HBM_CHECKSHEETS' || user?.user_type === 'ADMIN';
+  };
+
+  const isCraneMaintenance = () => {
+    const ut = user?.loginType || user?.user_type;
+    return ut === 'CRANE_MAINTENANCE' || user?.user_type === 'ADMIN';
+  };
+
+  const getUserType = () => {
+    return user?.loginType || user?.user_type || 'CRANE_MAINTENANCE';
   };
 
   const getDepartmentId = () => {
@@ -63,6 +77,9 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated,
     isAdmin,
     isOperator,
+    isHBM,
+    isCraneMaintenance,
+    getUserType,
     getDepartmentId,
     login,
     logout

@@ -14,7 +14,7 @@ class UserController {
    */
   static async createUser(req, res) {
     try {
-      const { username, password, role, is_active } = req.body;
+      const { username, password, role, user_type, is_active } = req.body;
 
       // Validation
       if (!username || !password || !role) {
@@ -31,6 +31,11 @@ class UserController {
         });
       }
 
+      const validUserTypes = ['ADMIN', 'CRANE_MAINTENANCE', 'HBM_CHECKSHEETS'];
+      const effectiveUserType = user_type && validUserTypes.includes(user_type)
+        ? user_type
+        : (role === 'ADMIN' ? 'ADMIN' : 'CRANE_MAINTENANCE');
+
       // Check if username already exists
       const existingUser = await query(
         'SELECT id FROM users WHERE username = $1',
@@ -46,13 +51,14 @@ class UserController {
 
       // Create user
       const userResult = await query(
-        `INSERT INTO users (username, password, role, is_active)
-         VALUES ($1, $2, $3, $4)
-         RETURNING id, username, role, is_active, created_at`,
+        `INSERT INTO users (username, password, role, user_type, is_active)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING id, username, role, user_type, is_active, created_at`,
         [
           username.trim(),
           password,
           role,
+          effectiveUserType,
           is_active !== false ? true : false
         ]
       );
@@ -66,6 +72,7 @@ class UserController {
           id: newUser.id,
           username: newUser.username,
           role: newUser.role,
+          user_type: newUser.user_type,
           is_active: newUser.is_active,
           created_at: newUser.created_at
         }
@@ -91,6 +98,7 @@ class UserController {
           u.id,
           u.username,
           u.role,
+          u.user_type,
           u.is_active,
           u.created_at,
           u.last_login,

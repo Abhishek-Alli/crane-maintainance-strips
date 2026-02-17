@@ -13,7 +13,8 @@ const generateToken = (user) => {
       id: user.id,
       username: user.username,
       email: user.email,
-      role: user.role_name
+      role: user.role_name || user.role,
+      user_type: user.user_type || 'CRANE_MAINTENANCE'
     },
     JWT_SECRET,
     { expiresIn: JWT_EXPIRES_IN }
@@ -66,6 +67,7 @@ const authenticate = async (req, res, next) => {
     u.username,
     u.is_active,
     u.department_id,
+    u.user_type,
     COALESCE(r.name::text, u.role::text) AS role_name,
     r.permissions
   FROM public.users u
@@ -227,6 +229,52 @@ const checkCraneAccess = async (req, res, next) => {
   }
 };
 
+/**
+ * Middleware: Require HBM user type
+ * Blocks users who are not ADMIN or HBM_CHECKSHEETS
+ */
+const requireHBM = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: 'Authentication required'
+    });
+  }
+
+  const userType = req.user.user_type || 'CRANE_MAINTENANCE';
+  if (userType !== 'ADMIN' && userType !== 'HBM_CHECKSHEETS') {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied. HBM Checksheets module access required.'
+    });
+  }
+
+  next();
+};
+
+/**
+ * Middleware: Require Crane Maintenance user type
+ * Blocks users who are not ADMIN or CRANE_MAINTENANCE
+ */
+const requireCraneMaintenance = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: 'Authentication required'
+    });
+  }
+
+  const userType = req.user.user_type || 'CRANE_MAINTENANCE';
+  if (userType !== 'ADMIN' && userType !== 'CRANE_MAINTENANCE') {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied. Crane Maintenance module access required.'
+    });
+  }
+
+  next();
+};
+
 module.exports = {
   generateToken,
   verifyToken,
@@ -236,5 +284,7 @@ module.exports = {
   canAccessShed,
   canAccessCrane,
   checkShedAccess,
-  checkCraneAccess
+  checkCraneAccess,
+  requireHBM,
+  requireCraneMaintenance
 };

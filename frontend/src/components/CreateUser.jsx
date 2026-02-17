@@ -13,6 +13,7 @@ const CreateUser = ({ user }) => {
     username: '',
     password: '',
     role: 'OPERATOR',
+    user_type: 'CRANE_MAINTENANCE',
     is_active: true
   });
 
@@ -67,6 +68,7 @@ const CreateUser = ({ user }) => {
           username: formData.username.trim(),
           password: formData.password,
           role: formData.role,
+          user_type: formData.user_type,
           is_active: formData.is_active
         },
         {
@@ -85,6 +87,7 @@ const CreateUser = ({ user }) => {
           username: '',
           password: '',
           role: 'OPERATOR',
+          user_type: 'CRANE_MAINTENANCE',
           is_active: true
         });
       }
@@ -218,6 +221,54 @@ const CreateUser = ({ user }) => {
                 </div>
               </div>
 
+              {/* User Type / Module Access */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Module Access <span className="text-red-500">*</span>
+                </label>
+                <div className="space-y-2">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="user_type"
+                      value="CRANE_MAINTENANCE"
+                      checked={formData.user_type === 'CRANE_MAINTENANCE'}
+                      onChange={handleChange}
+                      className="w-4 h-4"
+                    />
+                    <span className="ml-3 text-gray-700">
+                      Crane Maintenance <span className="text-xs text-gray-500">(Crane inspections)</span>
+                    </span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="user_type"
+                      value="HBM_CHECKSHEETS"
+                      checked={formData.user_type === 'HBM_CHECKSHEETS'}
+                      onChange={handleChange}
+                      className="w-4 h-4"
+                    />
+                    <span className="ml-3 text-gray-700">
+                      HBM Checksheets <span className="text-xs text-gray-500">(Machine checksheets)</span>
+                    </span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="user_type"
+                      value="ADMIN"
+                      checked={formData.user_type === 'ADMIN'}
+                      onChange={handleChange}
+                      className="w-4 h-4"
+                    />
+                    <span className="ml-3 text-gray-700">
+                      Admin <span className="text-xs text-gray-500">(Access all modules)</span>
+                    </span>
+                  </label>
+                </div>
+              </div>
+
               {/* Active Status */}
               <div>
                 <label className="flex items-center">
@@ -270,6 +321,15 @@ const CreateUser = ({ user }) => {
                               : 'bg-blue-100 text-blue-800'
                           }`}>
                             {u.role}
+                          </span>
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            u.user_type === 'HBM_CHECKSHEETS'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : u.user_type === 'ADMIN'
+                              ? 'bg-purple-100 text-purple-800'
+                              : 'bg-orange-100 text-orange-800'
+                          }`}>
+                            {(u.user_type || 'CRANE_MAINTENANCE').replace(/_/g, ' ')}
                           </span>
                           <span className={`text-xs px-2 py-1 rounded ${
                             u.is_active

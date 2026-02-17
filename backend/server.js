@@ -24,6 +24,11 @@ const inspectionItemRoutes = require('./routes/inspectionItemRoutes');
 const shedRoutes = require('./routes/shedRoutes');
 const telegramRoutes = require('./routes/telegramRoutes');
 const cronRoutes = require('./routes/cronRoutes');
+const hbmRoutes = require('./routes/hbmRoutes');
+const pumphouseRoutes = require('./routes/pumphouseRoutes');
+const fabricationRoutes = require("./routes/fabricationRoutes");
+
+
 
 // Import database
 const { pool } = require('./config/database');
@@ -68,13 +73,18 @@ app.use('/api/inspection-items', inspectionItemRoutes);
 app.use('/api/inspection-sections', inspectionSectionRoutes);
 app.use('/api/telegram', telegramRoutes);
 app.use('/api/cron', cronRoutes);
+app.use('/api/hbm', hbmRoutes);
+
+app.use("/api", fabricationRoutes);
 
 // app.use('/api/sheds', shedRoutes);
 app.use('/api/cranes', craneRoutes);
 app.use('/api/inspections', inspectionRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/pumphouse', pumphouseRoutes);
 console.log('departmentRoutes =>', typeof departmentRoutes);
 console.log('shedRoutes =>', typeof shedRoutes);
+
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -92,10 +102,14 @@ app.get('/', (req, res) => {
       maintenanceSchedule: '/api/maintenance-schedule',
       reports: '/api/reports',
       telegram: '/api/telegram',
+      hbm: '/api/hbm',
       health: '/health'
     }
   });
 });
+
+
+
 
 // 404 handler
 app.use((req, res) => {

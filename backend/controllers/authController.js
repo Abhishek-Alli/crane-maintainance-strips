@@ -15,13 +15,28 @@ class AuthController {
    */
   static async login(req, res) {
     try {
-      const { username, password } = req.body;
+      const { username, password, userType } = req.body;
 
       // Validation
       if (!username || !password) {
         return res.status(400).json({
           success: false,
           message: 'Username and password are required'
+        });
+      }
+
+      if (!userType) {
+        return res.status(400).json({
+          success: false,
+          message: 'Please select a login type'
+        });
+      }
+
+      const validUserTypes = ['ADMIN', 'CRANE_MAINTENANCE', 'HBM_CHECKSHEETS'];
+      if (!validUserTypes.includes(userType)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid login type'
         });
       }
 
@@ -32,6 +47,7 @@ class AuthController {
           u.username,
           u.password,
           u.role,
+          u.user_type,
           u.is_active
          FROM users u
          WHERE u.username = $1 AND u.is_active = true`,
@@ -55,7 +71,16 @@ class AuthController {
         });
       }
 
-      // 3. Fetch user's assigned departments
+      // 3. Validate user_type matches
+      // ADMIN user_type can access any module
+      if (user.user_type !== 'ADMIN' && user.user_type !== userType) {
+        return res.status(403).json({
+          success: false,
+          message: `You are not authorized for ${userType.replace(/_/g, ' ')} module. Your account is registered for ${(user.user_type || 'CRANE_MAINTENANCE').replace(/_/g, ' ')}.`
+        });
+      }
+
+      // 4. Fetch user's assigned departments (for crane maintenance)
       const deptResult = await query(
         `SELECT d.id, d.name
          FROM user_departments ud
@@ -66,11 +91,13 @@ class AuthController {
 
       const departments = deptResult.rows;
 
-      // 4. SUCCESS - Generate token and return user data
+      // 5. SUCCESS - Generate token and return user data
+      const effectiveUserType = user.user_type || 'CRANE_MAINTENANCE';
       const token = generateToken({
         id: user.id,
         username: user.username,
-        role: user.role
+        role: user.role,
+        user_type: effectiveUserType
       });
 
       // Update last login timestamp
@@ -88,6 +115,8 @@ class AuthController {
             id: user.id,
             username: user.username,
             role: user.role,
+            user_type: effectiveUserType,
+            loginType: userType,
             departments: departments
           }
         }

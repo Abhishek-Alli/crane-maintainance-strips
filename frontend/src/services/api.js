@@ -183,6 +183,58 @@ export const telegramAPI = {
 };
 
 /* =============================
+   HBM API
+============================= */
+export const hbmAPI = {
+  // Dashboard
+  getDashboardStats: () => api.get('/hbm/dashboard/stats'),
+  getRecentChecksheets: (limit) => api.get('/hbm/dashboard/recent', { params: { limit } }),
+
+  // Machines
+  getMachines: (params) => api.get('/hbm/machines', { params }),
+  getMachineById: (id) => api.get(`/hbm/machines/${id}`),
+  createMachine: (data) => api.post('/hbm/machines', data),
+  updateMachine: (id, data) => api.put(`/hbm/machines/${id}`, data),
+  deleteMachine: (id) => api.delete(`/hbm/machines/${id}`),
+
+  // Machine templates
+  getMachineTemplates: (machineId) => api.get(`/hbm/machines/${machineId}/templates`),
+  assignTemplate: (machineId, templateId) => api.post(`/hbm/machines/${machineId}/templates`, { template_id: templateId }),
+
+  // Templates
+  getTemplates: () => api.get('/hbm/templates'),
+  getTemplateById: (id) => api.get(`/hbm/templates/${id}`),
+
+  // Checksheets
+  getChecksheets: (params) => api.get('/hbm/checksheets', { params }),
+  getChecksheetById: (id) => api.get(`/hbm/checksheets/${id}`),
+  createChecksheet: (data) => api.post('/hbm/checksheets', data),
+};
+
+export const pumpHouseAPI = {
+  getLocations: () =>
+    api.get("/pumphouse/locations"),
+
+  saveReading: (data) =>
+    api.post("/pumphouse/readings", data),
+
+  saveWithPDF: (data) =>
+    api.post("/pumphouse/readings-with-pdf", data, {
+      responseType: "blob",
+    }),
+};
+
+// PumpHouse
+export const getPumpLocations = () =>
+  api.get("/api/pumphouse/locations");
+
+export const savePumpReadings = (data) =>
+  api.post("/api/pumphouse/readings", data);
+
+
+
+
+/* =============================
    EXPORT AXIOS INSTANCE
 ============================= */
 export default api;

@@ -15,7 +15,21 @@
       "Bash(git commit -m \"$\\(cat <<''EOF''\nMove react-scripts to dependencies for Vercel build\n\nVercel skips devDependencies in production mode\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nFix ESLint warnings for Vercel CI build\n\n- Disable unused-vars warning for allCranes state\n- Disable exhaustive-deps warning for crane history effect\n- Disable unused-vars for maintenance schedule imports\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git commit:*)",
-      "Bash(node scripts/migrate-to-supabase.js:*)"
+      "Bash(node scripts/migrate-to-supabase.js:*)",
+      "Bash(node scripts/view-inspections.js:*)",
+      "Bash(node scripts/delete-inspections-by-date.js:*)",
+      "Bash(node scripts/check-telegram.js:*)",
+      "Bash(node scripts/test-telegram-all.js:*)",
+      "Bash(node scripts/update-cranes.js:*)",
+      "Bash(npx react-scripts build:*)",
+      "Bash(npx vercel env:*)",
+      "Bash(npx vercel:*)",
+      "WebFetch(domain:crane-maintainance-strips.vercel.app)",
+      "Bash(node scripts/check-schema.js:*)",
+      "Bash(gh api:*)",
+      "Bash(\"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\" api repos/Abhishek-Alli/crane-maintainance-strips/deployments --jq \".[0] | {state: .state, created: .created_at, env: .environment}\")",
+      "Bash(where:*)",
+      "Bash(node scripts/clear-all-inspections.js:*)"
     ]
   }
 }
