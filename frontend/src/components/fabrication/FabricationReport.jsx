@@ -37,6 +37,7 @@ const FabricationReport = () => {
 
     useEffect(() => {
         fetchReports();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Handle change

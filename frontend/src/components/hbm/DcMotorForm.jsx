@@ -1,7 +1,6 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import "jspdf-autotable";
 
 
 /* ================= OPTION TYPES ================= */
@@ -140,8 +139,6 @@ const blockConfig = {
 /* ================= COMPONENT ================= */
 
 const DcMotorForm = () => {
-    const navigate = useNavigate();
-
     const [header, setHeader] = useState({
         date: new Date().toISOString().split("T")[0],
         shift: "DAY",
@@ -352,6 +349,7 @@ const DcMotorForm = () => {
 
                 const rowHeight = Math.max(...rowHeights);
 
+                // eslint-disable-next-line no-loop-func
                 sections.forEach((sectionName, index) => {
                     const x = margin + index * sectionWidth;
 

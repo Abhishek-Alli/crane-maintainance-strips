@@ -12,7 +12,6 @@ import {
   configAPI,
   craneAPI,
   inspectionAPI,
-  formAPI,
   inspectionSectionAPI,
   inspectionItemAPI
 } from '../services/api';
@@ -50,6 +49,7 @@ const InspectionForm = ({ onSuccess }) => {
 
   const [sections, setSections] = useState([]);
   const [sectionValues, setSectionValues] = useState({});
+  // eslint-disable-next-line no-unused-vars
   const [remarks, setRemarks] = useState({});
   // const [actions, setActions] = useState({});
 

@@ -69,6 +69,7 @@ const Dashboard = () => {
   // Data states
   // eslint-disable-next-line no-unused-vars
   const [allCranes, setAllCranes] = useState([]);
+  // eslint-disable-next-line no-unused-vars
   const [craneMaintenanceData, setCraneMaintenanceData] = useState([]);
   const [selectedCraneHistory, setSelectedCraneHistory] = useState([]);
 
