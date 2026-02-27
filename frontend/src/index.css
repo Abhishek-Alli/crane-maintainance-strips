@@ -40,6 +40,12 @@ code {
   background: #555;
 }
 
+/* React DatePicker fix - ensure text is visible */
+.react-datepicker__input-container input {
+  color: #111827;
+  background-color: #ffffff;
+}
+
 /* Print styles */
 @media print {
   .no-print {

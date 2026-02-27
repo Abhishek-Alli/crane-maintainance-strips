@@ -332,7 +332,12 @@ const InspectionForm = ({ onSuccess }) => {
           name="inspection_date"
           control={control}
           render={({ field }) => (
-            <DatePicker {...field} className="w-full border p-2 rounded" />
+            <DatePicker
+              selected={field.value}
+              onChange={field.onChange}
+              dateFormat="dd/MM/yyyy"
+              className="w-full border p-2 rounded text-gray-900 bg-white"
+            />
           )}
         />
 
