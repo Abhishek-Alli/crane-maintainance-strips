@@ -5,8 +5,8 @@ import { configAPI, craneAPI, reportAPI } from '../services/api';
 import 'react-datepicker/dist/react-datepicker.css';
 
 const ReportGenerator = () => {
-  const [reportType, setReportType] = useState('monthly');
 
+  // const [reportType, setReportType] = useState('monthly');
   // Date selections
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [weekStart, setWeekStart] = useState(null);
@@ -15,31 +15,41 @@ const ReportGenerator = () => {
   const [fromDate, setFromDate] = useState(null);
   const [toDate, setToDate] = useState(new Date());
 
+
   // Filters
   const [departments, setDepartments] = useState([]);
+  const [subDepartments, setSubDepartments] = useState([]);
   const [sheds, setSheds] = useState([]);
   const [cranes, setCranes] = useState([]);
   const [selectedDepartment, setSelectedDepartment] = useState('');
+  const [selectedSubDepartment, setSelectedSubDepartment] = useState('');
   const [selectedShed, setSelectedShed] = useState('');
   const [selectedCrane, setSelectedCrane] = useState('');
   const [alertsOnly, setAlertsOnly] = useState(false);
 
+
   // Preview
   const [previewData, setPreviewData] = useState(null);
   const [loading, setLoading] = useState(false);
-
+  const [reportType, setReportType] = useState('monthly');
   useEffect(() => { loadDepartments(); }, []);
+
 
   useEffect(() => {
     if (selectedDepartment) {
+      loadSubDepartments(selectedDepartment);
       loadSheds(selectedDepartment);
+      setSelectedSubDepartment('');
       setSelectedShed('');
       setSelectedCrane('');
     } else {
+      setSubDepartments([]);
       setSheds([]);
       setCranes([]);
+      setSelectedSubDepartment('');
     }
   }, [selectedDepartment]);
+
 
   useEffect(() => {
     if (selectedShed) {
@@ -50,10 +60,18 @@ const ReportGenerator = () => {
     }
   }, [selectedShed]);
 
+
   const loadDepartments = async () => {
     try {
       const res = await configAPI.getDepartments();
       setDepartments(res.data || []);
+    } catch (e) { console.error(e); }
+  };
+
+  const loadSubDepartments = async (deptId) => {
+    try {
+      const res = await configAPI.getSubDepartments(deptId);
+      setSubDepartments(res.data || []);
     } catch (e) { console.error(e); }
   };
 
@@ -64,6 +82,7 @@ const ReportGenerator = () => {
     } catch (e) { console.error(e); }
   };
 
+
   const loadCranes = async (shedId) => {
     try {
       const res = await craneAPI.getByShed(shedId);
@@ -71,11 +90,13 @@ const ReportGenerator = () => {
     } catch (e) { console.error(e); }
   };
 
+
   const buildReportParams = () => {
     const params = {
       report_type: reportType,
       include_alerts_only: alertsOnly
     };
+
 
     switch (reportType) {
       case 'daily':
@@ -98,13 +119,17 @@ const ReportGenerator = () => {
       default: break;
     }
 
+
     if (selectedDepartment) params.department_id = selectedDepartment;
+    if (selectedSubDepartment) params.sub_department_id = selectedSubDepartment;
     if (selectedShed) params.shed_id = selectedShed;
     if (selectedCrane) params.crane_id = selectedCrane;
+
 
     return params;
   };
 
+  
   const loadPreview = async () => {
     setLoading(true);
     try {
@@ -150,7 +175,7 @@ const ReportGenerator = () => {
     try {
       const data = buildReportParams();
       const response = await reportAPI.exportPDF(data);
-      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const blob = response.data instanceof Blob ? response.data : new Blob([response.data], { type: 'application/pdf' });
       downloadBlob(blob, `Maintenance_Report_${reportType}_${new Date().toISOString().split('T')[0]}.pdf`);
       toast.success('PDF report downloaded');
     } catch (error) {
@@ -313,7 +338,7 @@ const ReportGenerator = () => {
           {/* Filters */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Filters (Optional)</label>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <select
                 value={selectedDepartment}
                 onChange={e => setSelectedDepartment(e.target.value)}
@@ -322,6 +347,17 @@ const ReportGenerator = () => {
                 <option value="">All Departments</option>
                 {departments.map(d => (
                   <option key={d.id} value={d.id}>{d.name}</option>
+                ))}
+              </select>
+              <select
+                value={selectedSubDepartment}
+                onChange={e => setSelectedSubDepartment(e.target.value)}
+                className="p-2 border rounded-lg text-sm"
+                disabled={!selectedDepartment || subDepartments.length === 0}
+              >
+                <option value="">All Sub-Departments</option>
+                {subDepartments.map(sd => (
+                  <option key={sd.id} value={sd.id}>{sd.name}</option>
                 ))}
               </select>
               <select

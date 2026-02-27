@@ -349,7 +349,7 @@ class MaintenanceTracking {
          manually_marked = true,
          marked_by = $2,
          notes = COALESCE($3, notes),
-         completed_date = CASE WHEN $1 IN ('COMPLETED', 'RESCHEDULED') THEN CURRENT_DATE ELSE completed_date END,
+         completed_date = CASE WHEN $1::varchar IN ('COMPLETED', 'RESCHEDULED') THEN CURRENT_DATE ELSE completed_date END,
          updated_at = CURRENT_TIMESTAMP
        WHERE crane_id = $4 AND year = $5 AND month = $6
        RETURNING *`,

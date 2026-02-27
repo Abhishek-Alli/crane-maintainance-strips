@@ -7,7 +7,7 @@ const compression = require('compression');
 const morgan = require('morgan');
 require('dotenv').config();
 
-// Import routes
+// Routes
 const inspectionRoutes = require('./routes/inspectionRoutes-v3');
 const craneRoutes = require('./routes/craneRoutes');
 const configRoutes = require('./routes/configRoutes');
@@ -21,16 +21,12 @@ const departmentRoutes = require('./routes/departmentRoutes');
 const inspectionValueRoutes = require('./routes/inspectionValueRoutes');
 const inspectionSectionRoutes = require('./routes/inspectionSectionRoutes');
 const inspectionItemRoutes = require('./routes/inspectionItemRoutes');
-const shedRoutes = require('./routes/shedRoutes');
 const telegramRoutes = require('./routes/telegramRoutes');
 const cronRoutes = require('./routes/cronRoutes');
 const hbmRoutes = require('./routes/hbmRoutes');
 const pumphouseRoutes = require('./routes/pumphouseRoutes');
-const fabricationRoutes = require("./routes/fabricationRoutes");
+const fabricationRoutes = require('./routes/fabricationRoutes');
 
-
-
-// Import database
 const { pool } = require('./config/database');
 
 const app = express();
@@ -47,7 +43,7 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Health check endpoint
+// Health Check
 app.get('/health', (req, res) => {
   res.json({
     status: 'healthy',
@@ -56,37 +52,27 @@ app.get('/health', (req, res) => {
   });
 });
 
-// API Routes
+// API Routes (NO DUPLICATES)
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/forms', formRoutes);
 app.use('/api/crane-forms', craneFormRoutes);
 app.use('/api/inspections', inspectionRoutes);
+app.use('/api/inspection-values', inspectionValueRoutes);
+app.use('/api/inspection-sections', inspectionSectionRoutes);
+app.use('/api/inspection-items', inspectionItemRoutes);
 app.use('/api/cranes', craneRoutes);
 app.use('/api/config', configRoutes);
 app.use('/api/maintenance-schedule', maintenanceScheduleRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/departments', departmentRoutes);
-app.use('/api/inspections', inspectionValueRoutes);
-app.use('/api/inspections', inspectionSectionRoutes);
-app.use('/api/inspection-items', inspectionItemRoutes);
-app.use('/api/inspection-sections', inspectionSectionRoutes);
 app.use('/api/telegram', telegramRoutes);
 app.use('/api/cron', cronRoutes);
 app.use('/api/hbm', hbmRoutes);
-
-app.use("/api", fabricationRoutes);
-
-// app.use('/api/sheds', shedRoutes);
-app.use('/api/cranes', craneRoutes);
-app.use('/api/inspections', inspectionRoutes);
-app.use('/api/reports', reportRoutes);
 app.use('/api/pumphouse', pumphouseRoutes);
-console.log('departmentRoutes =>', typeof departmentRoutes);
-console.log('shedRoutes =>', typeof shedRoutes);
+app.use('/api', fabricationRoutes);
 
-
-// Root endpoint
+// Root Endpoint
 app.get('/', (req, res) => {
   res.json({
     message: 'Crane Maintenance Inspection System API',
@@ -95,23 +81,15 @@ app.get('/', (req, res) => {
       auth: '/api/auth',
       users: '/api/users',
       forms: '/api/forms',
-      craneforms: '/api/crane-forms',
       inspections: '/api/inspections',
       cranes: '/api/cranes',
-      config: '/api/config',
-      maintenanceSchedule: '/api/maintenance-schedule',
       reports: '/api/reports',
-      telegram: '/api/telegram',
-      hbm: '/api/hbm',
       health: '/health'
     }
   });
 });
 
-
-
-
-// 404 handler
+// 404 Handler
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -119,28 +97,25 @@ app.use((req, res) => {
   });
 });
 
-// Global error handler
+// Global Error Handler
 app.use((err, req, res, next) => {
   console.error('Global error handler:', err);
   res.status(err.status || 500).json({
     success: false,
-    message: err.message || 'Internal server error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    message: err.message || 'Internal server error'
   });
 });
 
-// Only start listening + cron when running locally (not on Vercel)
+// Start Server
 if (!process.env.VERCEL) {
   const { startCronJobs } = require('./cron/cronJobs');
 
   const gracefulShutdown = async () => {
-    console.log('Received shutdown signal. Closing HTTP server and database connections...');
+    console.log('Shutting down...');
     try {
       await pool.end();
-      console.log('Database connections closed.');
       process.exit(0);
     } catch (error) {
-      console.error('Error during shutdown:', error);
       process.exit(1);
     }
   };
@@ -150,15 +125,11 @@ if (!process.env.VERCEL) {
 
   app.listen(PORT, () => {
     console.log(`
-  ========================================
-  Crane Maintenance System API Server
-  ========================================
-  Environment: ${process.env.NODE_ENV || 'development'}
-  Port: ${PORT}
-  Database: ${process.env.DB_NAME || 'crane_maintenance'}
-
-  Ready to accept connections!
-  ========================================
+========================================
+Crane Maintenance API
+Port: ${PORT}
+Environment: ${process.env.NODE_ENV || 'development'}
+========================================
     `);
 
     startCronJobs();

@@ -41,7 +41,41 @@ router.get('/departments', async (req, res) => {
     });
   }
 });
+// GET /api/config/sub-departments?department_id=1
+// GET /api/config/sub-departments?department_id=1
+router.get('/sub-departments', async (req, res) => {
+  try {
+    const { department_id } = req.query;
 
+    if (!department_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'department_id is required'
+      });
+    }
+
+    const { rows } = await db.query(`
+      SELECT id, department_id, name, is_active
+      FROM sub_departments
+      WHERE department_id = $1
+      AND is_active = true
+      ORDER BY name
+    `, [department_id]);
+
+    res.json({
+      success: true,
+      data: rows
+    });
+
+  } catch (error) {
+    console.error('Sub-department fetch error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+});
 /**
  * =========================================================
  * GET /api/config/sheds

@@ -82,13 +82,23 @@ export const formAPI = {
 ============================= */
 
 export const configAPI = {
-  getDepartments: () => api.get('/departments'),
-  getSheds: (params) => api.get('/config/sheds', { params }),
-};
+  getDepartments: () =>
+    api.get('/departments'),
 
+  getSheds: (params) =>
+    api.get('/config/sheds', { params }),
+
+  getSubDepartments: (departmentId) =>
+    api.get('/config/sub-departments', {
+      params: { department_id: departmentId }
+    })
+};
 export const inspectionSectionAPI = {
   getByForm: (formId) =>
-    api.get(`/inspection-sections/form/${formId}`)
+    api.get(`/inspection-sections/form/${formId}`),
+
+  getByDepartment: (params) =>
+    api.get('/inspection-sections/by-department', { params })
 };
 
 export const inspectionItemAPI = {

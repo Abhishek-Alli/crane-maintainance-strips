@@ -72,6 +72,10 @@ class ReportController {
       values.push(parseInt(params.crane_id, 10));
       conditions += ` AND i.crane_id = $${values.length}`;
     }
+    if (params.sub_department_id) {
+      values.push(parseInt(params.sub_department_id, 10));
+      conditions += ` AND i.sub_department_id = $${values.length}`;
+    }
     if (params.include_alerts_only === 'true' || params.include_alerts_only === true) {
       conditions += ` AND i.has_alerts = true`;
     }
@@ -147,6 +151,7 @@ class ReportController {
 
     const sql = `
       SELECT
+        i.id AS inspection_id,
         i.inspection_date,
         d.name AS department,
         s.name AS shed,
@@ -155,6 +160,7 @@ class ReportController {
         fi.field_name AS item_name,
         iv.selected_value AS status,
         iv.remarks,
+        iv.action_taken,
         u.username AS recorded_by
       FROM inspections i
       LEFT JOIN inspection_values iv ON iv.inspection_id = i.id
@@ -187,10 +193,10 @@ class ReportController {
 
       const wb = new ExcelJS.Workbook();
 
-      // Group data by inspection (crane + date)
+      // Group data by inspection ID (prevents duplicates when same crane has multiple inspections on same date)
       const grouped = {};
       rows.forEach(r => {
-        const key = `${r.department}-${r.shed}-${r.crane_number}-${r.inspection_date}`;
+        const key = `${r.inspection_id}`;
         if (!grouped[key]) {
           grouped[key] = {
             inspection_date: r.inspection_date,
@@ -301,10 +307,10 @@ class ReportController {
         return res.status(404).json({ success: false, message: 'No data found' });
       }
 
-      // Group by inspection → section → items
+      // Group by inspection ID (prevents duplicates when same crane has multiple inspections on same date)
       const grouped = {};
       rows.forEach(r => {
-        const key = `${r.department}-${r.shed}-${r.crane_number}-${r.inspection_date}`;
+        const key = `${r.inspection_id}`;
         if (!grouped[key]) {
           grouped[key] = {
             inspection_date: r.inspection_date,
@@ -322,7 +328,8 @@ class ReportController {
           grouped[key].sections[r.section].push({
             item_name: r.item_name || '-',
             status: r.status || '-',
-            remarks: r.remarks || ''
+            remarks: r.remarks || '',
+            action_taken: r.action_taken || ''
           });
         }
       });
@@ -340,7 +347,8 @@ class ReportController {
       const colX = 40;         // left margin
       const col1W = 220;       // Item Name width
       const col2W = 100;       // Status width
-      const col3W = pageWidth - col1W - col2W; // Remarks width
+      const col3W = 130; // Remarks width
+      const col4W = pageWidth - col1W - col2W - col3W; // Action Taken width = 65
       const rowH = 22;
 
       const inspections = Object.values(grouped);
@@ -400,25 +408,34 @@ class ReportController {
           const tableTop = doc.y;
 
           // Table header row
-          drawTableRow(doc, colX, tableTop, col1W, col2W, col3W, rowH,
-            'Item Name', 'Status', 'Remarks', true);
-
+          drawTableRow(doc, colX, tableTop, col1W, col2W, col3W, col4W, rowH,
+            'Item Name', 'Status', 'Remarks', 'Action Taken', true);
           // Data rows
           let currentY = tableTop + rowH;
           items.forEach(item => {
+            const h = calcRowHeight(
+              doc,
+              [item.item_name, item.status, item.remarks, item.action_taken],
+              [col1W, col2W, col3W, col4W],
+              9, 22
+            );
             // New page check
-            if (currentY + rowH > 760) {
+            if (currentY + h > 760) {
               doc.addPage();
               currentY = 40;
               // Re-draw header on new page
-              drawTableRow(doc, colX, currentY, col1W, col2W, col3W, rowH,
-                'Item Name', 'Status', 'Remarks', true);
+              drawTableRow(doc, colX, currentY, col1W, col2W, col3W, col4W, rowH,
+                'Item Name', 'Status', 'Remarks', 'Action Taken', true);
               currentY += rowH;
             }
 
-            drawTableRow(doc, colX, currentY, col1W, col2W, col3W, rowH,
-              item.item_name, item.status, item.remarks, false);
-            currentY += rowH;
+            drawTableRow(doc, colX, currentY, col1W, col2W, col3W, col4W, h,
+              item.item_name,
+              item.status,
+              item.remarks,
+              item.action_taken,
+              false);
+            currentY += h;
           });
 
           doc.y = currentY + 10;
@@ -433,41 +450,91 @@ class ReportController {
     }
   }
 }
+/* =============================
+   PDF ROW HEIGHT CALCULATOR
+============================= */
+function calcRowHeight(doc, texts, widths, fontSize, minH = 22) {
+  doc.font('Helvetica').fontSize(fontSize);
+  const maxTextH = Math.max(
+    ...texts.map((t, i) => doc.heightOfString(String(t || '-'), { width: widths[i] - 10 }))
+  );
+  return Math.max(maxTextH + 12, minH); // 12 = 6px top + 6px bottom padding
+}
 
 /* =============================
-   PDF TABLE DRAWING HELPER
+   PDF TABLE DRAWING HELPER (UPDATED – 4 COLUMNS)
 ============================= */
-function drawTableRow(doc, x, y, col1W, col2W, col3W, h, text1, text2, text3, isHeader) {
-  const totalW = col1W + col2W + col3W;
+function drawTableRow(
+  doc,
+  x,
+  y,
+  col1W,
+  col2W,
+  col3W,
+  col4W,
+  h,
+  text1,
+  text2,
+  text3,
+  text4,
+  isHeader
+) {
+  const totalW = col1W + col2W + col3W + col4W;
 
   // Background
   if (isHeader) {
     doc.rect(x, y, totalW, h).fill('#2563EB');
     doc.fillColor('#FFFFFF');
   } else {
-    // Alternate row or NOT_OK highlight
     if (text2 === 'NOT_OK') {
       doc.rect(x, y, totalW, h).fill('#FEE2E2');
     }
     doc.fillColor('#000000');
   }
 
-  // Borders
+  // Outer Border
   doc.rect(x, y, totalW, h).stroke('#333333');
+
+  // Vertical lines
   doc.moveTo(x + col1W, y).lineTo(x + col1W, y + h).stroke('#333333');
   doc.moveTo(x + col1W + col2W, y).lineTo(x + col1W + col2W, y + h).stroke('#333333');
+  doc.moveTo(x + col1W + col2W + col3W, y)
+     .lineTo(x + col1W + col2W + col3W, y + h)
+     .stroke('#333333');
 
   // Text
   const textY = y + 6;
   const fontSize = isHeader ? 10 : 9;
-  doc.font(isHeader ? 'Helvetica-Bold' : 'Helvetica').fontSize(fontSize);
 
-  doc.text(text1 || '-', x + 5, textY, { width: col1W - 10, lineBreak: false });
-  doc.text(text2 || '-', x + col1W + 5, textY, { width: col2W - 10, lineBreak: false });
-  doc.text(text3 || '-', x + col1W + col2W + 5, textY, { width: col3W - 10, lineBreak: false });
+  doc.font(isHeader ? 'Helvetica-Bold' : 'Helvetica')
+     .fontSize(fontSize);
+
+  doc.text(text1 || '-', x + 5, textY, {
+    width: col1W - 10
+  });
+
+  doc.text(text2 || '-', x + col1W + 5, textY, {
+    width: col2W - 10,
+    lineBreak: false
+  });
+
+  doc.text(text3 || '-', x + col1W + col2W + 5, textY, {
+    width: col3W - 10
+  });
+
+  doc.text(text4 || '-', x + col1W + col2W + col3W + 5, textY, {
+    width: col4W - 10
+  });
 
   // Reset fill color
   doc.fillColor('#000000');
 }
+
+console.log("EXPORTING REPORT CONTROLLER:", ReportController);
+console.log('reportController:', ReportController);
+console.log('preview:', ReportController.getReportPreview);
+console.log('excel:', ReportController.exportReportToExcel);
+console.log('pdf:', ReportController.exportReportToPDF);
+
 
 module.exports = ReportController;

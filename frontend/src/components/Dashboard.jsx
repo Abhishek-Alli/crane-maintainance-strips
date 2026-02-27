@@ -511,34 +511,7 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* Crane List Overview */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-800">All Cranes</h2>
-          <p className="text-sm text-gray-600">List of all active cranes</p>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Crane No</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Shed</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Frequency</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {craneMaintenanceData.map((crane) => (
-                <tr key={crane.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{crane.crane_number}</td>
-                  <td className="px-4 py-3 text-sm text-gray-500">{crane.shed_name}</td>
-                  <td className="px-4 py-3 text-sm text-gray-500">{crane.maintenance_frequency || '-'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
+      
       {/* Recent Inspections with Tabs */}
       <div className="bg-white rounded-lg shadow">
         {/* Header with Tabs */}

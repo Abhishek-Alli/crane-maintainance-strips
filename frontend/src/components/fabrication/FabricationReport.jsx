@@ -98,29 +98,29 @@ const FabricationReport = () => {
     };
 
     const downloadPDF = async () => {
-  try {
-    let url = `/api/fabrication-report/pdf?type=${filterType}`;
+        try {
+            let url = `/api/fabrication-report/pdf?type=${filterType}`;
 
-    if (filterType === "custom") {
-      url += `&startDate=${customStart}&endDate=${customEnd}`;
-    }
+            if (filterType === "custom") {
+                url += `&startDate=${customStart}&endDate=${customEnd}`;
+            }
 
-    const res = await axios.get(url, {
-      headers: { Authorization: `Bearer ${token}` },
-      responseType: "blob"
-    });
+            const res = await axios.get(url, {
+                headers: { Authorization: `Bearer ${token}` },
+                responseType: "blob"
+            });
 
-    const blob = new Blob([res.data], { type: "application/pdf" });
+            const blob = new Blob([res.data], { type: "application/pdf" });
 
-    const link = document.createElement("a");
-    link.href = window.URL.createObjectURL(blob);
-    link.download = "fabrication-report.pdf";
-    link.click();
+            const link = document.createElement("a");
+            link.href = window.URL.createObjectURL(blob);
+            link.download = "fabrication-report.pdf";
+            link.click();
 
-  } catch (err) {
-    console.error("PDF Download Error:", err);
-  }
-};
+        } catch (err) {
+            console.error("PDF Download Error:", err);
+        }
+    };
 
     return (
         <div className="p-4 max-w-full overflow-x-auto">
