@@ -211,14 +211,34 @@ export const hbmAPI = {
   getMachineTemplates: (machineId) => api.get(`/hbm/machines/${machineId}/templates`),
   assignTemplate: (machineId, templateId) => api.post(`/hbm/machines/${machineId}/templates`, { template_id: templateId }),
 
-  // Templates
+  // Checksheet templates
   getTemplates: () => api.get('/hbm/templates'),
   getTemplateById: (id) => api.get(`/hbm/templates/${id}`),
 
-  // Checksheets
+  // Universal checksheets (template-based)
   getChecksheets: (params) => api.get('/hbm/checksheets', { params }),
   getChecksheetById: (id) => api.get(`/hbm/checksheets/${id}`),
   createChecksheet: (data) => api.post('/hbm/checksheets', data),
+
+  // DC Motor logs
+  getDcMotorLogs: (params) => api.get('/hbm/dc-motor', { params }),
+  getDcMotorLogById: (id) => api.get(`/hbm/dc-motor/${id}`),
+  createDcMotorLog: (data) => api.post('/hbm/dc-motor', data),
+
+  // Rolling Stand logs
+  getRollingStandLogs: (params) => api.get('/hbm/rolling-stand', { params }),
+  getRollingStandLogById: (id) => api.get(`/hbm/rolling-stand/${id}`),
+  createRollingStandLog: (data) => api.post('/hbm/rolling-stand', data),
+
+  // Mill Mechanical logs
+  getMillMechLogs: (params) => api.get('/hbm/mill-mech', { params }),
+  getMillMechLogById: (id) => api.get(`/hbm/mill-mech/${id}`),
+  createMillMechLog: (data) => api.post('/hbm/mill-mech', data),
+
+  // Cooling Bed logs
+  getCoolingBedLogs: (params) => api.get('/hbm/cooling-bed', { params }),
+  getCoolingBedLogById: (id) => api.get(`/hbm/cooling-bed/${id}`),
+  createCoolingBedLog: (data) => api.post('/hbm/cooling-bed', data),
 };
 
 export const pumpHouseAPI = {

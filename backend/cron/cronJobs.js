@@ -149,6 +149,32 @@ async function dailyInspectionSummary() {
 }
 
 /**
+ * JOB 3 – HBM DATA RETENTION CLEANUP
+ * Deletes HBM checksheets older than 1 year
+ * hbm_checksheet_values auto-deletes via CASCADE
+ * Runs daily at 2:30 AM IST as backend fallback
+ * (pg_cron in Supabase is the primary cleanup — see migration 011)
+ */
+async function hbmDataCleanup() {
+  try {
+    const result = await query(`
+      DELETE FROM hbm_checksheets
+      WHERE created_at < NOW() - INTERVAL '1 year'
+      RETURNING id
+    `);
+
+    const count = result.rows.length;
+    if (count > 0) {
+      console.log(`[CRON 2:30AM] HBM Cleanup: Deleted ${count} checksheet(s) older than 1 year`);
+    } else {
+      console.log('[CRON 2:30AM] HBM Cleanup: No old records to delete');
+    }
+  } catch (error) {
+    console.error('[CRON 2:30AM] HBM Cleanup error:', error);
+  }
+}
+
+/**
  * Schedule cron jobs using node-cron (local dev only)
  */
 function startCronJobs() {
@@ -164,9 +190,17 @@ function startCronJobs() {
     dailyInspectionSummary();
   }, { timezone: 'Asia/Kolkata' });
 
+  // HBM 1-year data retention — runs daily at 2:30 AM IST
+  // This is a backend fallback; pg_cron in Supabase is the primary (see migration 011)
+  cron.schedule('30 2 * * *', () => {
+    console.log('[CRON] Running 2:30 AM HBM data cleanup...');
+    hbmDataCleanup();
+  }, { timezone: 'Asia/Kolkata' });
+
   console.log('  Cron Jobs:');
-  console.log('    - Maintenance Due Alert  → 09:00 AM IST');
+  console.log('    - Maintenance Due Alert    → 09:00 AM IST');
   console.log('    - Daily Inspection Summary → 06:00 PM IST');
+  console.log('    - HBM Data Cleanup (1yr)   → 02:30 AM IST');
 }
 
-module.exports = { startCronJobs, maintenanceDueAlert, dailyInspectionSummary };
+module.exports = { startCronJobs, maintenanceDueAlert, dailyInspectionSummary, hbmDataCleanup };

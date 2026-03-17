@@ -1,564 +1,371 @@
-import React, { useState } from "react";
-import jsPDF from "jspdf";
-import "jspdf-autotable";
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
+import { hbmAPI } from '../../services/api';
 
-
-/* ================= OPTION TYPES ================= */
-
-const TYPES = {
-    OK: ["OK", "NOT OK"],
-    YESNO: ["YES", "NO"],
-    DONE: ["DONE", "NOT DONE"],
-    CLOSED: ["OPEN", "CLOSED"],
-    NA: ["NA", "OK"]
-};
-
-/* ================= BASE STRUCTURE ================= */
-
-const baseSections = {
-    "INTERNAL MOTOR": [
-        { name: "CARBON BRUSH", type: "OK" },
-        { name: "HOLDER", type: "OK" },
-        { name: "COMMUTATOR", type: "OK" },
-        { name: "NO. CARBON BUSH", type: "NA" },
-        { name: "CORROSION", type: "YESNO" }
-    ],
-    CLEANING: [
-        { name: "MOTOR", type: "DONE" },
-        { name: "FILTER PAD", type: "DONE" },
-        { name: "BLOWER", type: "DONE" },
-        { name: "CARBON CONSUMPTION", type: "YESNO" },
-        { name: "HOLDER CONSUMPTION", type: "YESNO" }
-    ],
-    CONNECTION: [
-        { name: "ARMATURE", type: "OK" },
-        { name: "FIELD", type: "OK" },
-        { name: "BLOWER", type: "OK" },
-        { name: "ENCODER", type: "OK" },
-        { name: "PANEL 24 V DC", type: "OK" }
-    ],
-    MOUNTING: [
-        { name: "DRIVE SIDE", type: "OK" },
-        { name: "NON DRIVE SIDE", type: "OK" },
-        { name: "FOUNDATION", type: "OK" },
-        { name: "NUT BOLT", type: "OK" }
-    ],
-    COOLING: [
-        { name: "FRONT COVER", type: "CLOSED" },
-        { name: "BACK COVER", type: "CLOSED" },
-        { name: "DRIVE PANEL", type: "CLOSED" }
-    ]
-};
-
-/* ================= COMPLETE BLOCK CONFIG ================= */
-
+// ─── BLOCK CONFIGURATION ───────────────────────────────────────────────────
 const blockConfig = {
-
-    "ROUGHING MOTOR": {
-        "INTERNAL MOTOR": [
-            { name: "CARBON BRUSH", type: "OK" },
-            { name: "HOLDER", type: "OK" },
-            { name: "STATOR", type: "OK" }
-        ],
-        CLEANING: [{ name: "MOTOR", type: "DONE" }],
-        CONNECTION: [
-            { name: "STATOR", type: "OK" },
-            { name: "ROTOR", type: "OK" },
-            { name: "JUNCTION BOX", type: "OK" }
-        ]
-    },
-
-    "STAND - C1": baseSections,
-    "STAND - C2": baseSections,
-    "STAND - C3": baseSections,
-    "STAND - C4": baseSections,
-    "STAND - C5": baseSections,
-    "STAND - C6": baseSections,
-    "STAND - C7": baseSections,
-    "STAND - C8": baseSections,
-    "STAND - C9": baseSections,
-    "STAND - C10": baseSections,
-
-    "CCS - 1": {
-        ...baseSections,
-        CONNECTION: [...baseSections.CONNECTION, { name: "PROXY", type: "OK" }]
-    },
-
-    "CCS - 2": {
-        ...baseSections,
-        CONNECTION: [...baseSections.CONNECTION, { name: "PROXY", type: "OK" }]
-    },
-
-    "PRE PINCH": {
-        ...baseSections,
-        CONNECTION: [
-            ...baseSections.CONNECTION,
-            { name: "HMD", type: "OK" },
-            { name: "SOLENOID COIL", type: "OK" }
-        ]
-    },
-
-    "POST PINCH": {
-        ...baseSections,
-        CONNECTION: [
-            ...baseSections.CONNECTION,
-            { name: "SOLENOID COIL", type: "OK" }
-        ]
-    },
-
-    "CRANK + FLY SHEAR": {
-        ...baseSections,
-        CONNECTION: [...baseSections.CONNECTION, { name: "PROXY", type: "OK" }]
-    },
-
-    "TB-1 MOTOR": {
-        ...baseSections,
-        CONNECTION: [...baseSections.CONNECTION, { name: "SOLENOID COIL", type: "OK" }]
-    },
-
-    "TB-2 MOTOR": {
-        ...baseSections,
-        CONNECTION: [...baseSections.CONNECTION, { name: "SOLENOID COIL", type: "OK" }]
-    },
-
-    "RAKE-1": {
-        ...baseSections,
-        CONNECTION: [...baseSections.CONNECTION, { name: "PROXY", type: "OK" }]
-    },
-
-    "RAKE-2": {
-        ...baseSections,
-        CONNECTION: [
-            ...baseSections.CONNECTION,
-            { name: "SOLENOID COIL", type: "OK" },
-            { name: "PROXY", type: "OK" }
-        ]
-    }
+  'ROUGHING MOTOR': {
+    'INTERNAL MOTOR': ['CARBON BRUSH', 'HOLDER', 'STATOR'],
+    'CLEANING': ['MOTOR'],
+    'CONNECTION': ['STATOR', 'ROTOR', 'JUNCTION BOX'],
+  },
+  'STAND - C1': {
+    'INTERNAL MOTOR': ['CARBON BRUSH', 'HOLDER', 'COMMUTATOR', 'NO. CARBON BUSH', 'CORROSION'],
+    'CLEANING': ['MOTOR', 'FILTER PAD', 'BLOWER', 'CARBON CONSUMPTION', 'HOLDER CONSUMPTION'],
+    'CONNECTION': ['ARMATURE', 'FIELD', 'BLOWER', 'ENCODER', 'PANEL 24 V DC'],
+    'MOUNTING': ['DRIVE SIDE', 'NON DRIVE SIDE', 'FOUNDATION', 'NUT BOLT'],
+    'COOLING': ['FRONT COVER', 'BACK COVER', 'DRIVE PANEL'],
+  },
+  'STAND - C2': null,
+  'STAND - C3': null,
+  'STAND - C4': null,
+  'STAND - C5': null,
+  'STAND - C6': null,
+  'STAND - C7': null,
+  'STAND - C8': null,
+  'STAND - C9': null,
+  'STAND - C10': null,
+  'CCS - 1': {
+    'INTERNAL MOTOR': ['CARBON BRUSH', 'HOLDER', 'COMMUTATOR', 'NO. CARBON BUSH', 'CORROSION'],
+    'CLEANING': ['MOTOR', 'FILTER PAD', 'BLOWER', 'CARBON CONSUMPTION', 'HOLDER CONSUMPTION'],
+    'CONNECTION': ['ARMATURE', 'FIELD', 'BLOWER', 'ENCODER', 'PANEL 24 V DC', 'PROXY'],
+    'MOUNTING': ['DRIVE SIDE', 'NON DRIVE SIDE', 'FOUNDATION', 'NUT BOLT'],
+    'COOLING': ['FRONT COVER', 'BACK COVER', 'DRIVE PANEL'],
+  },
+  'CCS - 2': null,
+  'PRE PINCH': {
+    'INTERNAL MOTOR': ['CARBON BRUSH', 'HOLDER', 'COMMUTATOR', 'NO. CARBON BUSH', 'CORROSION'],
+    'CLEANING': ['MOTOR', 'FILTER PAD', 'BLOWER', 'CARBON CONSUMPTION', 'HOLDER CONSUMPTION'],
+    'CONNECTION': ['ARMATURE', 'FIELD', 'BLOWER', 'ENCODER', 'PANEL 24 V DC', 'HMD', 'SOLENOID COIL'],
+    'MOUNTING': ['DRIVE SIDE', 'NON DRIVE SIDE', 'FOUNDATION', 'NUT BOLT'],
+    'COOLING': ['FRONT COVER', 'BACK COVER', 'DRIVE PANEL'],
+  },
+  'POST PINCH': {
+    'INTERNAL MOTOR': ['CARBON BRUSH', 'HOLDER', 'COMMUTATOR', 'NO. CARBON BUSH', 'CORROSION'],
+    'CLEANING': ['MOTOR', 'FILTER PAD', 'BLOWER', 'CARBON CONSUMPTION', 'HOLDER CONSUMPTION'],
+    'CONNECTION': ['ARMATURE', 'FIELD', 'BLOWER', 'ENCODER', 'PANEL 24 V DC', 'SOLENOID COIL'],
+    'MOUNTING': ['DRIVE SIDE', 'NON DRIVE SIDE', 'FOUNDATION', 'NUT BOLT'],
+    'COOLING': ['FRONT COVER', 'BACK COVER', 'DRIVE PANEL'],
+  },
+  'CRANK + FLY SHEAR': null,
+  'TB-1 MOTOR': null,
+  'TB-2 MOTOR': null,
+  'RAKE-1': null,
+  'RAKE-2': {
+    'INTERNAL MOTOR': ['CARBON BRUSH', 'HOLDER', 'COMMUTATOR', 'NO. CARBON BUSH', 'CORROSION'],
+    'CLEANING': ['MOTOR', 'FILTER PAD', 'BLOWER', 'CARBON CONSUMPTION', 'HOLDER CONSUMPTION'],
+    'CONNECTION': ['ARMATURE', 'FIELD', 'BLOWER', 'ENCODER', 'PANEL 24 V DC', 'SOLENOID COIL', 'PROXY'],
+    'MOUNTING': ['DRIVE SIDE', 'NON DRIVE SIDE', 'FOUNDATION', 'NUT BOLT'],
+    'COOLING': ['FRONT COVER', 'BACK COVER', 'DRIVE PANEL'],
+  },
 };
 
-/* ================= COMPONENT ================= */
-
-const DcMotorForm = () => {
-    const [header, setHeader] = useState({
-        date: new Date().toISOString().split("T")[0],
-        shift: "DAY",
-        heatStart: "",
-        heatEnd: "",
-        remarks: ""
-    });
-
-    const [openBlock, setOpenBlock] = useState(null);
-    const [data, setData] = useState({});
-
-    const handleChange = (block, section, param, value) => {
-        setData(prev => ({
-            ...prev,
-            [block]: {
-                ...prev[block],
-                [section]: {
-                    ...prev[block]?.[section],
-                    [param]: value
-                }
-            }
-        }));
-    };
-
-    const validateForm = () => {
-        const today = new Date().toISOString().split("T")[0];
-
-        if (!header.date || header.date > today) {
-            alert("Invalid Date. Future date not allowed.");
-            return false;
-        }
-
-        if (!header.shift) {
-            alert("Shift is required.");
-            return false;
-        }
-
-        if (!header.heatStart) {
-            alert("Heat Over Start Time is required.");
-            return false;
-        }
-
-        if (!header.heatEnd) {
-            alert("Heat Over End Time is required.");
-            return false;
-        }
-
-        if (!header.remarks || header.remarks.trim() === "") {
-            alert("Remarks are compulsory.");
-            return false;
-        }
-
-        // At least one section filled
-        let anySectionFilled = false;
-
-        for (const block of Object.values(data)) {
-            for (const section of Object.values(block)) {
-                for (const value of Object.values(section)) {
-                    if (value && value !== "") {
-                        anySectionFilled = true;
-                    }
-                }
-            }
-        }
-
-        if (!anySectionFilled) {
-            alert("At least one machine section must be filled.");
-            return false;
-        }
-
-        return true;
-    };
-
-    // import jsPDF from "jspdf";
-
-    const generatePDF = () => {
-        const doc = new jsPDF("p", "mm", "a4");
-
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const pageHeight = doc.internal.pageSize.getHeight();
-
-        const margin = 10;
-        let y = 15;
-
-        /* ================= HEADER ================= */
-
-        doc.setFontSize(14);
-        doc.setFont(undefined, "bold");
-        doc.text("DC MOTOR MAINTENANCE AND CHECKLIST", pageWidth / 2, y, {
-            align: "center",
-        });
-
-        y += 8;
-
-        doc.setFontSize(9);
-        doc.setFont(undefined, "normal");
-
-        doc.text(
-            `HEAT OVER TIME: ${header.heatStart} TO ${header.heatEnd} (${header.shift})`,
-            margin,
-            y
-        );
-
-        doc.text(`DATE: ${header.date}`, pageWidth - margin, y, {
-            align: "right",
-        });
-
-        y += 10;
-
-        /* ================= BLOCK LOOP ================= */
-
-        Object.keys(data).forEach((block) => {
-            const blockData = data[block];
-
-            if (!blockData) return;
-
-            // Page break
-            if (y > pageHeight - 40) {
-                doc.addPage();
-                y = 15;
-            }
-
-            doc.setFontSize(10);
-            doc.setFont(undefined, "bold");
-            doc.text(block, margin, y);
-
-            y += 5;
-
-            const sections = Object.keys(blockData);
-            const sectionCount = sections.length;
-
-            const availableWidth = pageWidth - margin * 2;
-            const sectionWidth = availableWidth / sectionCount;
-
-            let maxRows = 0;
-
-            sections.forEach((sec) => {
-                maxRows = Math.max(
-                    maxRows,
-                    Object.keys(blockData[sec]).length
-                );
-            });
-
-            /* ================= HEADER ROW ================= */
-
-            doc.setFontSize(7);
-            doc.setFont(undefined, "bold");
-
-            sections.forEach((sectionName, index) => {
-                const x = margin + index * sectionWidth;
-
-                doc.setFillColor(255, 255, 0);
-                doc.rect(x, y, sectionWidth * 0.7, 6, "FD");
-                doc.rect(x + sectionWidth * 0.7, y, sectionWidth * 0.3, 6, "FD");
-
-                doc.setTextColor(0, 0, 0);
-
-                doc.text(sectionName, x + 2, y + 4);
-                doc.text("STATUS", x + sectionWidth * 0.7 + 2, y + 4);
-            });
-
-            y += 6;
-
-            /* ================= DATA ROWS ================= */
-
-            const paddingX = 2;
-            const paddingY = 1.5;
-            const minRowHeight = 6;
-            const lineHeight = 3;
-
-            for (let i = 0; i < maxRows; i++) {
-                let rowHeights = [];
-
-                sections.forEach((sectionName) => {
-                    const entries = Object.entries(blockData[sectionName]);
-                    const entry = entries[i];
-
-                    if (!entry) {
-                        rowHeights.push(minRowHeight);
-                        return;
-                    }
-
-                    const [param, value] = entry;
-
-                    const partWidth = sectionWidth * 0.7;
-                    const statusWidth = sectionWidth * 0.3;
-
-                    const textLines = doc.splitTextToSize(
-                        param,
-                        partWidth - paddingX * 2
-                    );
-
-                    const valueLines = doc.splitTextToSize(
-                        value,
-                        statusWidth - paddingX * 2
-                    );
-
-                    const contentHeight =
-                        Math.max(
-                            textLines.length,
-                            valueLines.length
-                        ) * lineHeight;
-
-                    rowHeights.push(
-                        Math.max(minRowHeight, contentHeight + paddingY * 2)
-                    );
-                });
-
-                const rowHeight = Math.max(...rowHeights);
-
-                // eslint-disable-next-line no-loop-func
-                sections.forEach((sectionName, index) => {
-                    const x = margin + index * sectionWidth;
-
-                    const entries = Object.entries(blockData[sectionName]);
-                    const entry = entries[i];
-
-                    const partWidth = sectionWidth * 0.7;
-                    const statusWidth = sectionWidth * 0.3;
-
-                    doc.rect(x, y, partWidth, rowHeight);
-                    doc.rect(x + partWidth, y, statusWidth, rowHeight);
-
-                    if (!entry) return;
-
-                    const [param, value] = entry;
-
-                    doc.setFontSize(6.5);
-                    doc.setFont(undefined, "normal");
-
-                    const textLines = doc.splitTextToSize(
-                        param,
-                        partWidth - paddingX * 2
-                    );
-
-                    const valueLines = doc.splitTextToSize(
-                        value,
-                        statusWidth - paddingX * 2
-                    );
-
-                    doc.text(
-                        textLines,
-                        x + paddingX,
-                        y + paddingY + lineHeight - 1
-                    );
-
-                    doc.text(
-                        valueLines,
-                        x + partWidth + paddingX,
-                        y + paddingY + lineHeight - 1
-                    );
-                });
-
-                y += rowHeight;
-            }
-
-            y += 6;
-        });
-
-        /* ================= REMARKS ================= */
-
-        if (y > pageHeight - 30) {
-            doc.addPage();
-            y = 20;
-        }
-
-        doc.setFontSize(9);
-        doc.setFont(undefined, "bold");
-        doc.text("REMARKS:", margin, y);
-
-        y += 5;
-
-        doc.setFont(undefined, "normal");
-        doc.setFontSize(8);
-
-        const remarksLines = doc.splitTextToSize(
-            header.remarks,
-            pageWidth - margin * 2
-        );
-
-        doc.text(remarksLines, margin, y);
-
-        /* ================= SAVE ================= */
-
-        doc.save(`HBM_DC_MOTOR_${header.date}.pdf`);
-    };
-
-
-    const handleSubmit = () => {
-        if (!validateForm()) return;
-
-        console.log("HEADER:", header);
-        console.log("BLOCK DATA:", data);
-
-        alert("Checksheet Saved Successfully");
-        generatePDF();
-    };
-
-
-    return (
-        <div className="min-h-screen bg-gray-50 p-4">
-            <div className="max-w-6xl mx-auto bg-white p-6 rounded-xl shadow">
-
-                <h1 className="text-2xl font-bold mb-6">
-                    HBM DC MOTOR MAINTENANCE
-                </h1>
-
-                {/* HEADER */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 bg-gray-50 p-4 rounded-lg border">
-                    <label className="block text-sm font-semibold mb-1">DATE</label>
-                    <input
-                        type="date"
-                        max={new Date().toISOString().split("T")[0]}
-                        value={header.date}
-                        onChange={(e) => setHeader({ ...header, date: e.target.value })}
-                        className="w-full border px-3 py-2 rounded"
-                    />
-
-                    <label className="block text-sm font-semibold mb-1">SHIFT</label>
-                    <select
-                        value={header.shift}
-                        onChange={(e) => setHeader({ ...header, shift: e.target.value })}
-                        className="border px-3 py-2 rounded"
-                    >
-                        <option value="DAY">DAY</option>
-                        <option value="NIGHT">NIGHT</option>
-                    </select>
-                    <label className="block text-sm font-semibold mb-1">HEAT OVER START TIME</label>
-                    <input
-                        type="time"
-                        value={header.heatStart}
-                        onChange={(e) => setHeader({ ...header, heatStart: e.target.value })}
-                        className="border px-3 py-2 rounded"
-                    />
-                    <label className="block text-sm font-semibold mb-1">HEAT OVER END TIME</label>
-                    <input
-                        type="time"
-                        value={header.heatEnd}
-                        onChange={(e) => setHeader({ ...header, heatEnd: e.target.value })}
-                        className="border px-3 py-2 rounded"
-                    />
-                </div>
-
-                {/* BLOCKS */}
-                {Object.keys(blockConfig).map(block => (
-                    <div key={block} className="border rounded-lg mb-4">
-
-                        <div
-                            onClick={() => setOpenBlock(openBlock === block ? null : block)}
-                            className="cursor-pointer px-4 py-3 bg-emerald-600 text-white font-semibold flex justify-between"
-                        >
-                            {block}
-                            <span>{openBlock === block ? "−" : "+"}</span>
-                        </div>
-
-                        {openBlock === block && (
-                            <div className="p-4 bg-gray-50">
-
-                                {Object.entries(blockConfig[block]).map(([section, params]) => (
-                                    <div key={section} className="mb-5">
-
-                                        <h3 className="font-bold text-emerald-700 mb-3 border-b pb-1">
-                                            {section}
-                                        </h3>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                            {params.map(param => (
-                                                <div key={param.name} className="flex justify-between items-center bg-white p-2 rounded border">
-
-                                                    <label className="text-sm font-medium">
-                                                        {param.name}
-                                                    </label>
-
-                                                    <select
-                                                        value={data?.[block]?.[section]?.[param.name] || ""}
-                                                        onChange={(e) =>
-                                                            handleChange(block, section, param.name, e.target.value)
-                                                        }
-                                                        className="border rounded px-2 py-1 text-sm"
-                                                    >
-                                                        <option value="">-- Select --</option>
-                                                        {TYPES[param.type].map(opt => (
-                                                            <option key={opt}>{opt}</option>
-                                                        ))}
-                                                    </select>
-
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                    </div>
-                                ))}
-
-                            </div>
-                        )}
-
-                    </div>
-                ))}
-
-                {/* REMARKS */}
-                <textarea
-                    rows="4"
-                    value={header.remarks}
-                    onChange={(e) => setHeader({ ...header, remarks: e.target.value })}
-                    className="w-full border px-3 py-2 rounded mt-6"
-                    placeholder="Remarks..."
-                />
-
-
-                <button
-                    onClick={handleSubmit}
-                    className="w-full mt-6 bg-emerald-600 text-white py-3 rounded-lg font-semibold hover:bg-emerald-700"
-                >
-                    Save Checksheet
-                </button>
-
-
-            </div>
+// Default sections for standard blocks (null blocks inherit this)
+const defaultSections = {
+  'INTERNAL MOTOR': ['CARBON BRUSH', 'HOLDER', 'COMMUTATOR', 'NO. CARBON BUSH', 'CORROSION'],
+  'CLEANING': ['MOTOR', 'FILTER PAD', 'BLOWER', 'CARBON CONSUMPTION', 'HOLDER CONSUMPTION'],
+  'CONNECTION': ['ARMATURE', 'FIELD', 'BLOWER', 'ENCODER', 'PANEL 24 V DC'],
+  'MOUNTING': ['DRIVE SIDE', 'NON DRIVE SIDE', 'FOUNDATION', 'NUT BOLT'],
+  'COOLING': ['FRONT COVER', 'BACK COVER', 'DRIVE PANEL'],
+};
+
+const getBlockSections = (block) => blockConfig[block] || defaultSections;
+
+// ─── Single Item Row ───────────────────────────────────────────────────────
+const ItemRow = ({ block, section, item, value, onChange }) => {
+  const isNotOk = value?.status === 'NOT_OK';
+  const key = `${block}__${section}__${item}`;
+
+  return (
+    <div className={`border-b border-gray-100 last:border-0 px-4 py-3 ${isNotOk ? 'bg-red-50' : ''}`}>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+        <p className="flex-1 text-sm font-medium text-gray-800">{item}</p>
+        <div className="flex gap-2 flex-shrink-0">
+          <button type="button"
+            onClick={() => onChange(key, { status: 'OK', remark: '', action_taken: '' })}
+            className={`px-5 py-1.5 rounded-lg text-sm font-bold border-2 transition-all ${
+              value?.status === 'OK'
+                ? 'bg-green-500 border-green-500 text-white shadow-sm'
+                : 'bg-white border-gray-300 text-gray-600 hover:border-green-400 hover:text-green-600'
+            }`}>OK</button>
+          <button type="button"
+            onClick={() => onChange(key, { status: 'NOT_OK', remark: value?.remark || '', action_taken: value?.action_taken || '' })}
+            className={`px-4 py-1.5 rounded-lg text-sm font-bold border-2 transition-all ${
+              value?.status === 'NOT_OK'
+                ? 'bg-red-500 border-red-500 text-white shadow-sm'
+                : 'bg-white border-gray-300 text-gray-600 hover:border-red-400 hover:text-red-600'
+            }`}>NOT OK</button>
         </div>
-    );
+      </div>
+
+      {isNotOk && (
+        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-semibold text-red-700 mb-1">Remark <span className="text-red-500">*</span></label>
+            <input type="text"
+              value={value?.remark || ''}
+              onChange={e => onChange(key, { ...value, remark: e.target.value })}
+              placeholder="Describe the issue..."
+              className="w-full px-3 py-2 border-2 border-red-200 rounded-lg text-sm bg-white focus:outline-none focus:border-red-400" />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-orange-700 mb-1">Action Taken <span className="text-red-500">*</span></label>
+            <input type="text"
+              value={value?.action_taken || ''}
+              onChange={e => onChange(key, { ...value, action_taken: e.target.value })}
+              placeholder="Action taken to fix..."
+              className="w-full px-3 py-2 border-2 border-orange-200 rounded-lg text-sm bg-white focus:outline-none focus:border-orange-400" />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── Main Component ────────────────────────────────────────────────────────
+const DcMotorForm = () => {
+  const navigate = useNavigate();
+  const [header, setHeader] = useState({
+    log_date: new Date().toISOString().split('T')[0],
+    log_time: new Date().toTimeString().slice(0, 5),
+    shift: 'DAY',
+    heat_start: '',
+    heat_end: '',
+    remarks: ''
+  });
+  const [openBlocks, setOpenBlocks] = useState({});
+  const [itemValues, setItemValues] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+
+  const toggleBlock = (block) => {
+    setOpenBlocks(prev => ({ ...prev, [block]: !prev[block] }));
+  };
+
+  const handleItemChange = (key, val) => {
+    setItemValues(prev => ({ ...prev, [key]: val }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!header.log_date || !header.log_time || !header.shift) {
+      toast.error('Date, time and shift are required');
+      return;
+    }
+
+    // Collect all filled items
+    const items = [];
+    for (const [key, val] of Object.entries(itemValues)) {
+      if (!val?.status) continue;
+      const [block, section, item] = key.split('__');
+
+      if (val.status === 'NOT_OK') {
+        if (!val.remark?.trim()) {
+          toast.error(`Remark is compulsory for: ${item} (${block} - ${section})`);
+          return;
+        }
+        if (!val.action_taken?.trim()) {
+          toast.error(`Action Taken is compulsory for: ${item} (${block} - ${section})`);
+          return;
+        }
+      }
+
+      items.push({
+        block_name: block,
+        section_name: section,
+        item_name: item,
+        status: val.status,
+        remark: val.remark || '',
+        action_taken: val.action_taken || ''
+      });
+    }
+
+    if (items.length === 0) {
+      toast.error('Please fill at least one check item');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await hbmAPI.createDcMotorLog({
+        log_date: header.log_date,
+        log_time: header.log_time,
+        shift: header.shift,
+        heat_start: header.heat_start || null,
+        heat_end: header.heat_end || null,
+        remarks: header.remarks || null,
+        items
+      });
+      toast.success('DC Motor checksheet submitted successfully!');
+      navigate('/hbm/dashboard');
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Failed to submit');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const blockNames = Object.keys(blockConfig);
+
+  // Count filled items per block
+  const getBlockCount = (block) => {
+    const sections = getBlockSections(block);
+    let total = 0, filled = 0, notOk = 0;
+    Object.entries(sections).forEach(([section, items]) => {
+      items.forEach(item => {
+        total++;
+        const key = `${block}__${section}__${item}`;
+        if (itemValues[key]?.status) { filled++; if (itemValues[key].status === 'NOT_OK') notOk++; }
+      });
+    });
+    return { total, filled, notOk };
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
+      <div className="max-w-5xl mx-auto">
+
+        {/* Header */}
+        <div className="flex items-center space-x-3 mb-6">
+          <button onClick={() => navigate('/hbm/dashboard')}
+            className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">DC Motor Maintenance</h1>
+            <p className="text-sm text-gray-500">Daily checksheet — saved to database</p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+
+          {/* Header Fields */}
+          <div className="bg-white rounded-xl border border-gray-200 p-5 mb-5">
+            <h2 className="text-base font-bold text-gray-800 mb-4">Sheet Header</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Date <span className="text-red-500">*</span></label>
+                <input type="date" value={header.log_date} required
+                  max={new Date().toISOString().split('T')[0]}
+                  onChange={e => setHeader(p => ({ ...p, log_date: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Time <span className="text-red-500">*</span></label>
+                <input type="time" value={header.log_time} required
+                  onChange={e => setHeader(p => ({ ...p, log_time: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Shift <span className="text-red-500">*</span></label>
+                <select value={header.shift} required
+                  onChange={e => setHeader(p => ({ ...p, shift: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+                  <option value="DAY">Day</option>
+                  <option value="NIGHT">Night</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Heat Over Start Time</label>
+                <input type="time" value={header.heat_start}
+                  onChange={e => setHeader(p => ({ ...p, heat_start: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Heat Over End Time</label>
+                <input type="time" value={header.heat_end}
+                  onChange={e => setHeader(p => ({ ...p, heat_end: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Remarks</label>
+                <input type="text" value={header.remarks}
+                  onChange={e => setHeader(p => ({ ...p, remarks: e.target.value }))}
+                  placeholder="General remarks..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
+              </div>
+            </div>
+          </div>
+
+          {/* Motor Blocks */}
+          <div className="space-y-3">
+            {blockNames.map(block => {
+              const sections = getBlockSections(block);
+              const isOpen = openBlocks[block];
+              const { total, filled, notOk } = getBlockCount(block);
+
+              return (
+                <div key={block} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                  {/* Block Header */}
+                  <button type="button" onClick={() => toggleBlock(block)}
+                    className={`w-full flex items-center justify-between px-5 py-4 transition-colors ${
+                      isOpen ? 'bg-emerald-600 text-white' : 'bg-gray-50 hover:bg-gray-100 text-gray-900'
+                    }`}>
+                    <div className="flex items-center gap-3">
+                      <span className="font-bold text-base">{block}</span>
+                      {filled > 0 && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                          notOk > 0
+                            ? 'bg-red-100 text-red-700'
+                            : isOpen ? 'bg-emerald-700 text-white' : 'bg-green-100 text-green-700'
+                        }`}>
+                          {filled}/{total} {notOk > 0 ? `· ${notOk} NOT OK` : '· OK'}
+                        </span>
+                      )}
+                    </div>
+                    <svg className={`w-5 h-5 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                      fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+
+                  {/* Block Sections */}
+                  {isOpen && (
+                    <div>
+                      {Object.entries(sections).map(([section, items]) => (
+                        <div key={section}>
+                          <div className="px-5 py-2 bg-gray-100 border-b border-gray-200">
+                            <h4 className="text-sm font-bold text-gray-700">{section}</h4>
+                          </div>
+                          {items.map(item => (
+                            <ItemRow
+                              key={`${block}__${section}__${item}`}
+                              block={block} section={section} item={item}
+                              value={itemValues[`${block}__${section}__${item}`]}
+                              onChange={handleItemChange} />
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Submit */}
+          <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 mt-5 shadow-lg rounded-t-xl">
+            <button type="submit" disabled={submitting}
+              className="w-full py-3 bg-emerald-600 text-white rounded-lg font-bold text-base hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              {submitting ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                  </svg>
+                  Submitting...
+                </span>
+              ) : 'Submit DC Motor Checksheet'}
+            </button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+  );
 };
 
 export default DcMotorForm;

@@ -19,6 +19,17 @@ import HbmDashboard from './components/hbm/HbmDashboard';
 import HbmMachines from './components/hbm/HbmMachines';
 import HbmChecksheet from './components/hbm/HbmChecksheet';
 import DcMotorForm from './components/hbm/DcMotorForm';
+import DcMotorHistory from './components/hbm/DcMotorHistory';
+import DcMotorView from './components/hbm/DcMotorView';
+import RollingStandForm from './components/hbm/RollingStandForm';
+import RollingStandHistory from './components/hbm/RollingStandHistory';
+import RollingStandView from './components/hbm/RollingStandView';
+import MillMechForm from './components/hbm/MillMechForm';
+import MillMechHistory from './components/hbm/MillMechHistory';
+import MillMechView from './components/hbm/MillMechView';
+import CoolingBedForm from './components/hbm/CoolingBedForm';
+import CoolingBedHistory from './components/hbm/CoolingBedHistory';
+import CoolingBedView from './components/hbm/CoolingBedView';
 import PumpHouseForm from './components/pumphouse/PumpHouseForm';
 // import FabricationReport from "./components/fabrication/FabricationReport";
 // import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
@@ -409,6 +420,32 @@ function App() {
             }
           />
 
+          <Route
+            path="/hbm/dc-motor/history"
+            element={
+              user && (isHBMUser || isAdminUser) ? (
+                <DcMotorHistory />
+              ) : user ? (
+                <Navigate to="/" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+
+          <Route
+            path="/hbm/dc-motor/:id"
+            element={
+              user && (isHBMUser || isAdminUser) ? (
+                <DcMotorView />
+              ) : user ? (
+                <Navigate to="/" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+
 
 
           <Route
@@ -424,6 +461,123 @@ function App() {
             }
           />
 
+
+          <Route
+            path="/hbm/rolling-stand/new"
+            element={
+              user && (isHBMUser || isAdminUser) ? (
+                <RollingStandForm />
+              ) : user ? (
+                <Navigate to="/" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+
+          <Route
+            path="/hbm/rolling-stand/history"
+            element={
+              user && (isHBMUser || isAdminUser) ? (
+                <RollingStandHistory />
+              ) : user ? (
+                <Navigate to="/" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+
+          <Route
+            path="/hbm/rolling-stand/:id"
+            element={
+              user && (isHBMUser || isAdminUser) ? (
+                <RollingStandView />
+              ) : user ? (
+                <Navigate to="/" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+
+          <Route
+            path="/hbm/cooling-bed/new"
+            element={
+              user && (isHBMUser || isAdminUser) ? (
+                <CoolingBedForm />
+              ) : user ? (
+                <Navigate to="/" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+
+          <Route
+            path="/hbm/cooling-bed/history"
+            element={
+              user && (isHBMUser || isAdminUser) ? (
+                <CoolingBedHistory />
+              ) : user ? (
+                <Navigate to="/" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+
+          <Route
+            path="/hbm/cooling-bed/:id"
+            element={
+              user && (isHBMUser || isAdminUser) ? (
+                <CoolingBedView />
+              ) : user ? (
+                <Navigate to="/" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+
+          <Route
+            path="/hbm/mill-mech/new"
+            element={
+              user && (isHBMUser || isAdminUser) ? (
+                <MillMechForm />
+              ) : user ? (
+                <Navigate to="/" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+
+          <Route
+            path="/hbm/mill-mech/history"
+            element={
+              user && (isHBMUser || isAdminUser) ? (
+                <MillMechHistory />
+              ) : user ? (
+                <Navigate to="/" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+
+          <Route
+            path="/hbm/mill-mech/:id"
+            element={
+              user && (isHBMUser || isAdminUser) ? (
+                <MillMechView />
+              ) : user ? (
+                <Navigate to="/" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
 
           <Route
             path="/hbm/pumphouse/new"

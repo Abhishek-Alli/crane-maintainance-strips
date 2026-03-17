@@ -176,7 +176,7 @@ class InspectionController {
           s.id AS section_id,
           s.name AS section_name,
           i.id AS item_id,
-          i.field_name AS item_name,
+          i.item_name AS item_name,
           v.selected_value,
           v.remarks
         FROM inspection_values v
@@ -304,7 +304,7 @@ class InspectionController {
         `
         SELECT
           sec.name AS section,
-          itm.field_name AS item,
+          itm.item_name AS item,
           v.selected_value
         FROM inspection_values v
         JOIN inspection_sections sec ON sec.id = v.section_id
