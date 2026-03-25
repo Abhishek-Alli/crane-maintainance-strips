@@ -239,6 +239,11 @@ export const hbmAPI = {
   getCoolingBedLogs: (params) => api.get('/hbm/cooling-bed', { params }),
   getCoolingBedLogById: (id) => api.get(`/hbm/cooling-bed/${id}`),
   createCoolingBedLog: (data) => api.post('/hbm/cooling-bed', data),
+
+  // Pumphouse logs
+  getPumpHouseLogs: (params) => api.get('/hbm/pumphouse', { params }),
+  getPumpHouseLogById: (id) => api.get(`/hbm/pumphouse/${id}`),
+  createPumpHouseLog: (data) => api.post('/hbm/pumphouse', data),
 };
 
 export const pumpHouseAPI = {

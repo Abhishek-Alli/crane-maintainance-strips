@@ -10,20 +10,22 @@ const HbmDashboard = () => {
   const [recentRollingStand, setRecentRollingStand] = useState([]);
   const [recentMillMech, setRecentMillMech] = useState([]);
   const [recentCoolingBed, setRecentCoolingBed] = useState([]);
+  const [recentPumpHouse, setRecentPumpHouse] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('all');
+
 
   useEffect(() => { fetchDashboardData(); }, []);
 
   const fetchDashboardData = async () => {
     try {
-      const [statsRes, recentRes, dcRes, rsRes, mmRes, cbRes] = await Promise.allSettled([
+      const [statsRes, recentRes, dcRes, rsRes, mmRes, cbRes, phRes] = await Promise.allSettled([
         hbmAPI.getDashboardStats(),
         hbmAPI.getRecentChecksheets(8),
         hbmAPI.getDcMotorLogs({ limit: 5 }),
         hbmAPI.getRollingStandLogs({ limit: 5 }),
         hbmAPI.getMillMechLogs({ limit: 5 }),
-        hbmAPI.getCoolingBedLogs({ limit: 5 })
+        hbmAPI.getCoolingBedLogs({ limit: 5 }),
+        hbmAPI.getPumpHouseLogs({ limit: 5 }),
       ]);
 
       if (statsRes.status === 'fulfilled')   setStats(statsRes.value.data);
@@ -32,6 +34,7 @@ const HbmDashboard = () => {
       if (rsRes.status === 'fulfilled')      setRecentRollingStand(rsRes.value.data);
       if (mmRes.status === 'fulfilled')      setRecentMillMech(mmRes.value.data);
       if (cbRes.status === 'fulfilled')      setRecentCoolingBed(cbRes.value.data);
+      if (phRes.status === 'fulfilled')      setRecentPumpHouse(phRes.value.data);
     } catch (error) {
       toast.error('Failed to load dashboard data');
     } finally {
@@ -122,7 +125,8 @@ const HbmDashboard = () => {
               { to: '/hbm/rolling-stand/new', label: 'Rolling Stand', sub: 'Daily checksheet', color: 'teal', icon: '⚙' },
               { to: '/hbm/mill-mech/new', label: 'Mill Mechanical', sub: 'Daily checksheet', color: 'orange', icon: '🔩' },
               { to: '/hbm/cooling-bed/new', label: 'Cooling Bed', sub: 'Daily checksheet', color: 'cyan', icon: '❄' },
-              { to: '/hbm/pumphouse/new', label: 'Pump House Parameters', sub: 'Water quality sheet', color: 'blue', icon: '💧' },
+              { to: '/hbm/pumphouse/new', label: 'Pumphouse Checksheet', sub: 'Daily checksheet', color: 'blue', icon: '💧' },
+              { to: '/hbm/pumphouse/history', label: 'Pumphouse History', sub: 'View past records', color: 'gray', icon: '📅' },
               { to: '/hbm/checksheets/new', label: 'New Checksheet', sub: 'Template-based sheet', color: 'emerald', icon: '📋' },
               { to: '/hbm/machines', label: 'Manage Machines', sub: 'Add / Edit machines', color: 'gray', icon: '🔧' },
               { to: '/hbm/dc-motor/history', label: 'DC Motor History', sub: 'View past records', color: 'gray', icon: '📅' },
@@ -305,6 +309,42 @@ const HbmDashboard = () => {
                       <p className="font-semibold text-gray-900 text-sm">Rolling Stand</p>
                       <p className="text-xs text-gray-500 mt-0.5">
                         {formatDate(log.log_date)} · {formatTime(log.log_time)} · {log.shift}
+                        {log.filled_by_name && ` · ${log.filled_by_name}`}
+                      </p>
+                    </div>
+                    <div className="ml-3 flex-shrink-0">
+                      {parseInt(log.not_ok_count) > 0 ? (
+                        <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full font-semibold">
+                          {log.not_ok_count} NOT OK
+                        </span>
+                      ) : (
+                        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-semibold">OK</span>
+                      )}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Pumphouse Logs */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="font-bold text-gray-900">Pumphouse Logs</h2>
+              <Link to="/hbm/pumphouse/new" className="text-xs text-blue-600 font-medium hover:underline">+ New</Link>
+            </div>
+            {recentPumpHouse.length === 0 ? (
+              <div className="p-8 text-center text-gray-400 text-sm">No Pumphouse logs yet</div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {recentPumpHouse.map(log => (
+                  <Link key={log.id} to={`/hbm/pumphouse/${log.id}`}
+                    className="flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-gray-900 text-sm">Pumphouse</p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {formatDate(log.log_date)}
+                        {log.checked_by && ` · ${log.checked_by}`}
                         {log.filled_by_name && ` · ${log.filled_by_name}`}
                       </p>
                     </div>

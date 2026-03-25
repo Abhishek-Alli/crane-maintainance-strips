@@ -30,7 +30,9 @@ import MillMechView from './components/hbm/MillMechView';
 import CoolingBedForm from './components/hbm/CoolingBedForm';
 import CoolingBedHistory from './components/hbm/CoolingBedHistory';
 import CoolingBedView from './components/hbm/CoolingBedView';
-import PumpHouseForm from './components/pumphouse/PumpHouseForm';
+import PumpHouseForm from './components/hbm/PumpHouseForm';
+import PumpHouseHistory from './components/hbm/PumpHouseHistory';
+import PumpHouseView from './components/hbm/PumpHouseView';
 // import FabricationReport from "./components/fabrication/FabricationReport";
 // import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import FabricationReport from "./components/fabrication/FabricationReport";
@@ -591,6 +593,33 @@ function App() {
               )
             }
           />
+
+          <Route
+            path="/hbm/pumphouse/history"
+            element={
+              user && (isHBMUser || isAdminUser) ? (
+                <PumpHouseHistory />
+              ) : user ? (
+                <Navigate to="/" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+
+          <Route
+            path="/hbm/pumphouse/:id"
+            element={
+              user && (isHBMUser || isAdminUser) ? (
+                <PumpHouseView />
+              ) : user ? (
+                <Navigate to="/" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+
           <Route
             path="/fabrication"
             element={

@@ -951,6 +951,139 @@ class HbmController {
       res.status(500).json({ success: false, message: 'Failed to submit Rolling Stand log' });
     }
   }
+
+  // ==========================================
+  // PUMPHOUSE CHECKSHEET LOGS
+  // ==========================================
+
+  static async getPumpHouseLogs(req, res) {
+    try {
+      const { date_from, date_to, limit: lim } = req.query;
+      const limit = parseInt(lim) || 50;
+      const conditions = [];
+      const params = [];
+      let paramIdx = 1;
+
+      if (date_from) { conditions.push(`l.log_date >= $${paramIdx++}`); params.push(date_from); }
+      if (date_to)   { conditions.push(`l.log_date <= $${paramIdx++}`); params.push(date_to); }
+
+      const whereClause = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
+      params.push(limit);
+
+      const result = await query(
+        `SELECT l.*, u.username as filled_by_name,
+          COUNT(i.id) as total_items,
+          COUNT(i.id) FILTER (WHERE i.status = 'NOT_OK') as not_ok_count
+         FROM hbm_pumphouse_logs l
+         JOIN users u ON l.filled_by = u.id
+         LEFT JOIN hbm_pumphouse_items i ON i.log_id = l.id
+         ${whereClause}
+         GROUP BY l.id, u.username
+         ORDER BY l.log_date DESC, l.created_at DESC
+         LIMIT $${paramIdx}`,
+        params
+      );
+
+      res.json({ success: true, data: result.rows, count: result.rows.length });
+    } catch (error) {
+      console.error('Pumphouse get logs error:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch Pumphouse logs' });
+    }
+  }
+
+  static async getPumpHouseLogById(req, res) {
+    try {
+      const { id } = req.params;
+
+      const logResult = await query(
+        `SELECT l.*, u.username as filled_by_name
+         FROM hbm_pumphouse_logs l
+         JOIN users u ON l.filled_by = u.id
+         WHERE l.id = $1`,
+        [id]
+      );
+
+      if (logResult.rows.length === 0)
+        return res.status(404).json({ success: false, message: 'Pumphouse log not found' });
+
+      const itemsResult = await query(
+        `SELECT * FROM hbm_pumphouse_items WHERE log_id = $1
+         ORDER BY section_name, block_name, item_name`,
+        [id]
+      );
+
+      res.json({ success: true, data: { ...logResult.rows[0], items: itemsResult.rows } });
+    } catch (error) {
+      console.error('Pumphouse get log error:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch Pumphouse log' });
+    }
+  }
+
+  static async createPumpHouseLog(req, res) {
+    try {
+      const {
+        log_date, checked_by,
+        sec1_result, sec2_result, sec3_result, sec4_result,
+        sec5_result, sec6_result, sec7_result, sec8_result,
+        sec9_result, sec10_result, sec11_result, sec12_result,
+        items
+      } = req.body;
+
+      if (!log_date) {
+        return res.status(400).json({ success: false, message: 'Date is required' });
+      }
+
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ success: false, message: 'At least one check item is required' });
+      }
+
+      for (const item of items) {
+        if (item.status === 'NOT_OK') {
+          if (!item.remark || item.remark.trim() === '')
+            return res.status(400).json({ success: false, message: `Remark is compulsory for NOT OK item: ${item.item_name}` });
+          if (!item.action_taken || item.action_taken.trim() === '')
+            return res.status(400).json({ success: false, message: `Action Taken is compulsory for NOT OK item: ${item.item_name}` });
+        }
+      }
+
+      let log;
+      await transaction(async (client) => {
+        const logResult = await client.query(
+          `INSERT INTO hbm_pumphouse_logs
+             (log_date, checked_by,
+              sec1_result, sec2_result, sec3_result, sec4_result,
+              sec5_result, sec6_result, sec7_result, sec8_result,
+              sec9_result, sec10_result, sec11_result, sec12_result,
+              filled_by)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
+          [
+            log_date, checked_by || null,
+            sec1_result  || null, sec2_result  || null, sec3_result  || null, sec4_result  || null,
+            sec5_result  || null, sec6_result  || null, sec7_result  || null, sec8_result  || null,
+            sec9_result  || null, sec10_result || null, sec11_result || null, sec12_result || null,
+            req.user.id
+          ]
+        );
+
+        log = logResult.rows[0];
+
+        for (const item of items) {
+          await client.query(
+            `INSERT INTO hbm_pumphouse_items
+               (log_id, section_name, block_name, item_name, status, remark, action_taken, block_remark)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+            [log.id, item.section_name, item.block_name, item.item_name,
+             item.status, item.remark || null, item.action_taken || null, item.block_remark || null]
+          );
+        }
+      });
+
+      res.status(201).json({ success: true, message: 'Pumphouse log submitted successfully', data: log });
+    } catch (error) {
+      console.error('Pumphouse create log error:', error);
+      res.status(500).json({ success: false, message: 'Failed to submit Pumphouse log' });
+    }
+  }
 }
 
 module.exports = HbmController;

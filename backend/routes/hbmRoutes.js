@@ -50,4 +50,9 @@ router.get('/rolling-stand', HbmController.getRollingStandLogs);
 router.get('/rolling-stand/:id', HbmController.getRollingStandLogById);
 router.post('/rolling-stand', HbmController.createRollingStandLog);
 
+// Pumphouse logs
+router.get('/pumphouse', HbmController.getPumpHouseLogs);
+router.get('/pumphouse/:id', HbmController.getPumpHouseLogById);
+router.post('/pumphouse', HbmController.createPumpHouseLog);
+
 module.exports = router;
