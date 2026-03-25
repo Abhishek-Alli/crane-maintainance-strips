@@ -279,14 +279,6 @@ const MillMechForm = () => {
     }
   };
 
-  const sectionColors = {
-    'SECTION-1': 'bg-emerald-600',
-    'SECTION-2': 'bg-blue-600',
-    'SECTION-3': 'bg-purple-600',
-    'SECTION-4': 'bg-orange-600',
-    'SECTION-5': 'bg-rose-600',
-  };
-
   const blockOpenColors = {
     'SECTION-1': 'bg-emerald-600 text-white',
     'SECTION-2': 'bg-blue-600 text-white',
