@@ -5,7 +5,6 @@ import { hbmAPI } from '../../services/api';
 
 const HbmDashboard = () => {
   const [stats, setStats] = useState(null);
-  const [recentChecksheets, setRecentChecksheets] = useState([]);
   const [recentDcMotor, setRecentDcMotor] = useState([]);
   const [recentRollingStand, setRecentRollingStand] = useState([]);
   const [recentMillMech, setRecentMillMech] = useState([]);
@@ -18,9 +17,8 @@ const HbmDashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      const [statsRes, recentRes, dcRes, rsRes, mmRes, cbRes, phRes] = await Promise.allSettled([
+      const [statsRes, dcRes, rsRes, mmRes, cbRes, phRes] = await Promise.allSettled([
         hbmAPI.getDashboardStats(),
-        hbmAPI.getRecentChecksheets(8),
         hbmAPI.getDcMotorLogs({ limit: 5 }),
         hbmAPI.getRollingStandLogs({ limit: 5 }),
         hbmAPI.getMillMechLogs({ limit: 5 }),
@@ -29,7 +27,6 @@ const HbmDashboard = () => {
       ]);
 
       if (statsRes.status === 'fulfilled')   setStats(statsRes.value.data);
-      if (recentRes.status === 'fulfilled')  setRecentChecksheets(recentRes.value.data);
       if (dcRes.status === 'fulfilled')      setRecentDcMotor(dcRes.value.data);
       if (rsRes.status === 'fulfilled')      setRecentRollingStand(rsRes.value.data);
       if (mmRes.status === 'fulfilled')      setRecentMillMech(mmRes.value.data);
@@ -52,19 +49,6 @@ const HbmDashboard = () => {
   const formatDate = (dateStr) => {
     if (!dateStr) return '—';
     return new Date(dateStr).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-  };
-
-  const statusBadge = (status) => {
-    const styles = {
-      OK: 'bg-green-100 text-green-800',
-      ATTENTION_REQUIRED: 'bg-yellow-100 text-yellow-800',
-      CRITICAL: 'bg-red-100 text-red-800'
-    };
-    return (
-      <span className={`text-xs px-2 py-1 rounded-full font-semibold ${styles[status] || 'bg-gray-100 text-gray-700'}`}>
-        {status?.replace(/_/g, ' ')}
-      </span>
-    );
   };
 
   if (loading) {
@@ -126,11 +110,6 @@ const HbmDashboard = () => {
               { to: '/hbm/mill-mech/new', label: 'Mill Mechanical', sub: 'Daily checksheet', color: 'orange', icon: '🔩' },
               { to: '/hbm/cooling-bed/new', label: 'Cooling Bed', sub: 'Daily checksheet', color: 'cyan', icon: '❄' },
               { to: '/hbm/pumphouse/new', label: 'Pumphouse Checksheet', sub: 'Daily checksheet', color: 'blue', icon: '💧' },
-              { to: '/hbm/pumphouse/history', label: 'Pumphouse History', sub: 'View past records', color: 'gray', icon: '📅' },
-              { to: '/hbm/checksheets/new', label: 'New Checksheet', sub: 'Template-based sheet', color: 'emerald', icon: '📋' },
-              { to: '/hbm/machines', label: 'Manage Machines', sub: 'Add / Edit machines', color: 'gray', icon: '🔧' },
-              { to: '/hbm/dc-motor/history', label: 'DC Motor History', sub: 'View past records', color: 'gray', icon: '📅' },
-              { to: '/hbm/rolling-stand/history', label: 'Rolling Stand History', sub: 'View past records', color: 'gray', icon: '📅' },
             ].map((action, i) => {
               const borderMap = {
                 indigo: 'hover:border-indigo-300 hover:bg-indigo-50',
@@ -155,37 +134,6 @@ const HbmDashboard = () => {
 
         {/* Recent Submissions */}
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-
-          {/* Template Checksheets */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-bold text-gray-900">Recent Checksheets</h2>
-              <Link to="/hbm/checksheets/new" className="text-xs text-emerald-600 font-medium hover:underline">+ New</Link>
-            </div>
-            {recentChecksheets.length === 0 ? (
-              <div className="p-8 text-center text-gray-400 text-sm">No checksheets yet</div>
-            ) : (
-              <div className="divide-y divide-gray-100">
-                {recentChecksheets.map(cs => (
-                  <Link key={cs.id} to={`/hbm/checksheets/${cs.id}`}
-                    className="flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors">
-                    <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-gray-900 text-sm truncate">{cs.machine_name}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {formatDate(cs.checksheet_date)}
-                        {cs.checksheet_time && ` · ${formatTime(cs.checksheet_time)}`}
-                        {` · ${cs.shift}`}
-                        {cs.filled_by && ` · ${cs.filled_by}`}
-                      </p>
-                    </div>
-                    <div className="ml-3 flex-shrink-0">
-                      {statusBadge(cs.status)}
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
 
           {/* DC Motor Logs */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm">

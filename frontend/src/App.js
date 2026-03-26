@@ -33,6 +33,7 @@ import CoolingBedView from './components/hbm/CoolingBedView';
 import PumpHouseForm from './components/hbm/PumpHouseForm';
 import PumpHouseHistory from './components/hbm/PumpHouseHistory';
 import PumpHouseView from './components/hbm/PumpHouseView';
+import DownloadChecksheet from './components/hbm/DownloadChecksheet';
 // import FabricationReport from "./components/fabrication/FabricationReport";
 // import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import FabricationReport from "./components/fabrication/FabricationReport";
@@ -132,6 +133,18 @@ function App() {
 
               {/* Mobile: User Avatar & Menu Toggle */}
               <div className="flex items-center space-x-2">
+                {/* Download Icon (HBM only) */}
+                {isOnHBMRoute && (
+                  <Link
+                    to="/hbm/download"
+                    title="Download Checksheets"
+                    className={`p-2 rounded-lg ${navHover} ${location.pathname === '/hbm/download' ? navActive : ''}`}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                  </Link>
+                )}
                 {/* User Badge */}
                 <div className={`text-xs ${navBadgeBg} px-2 py-1 rounded`}>
                   {isOnHBMRoute ? 'HBM' : (user?.role === 'ADMIN' ? 'Admin' : 'Operator')}
@@ -211,6 +224,17 @@ function App() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                         </svg>
                         <span className="font-medium">New Checksheet</span>
+                      </Link>
+
+                      <Link
+                        to="/hbm/download"
+                        className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/hbm/download' ? navActive + ' text-white' : navHover
+                          }`}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        <span className="font-medium">Download</span>
                       </Link>
                     </>
                   ) : (
@@ -612,6 +636,19 @@ function App() {
             element={
               user && (isHBMUser || isAdminUser) ? (
                 <PumpHouseView />
+              ) : user ? (
+                <Navigate to="/" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+
+          <Route
+            path="/hbm/download"
+            element={
+              user && (isHBMUser || isAdminUser) ? (
+                <DownloadChecksheet />
               ) : user ? (
                 <Navigate to="/" replace />
               ) : (

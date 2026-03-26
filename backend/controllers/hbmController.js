@@ -1,4 +1,10 @@
 const { query, transaction } = require('../config/database');
+const { sendHbmChecksheetNotification } = require('../utils/telegram');
+const PDFDocument = require('pdfkit');
+const path = require('path');
+const fs = require('fs');
+
+const LOGO_PATH = path.join(__dirname, '../assets/srj-logo.png');
 
 class HbmController {
 
@@ -537,6 +543,16 @@ class HbmController {
       });
 
       res.status(201).json({ success: true, message: 'DC Motor log submitted successfully', data: log });
+
+      // Fire-and-forget Telegram notification
+      sendHbmChecksheetNotification({
+        checksheetType: 'DC Motor',
+        date: log_date, time: log_time, shift,
+        filledBy: req.user.username,
+        submittedAt: new Date(),
+        remarks,
+        items
+      }).catch((e) => console.error('Telegram DC Motor notify error:', e));
     } catch (error) {
       console.error('HBM create DC motor log error:', error);
       res.status(500).json({ success: false, message: 'Failed to submit DC motor log' });
@@ -677,6 +693,14 @@ class HbmController {
       });
 
       res.status(201).json({ success: true, message: 'Cooling Bed log submitted successfully', data: log });
+
+      sendHbmChecksheetNotification({
+        checksheetType: 'Cooling Bed',
+        date: log_date, time: log_time, shift,
+        filledBy: req.user.username,
+        submittedAt: new Date(),
+        items
+      }).catch((e) => console.error('Telegram Cooling Bed notify error:', e));
     } catch (error) {
       console.error('Cooling Bed create log error:', error);
       res.status(500).json({ success: false, message: 'Failed to submit Cooling Bed log' });
@@ -816,6 +840,14 @@ class HbmController {
       });
 
       res.status(201).json({ success: true, message: 'Mill Mechanical log submitted successfully', data: log });
+
+      sendHbmChecksheetNotification({
+        checksheetType: 'Mill Mechanical',
+        date: log_date, time: log_time, shift,
+        filledBy: req.user.username,
+        submittedAt: new Date(),
+        items
+      }).catch((e) => console.error('Telegram Mill Mech notify error:', e));
     } catch (error) {
       console.error('Mill Mech create log error:', error);
       res.status(500).json({ success: false, message: 'Failed to submit Mill Mechanical log' });
@@ -946,6 +978,14 @@ class HbmController {
       });
 
       res.status(201).json({ success: true, message: 'Rolling Stand log submitted successfully', data: log });
+
+      sendHbmChecksheetNotification({
+        checksheetType: 'Rolling Stand',
+        date: log_date, time: log_time, shift,
+        filledBy: req.user.username,
+        submittedAt: new Date(),
+        items
+      }).catch((e) => console.error('Telegram Rolling Stand notify error:', e));
     } catch (error) {
       console.error('Rolling Stand create log error:', error);
       res.status(500).json({ success: false, message: 'Failed to submit Rolling Stand log' });
@@ -1079,11 +1119,223 @@ class HbmController {
       });
 
       res.status(201).json({ success: true, message: 'Pumphouse log submitted successfully', data: log });
+
+      sendHbmChecksheetNotification({
+        checksheetType: 'Pumphouse',
+        date: log_date,
+        filledBy: req.user.username,
+        submittedAt: new Date(),
+        items
+      }).catch((e) => console.error('Telegram Pumphouse notify error:', e));
     } catch (error) {
       console.error('Pumphouse create log error:', error);
       res.status(500).json({ success: false, message: 'Failed to submit Pumphouse log' });
     }
   }
+  // ==========================================
+  // PDF DOWNLOAD
+  // ==========================================
+
+  static async downloadHbmPDF(req, res) {
+    const { type, id } = req.params;
+
+    const typeMap = {
+      'dc-motor':      { logTable: 'hbm_dc_motor_logs',      itemTable: 'hbm_dc_motor_items',      title: 'DC Motor Maintenance Checksheet'        },
+      'cooling-bed':   { logTable: 'hbm_cooling_bed_logs',   itemTable: 'hbm_cooling_bed_items',   title: 'Cooling Bed Maintenance Checksheet'     },
+      'mill-mech':     { logTable: 'hbm_mill_mech_logs',     itemTable: 'hbm_mill_mech_items',     title: 'Mill Mechanical Maintenance Checksheet' },
+      'rolling-stand': { logTable: 'hbm_rolling_stand_logs', itemTable: 'hbm_rolling_stand_items', title: 'Rolling Stand Maintenance Checksheet'   },
+      'pumphouse':     { logTable: 'hbm_pumphouse_logs',     itemTable: 'hbm_pumphouse_items',     title: 'Pumphouse Maintenance Checksheet'       },
+    };
+
+    const meta = typeMap[type];
+    if (!meta) return res.status(400).json({ success: false, message: 'Invalid checksheet type' });
+
+    try {
+      // Fetch log header
+      const logResult = await query(
+        `SELECT l.*, u.username AS filled_by_name
+         FROM ${meta.logTable} l
+         JOIN users u ON l.filled_by = u.id
+         WHERE l.id = $1`,
+        [id]
+      );
+      if (logResult.rows.length === 0)
+        return res.status(404).json({ success: false, message: 'Log not found' });
+
+      const log = logResult.rows[0];
+
+      // Fetch items
+      const itemsResult = await query(
+        `SELECT * FROM ${meta.itemTable} WHERE log_id = $1
+         ORDER BY section_name, block_name, item_name`,
+        [id]
+      );
+      const items = itemsResult.rows;
+
+      // Group items: block_name → section_name → [items]
+      const grouped = {};
+      items.forEach(item => {
+        const block   = item.block_name   || item.section_name || 'General';
+        const section = item.section_name || block;
+        if (!grouped[block]) grouped[block] = {};
+        if (!grouped[block][section]) grouped[block][section] = [];
+        grouped[block][section].push(item);
+      });
+
+      // PDF layout constants
+      const pageWidth = 515;
+      const colX      = 40;
+      const col1W     = 210;  // Item Name
+      const col2W     = 80;   // Status
+      const col3W     = 130;  // Remarks
+      const col4W     = pageWidth - col1W - col2W - col3W; // Action Taken ≈ 95
+      const rowH      = 22;
+
+      const doc = new PDFDocument({ margin: 40, size: 'A4', bufferPages: true });
+      const buffers = [];
+      doc.on('data', buffers.push.bind(buffers));
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition',
+        `attachment; filename=hbm_${type}_${id}_${log.log_date || 'report'}.pdf`);
+
+      // ── Company Header ──
+      if (fs.existsSync(LOGO_PATH)) {
+        doc.image(LOGO_PATH, colX, 30, { width: 60, height: 60 });
+      }
+      doc.font('Helvetica-Bold').fontSize(14).fillColor('#000000')
+        .text('SRJ STRIPS AND PIPES PVT LTD', 110, 35, { width: pageWidth - 70 });
+      doc.font('Helvetica-Bold').fontSize(12).fillColor('#1e40af')
+        .text('HBM CHECKSHEET REPORT', 110, 55, { width: pageWidth - 70 });
+      doc.fillColor('#000000').font('Helvetica').fontSize(10)
+        .text(meta.title, 110, 72, { width: pageWidth - 70 });
+      doc.moveTo(colX, 97).lineTo(colX + pageWidth, 97).stroke('#1e40af');
+      doc.y = 108;
+
+      // ── Log Info ──
+      doc.font('Helvetica-Bold').fontSize(10).fillColor('#000000');
+      if (log.log_date)    doc.text(`Date        : ${new Date(log.log_date).toLocaleDateString('en-IN')}`, colX);
+      if (log.log_time)    doc.text(`Time        : ${log.log_time}`, colX);
+      if (log.shift)       doc.text(`Shift       : ${log.shift}`, colX);
+      if (log.checked_by)  doc.text(`Checked By  : ${log.checked_by}`, colX);
+      doc.text(`Filled By   : ${log.filled_by_name}`, colX);
+      doc.text(`Submitted   : ${new Date(log.created_at).toLocaleString('en-IN')}`, colX);
+
+      const notOkCount = items.filter(i => i.status === 'NOT_OK').length;
+      doc.moveDown(0.3);
+      doc.font('Helvetica').fontSize(9)
+        .text(`Total Items: ${items.length}    OK: ${items.length - notOkCount}    NOT OK: ${notOkCount}`, colX);
+
+      if (log.remarks) {
+        doc.moveDown(0.3);
+        doc.font('Helvetica-Bold').fontSize(9).text('Overall Remarks: ', colX, doc.y, { continued: true });
+        doc.font('Helvetica').text(log.remarks);
+      }
+
+      doc.moveDown(1);
+
+      // ── Inspection Details Table ──
+      let sIdx = 1;
+      for (const [block, sections] of Object.entries(grouped)) {
+        for (const [section, sectionItems] of Object.entries(sections)) {
+          const sectionLabel = block === section ? block : `${block} › ${section}`;
+
+          if (doc.y + rowH * 3 > 760) {
+            doc.addPage();
+            doc.y = 40;
+          }
+
+          doc.font('Helvetica-Bold').fontSize(10).fillColor('#000000')
+            .text(`${sIdx}. ${sectionLabel}`, colX);
+          doc.moveDown(0.3);
+          sIdx++;
+
+          const tableTop = doc.y;
+          hbmDrawRow(doc, colX, tableTop, col1W, col2W, col3W, col4W, rowH,
+            'Item Name', 'Status', 'Remarks', 'Action Taken', true);
+
+          let curY = tableTop + rowH;
+          for (const item of sectionItems) {
+            const h = hbmRowHeight(doc,
+              [item.item_name, item.status, item.remark, item.action_taken],
+              [col1W, col2W, col3W, col4W], 9, 22);
+
+            if (curY + h > 760) {
+              doc.addPage();
+              curY = 40;
+              hbmDrawRow(doc, colX, curY, col1W, col2W, col3W, col4W, rowH,
+                'Item Name', 'Status', 'Remarks', 'Action Taken', true);
+              curY += rowH;
+            }
+
+            hbmDrawRow(doc, colX, curY, col1W, col2W, col3W, col4W, h,
+              item.item_name, item.status, item.remark, item.action_taken, false);
+            curY += h;
+          }
+
+          doc.y = curY + 10;
+        }
+      }
+
+      // ── Page Footers ──
+      const range = doc.bufferedPageRange();
+      for (let i = 0; i < range.count; i++) {
+        doc.switchToPage(range.start + i);
+        doc.font('Helvetica').fontSize(8).fillColor('#888888')
+          .text(
+            `Generated: ${new Date().toLocaleString('en-IN')}   |   Page ${i + 1} of ${range.count}`,
+            colX, 820, { width: pageWidth, align: 'center' }
+          );
+      }
+
+      doc.on('end', () => res.send(Buffer.concat(buffers)));
+      doc.end();
+
+    } catch (error) {
+      console.error('HBM PDF download error:', error);
+      res.status(500).json({ success: false, message: 'Failed to generate PDF' });
+    }
+  }
+}
+
+/* ── PDF helper: row height ── */
+function hbmRowHeight(doc, texts, widths, fontSize, minH = 22) {
+  doc.font('Helvetica').fontSize(fontSize);
+  const maxH = Math.max(
+    ...texts.map((t, i) => doc.heightOfString(String(t || '-'), { width: widths[i] - 10 }))
+  );
+  return Math.max(maxH + 12, minH);
+}
+
+/* ── PDF helper: draw one table row ── */
+function hbmDrawRow(doc, x, y, c1, c2, c3, c4, h, t1, t2, t3, t4, isHeader) {
+  const total = c1 + c2 + c3 + c4;
+
+  if (isHeader) {
+    doc.rect(x, y, total, h).fill('#1e40af');
+    doc.fillColor('#FFFFFF');
+  } else {
+    if (t2 === 'NOT_OK') {
+      doc.rect(x, y, total, h).fill('#FEE2E2');
+    }
+    doc.fillColor('#000000');
+  }
+
+  doc.rect(x, y, total, h).stroke('#333333');
+  doc.moveTo(x + c1, y).lineTo(x + c1, y + h).stroke('#333333');
+  doc.moveTo(x + c1 + c2, y).lineTo(x + c1 + c2, y + h).stroke('#333333');
+  doc.moveTo(x + c1 + c2 + c3, y).lineTo(x + c1 + c2 + c3, y + h).stroke('#333333');
+
+  const ty = y + 6;
+  const fs = isHeader ? 10 : 9;
+  doc.font(isHeader ? 'Helvetica-Bold' : 'Helvetica').fontSize(fs);
+
+  doc.text(t1 || '-', x + 5,          ty, { width: c1 - 10 });
+  doc.text(t2 || '-', x + c1 + 5,     ty, { width: c2 - 10, lineBreak: false });
+  doc.text(t3 || '-', x + c1 + c2 + 5, ty, { width: c3 - 10 });
+  doc.text(t4 || '-', x + c1 + c2 + c3 + 5, ty, { width: c4 - 10 });
+
+  doc.fillColor('#000000');
 }
 
 module.exports = HbmController;

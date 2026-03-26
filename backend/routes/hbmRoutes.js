@@ -55,4 +55,8 @@ router.get('/pumphouse', HbmController.getPumpHouseLogs);
 router.get('/pumphouse/:id', HbmController.getPumpHouseLogById);
 router.post('/pumphouse', HbmController.createPumpHouseLog);
 
+// PDF download  –  GET /api/hbm/pdf/:type/:id
+// type: dc-motor | cooling-bed | mill-mech | rolling-stand | pumphouse
+router.get('/pdf/:type/:id', HbmController.downloadHbmPDF);
+
 module.exports = router;

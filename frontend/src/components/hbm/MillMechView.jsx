@@ -16,8 +16,26 @@ const MillMechView = () => {
   const navigate = useNavigate();
   const [log, setLog] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => { fetchLog(); }, []); // eslint-disable-line
+
+  const handleDownloadPDF = async () => {
+    setDownloading(true);
+    try {
+      const res = await hbmAPI.downloadPDF('mill-mech', id);
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `hbm_mill_mech_${id}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error('Failed to download PDF');
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const fetchLog = async () => {
     try {
@@ -72,17 +90,26 @@ const MillMechView = () => {
       <div className="max-w-5xl mx-auto">
 
         {/* Page Header */}
-        <div className="flex items-center space-x-3 mb-6">
-          <button onClick={() => navigate('/hbm/mill-mech/history')}
-            className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">Mill Mechanical Log #{log.id}</h1>
-            <p className="text-sm text-gray-500">Mill Mechanical Checksheet</p>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-3">
+            <button onClick={() => navigate('/hbm/mill-mech/history')}
+              className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">Mill Mechanical Log #{log.id}</h1>
+              <p className="text-sm text-gray-500">Mill Mechanical Checksheet</p>
+            </div>
           </div>
+          <button onClick={handleDownloadPDF} disabled={downloading}
+            className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+            </svg>
+            {downloading ? 'Downloading…' : 'Download PDF'}
+          </button>
         </div>
 
         {/* Summary Card */}

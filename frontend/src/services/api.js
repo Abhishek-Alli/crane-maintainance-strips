@@ -244,6 +244,10 @@ export const hbmAPI = {
   getPumpHouseLogs: (params) => api.get('/hbm/pumphouse', { params }),
   getPumpHouseLogById: (id) => api.get(`/hbm/pumphouse/${id}`),
   createPumpHouseLog: (data) => api.post('/hbm/pumphouse', data),
+
+  // PDF downloads
+  downloadPDF: (type, id) =>
+    api.get(`/hbm/pdf/${type}/${id}`, { responseType: 'blob' }),
 };
 
 export const pumpHouseAPI = {
