@@ -34,6 +34,12 @@ import PumpHouseForm from './components/hbm/PumpHouseForm';
 import PumpHouseHistory from './components/hbm/PumpHouseHistory';
 import PumpHouseView from './components/hbm/PumpHouseView';
 import DownloadChecksheet from './components/hbm/DownloadChecksheet';
+import BarBundleAreaForm from './components/hbm/BarBundleAreaForm';
+import BarBundleAreaHistory from './components/hbm/BarBundleAreaHistory';
+import BarBundleAreaView from './components/hbm/BarBundleAreaView';
+import BeforeRollingForm from './components/hbm/BeforeRollingForm';
+import BeforeRollingHistory from './components/hbm/BeforeRollingHistory';
+import BeforeRollingView from './components/hbm/BeforeRollingView';
 // import FabricationReport from "./components/fabrication/FabricationReport";
 // import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import FabricationReport from "./components/fabrication/FabricationReport";
@@ -97,25 +103,27 @@ function App() {
   const isHBMUser = userLoginType === 'HBM_CHECKSHEETS';
   const isAdminUser = user?.role === 'ADMIN' || user?.user_type === 'ADMIN';
   const isOnHBMRoute = location.pathname.startsWith('/hbm');
+  const isOnAdminRoute = ['/create-user', '/telegram-settings', '/fabrication'].some(r => location.pathname.startsWith(r));
 
   // Don't show nav on login page
   const showNav = user && location.pathname !== '/login';
 
   // Determine default redirect after login restore
   const getDefaultRoute = () => {
+    if (isAdminUser) return '/create-user';
     if (isHBMUser) return '/hbm/dashboard';
     return '/';
   };
 
   // Nav colors based on module
-  const navBg = isOnHBMRoute ? 'bg-emerald-600' : 'bg-blue-600';
-  const navHover = isOnHBMRoute ? 'hover:bg-emerald-500' : 'hover:bg-blue-500';
-  const navActive = isOnHBMRoute ? 'bg-emerald-700' : 'bg-blue-700';
-  const navBadgeBg = isOnHBMRoute ? 'bg-emerald-500' : 'bg-blue-500';
-  const navBorderColor = isOnHBMRoute ? 'border-emerald-500' : 'border-blue-500';
-  const navInfoBg = isOnHBMRoute ? 'bg-emerald-700' : 'bg-blue-700';
-  const navInfoAvatarBg = isOnHBMRoute ? 'bg-emerald-400' : 'bg-blue-400';
-  const navInfoSubText = isOnHBMRoute ? 'text-emerald-200' : 'text-blue-200';
+  const navBg        = isOnAdminRoute ? 'bg-slate-900'         : isOnHBMRoute ? 'bg-emerald-600'       : 'bg-blue-600';
+  const navHover     = isOnAdminRoute ? 'hover:bg-slate-700'   : isOnHBMRoute ? 'hover:bg-emerald-500'  : 'hover:bg-blue-500';
+  const navActive    = isOnAdminRoute ? 'bg-slate-700'         : isOnHBMRoute ? 'bg-emerald-700'        : 'bg-blue-700';
+  const navBadgeBg   = isOnAdminRoute ? 'bg-violet-600'        : isOnHBMRoute ? 'bg-emerald-500'        : 'bg-blue-500';
+  const navBorderColor = isOnAdminRoute ? 'border-slate-700'   : isOnHBMRoute ? 'border-emerald-500'    : 'border-blue-500';
+  const navInfoBg    = isOnAdminRoute ? 'bg-slate-800'         : isOnHBMRoute ? 'bg-emerald-700'        : 'bg-blue-700';
+  const navInfoAvatarBg = isOnAdminRoute ? 'bg-violet-600'     : isOnHBMRoute ? 'bg-emerald-400'        : 'bg-blue-400';
+  const navInfoSubText = isOnAdminRoute ? 'text-slate-400'     : isOnHBMRoute ? 'text-emerald-200'      : 'text-blue-200';
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
@@ -127,12 +135,19 @@ function App() {
           <div className="px-4 py-3">
             <div className="flex items-center justify-between">
               {/* Logo */}
-              <Link to={isOnHBMRoute ? '/hbm/dashboard' : '/'} className="text-lg font-bold">
-                {isOnHBMRoute ? 'HBM Checksheets' : 'Crane Maintenance'}
+              <Link to={isOnAdminRoute ? '/create-user' : (isOnHBMRoute ? '/hbm/dashboard' : '/')} className="text-lg font-bold tracking-tight">
+                {isOnAdminRoute ? (
+                  <span className="flex items-center gap-2">
+                    <svg className="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                    Admin Panel
+                  </span>
+                ) : isOnHBMRoute ? 'HBM Checksheets' : 'Crane Maintenance'}
               </Link>
 
-              {/* Mobile: User Avatar & Menu Toggle */}
-              <div className="flex items-center space-x-2">
+              {/* Top-right controls */}
+              <div className="flex items-center space-x-1">
                 {/* Download Icon (HBM only) */}
                 {isOnHBMRoute && (
                   <Link
@@ -145,27 +160,55 @@ function App() {
                     </svg>
                   </Link>
                 )}
+
+                {/* Admin Panel icon — HBM route, admin only */}
+                {isOnHBMRoute && isAdminUser && (
+                  <Link
+                    to="/create-user"
+                    title="Admin Panel"
+                    className="p-2 rounded-lg text-violet-300 hover:text-white hover:bg-violet-700 transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                  </Link>
+                )}
+
                 {/* User Badge */}
-                <div className={`text-xs ${navBadgeBg} px-2 py-1 rounded`}>
-                  {isOnHBMRoute ? 'HBM' : (user?.role === 'ADMIN' ? 'Admin' : 'Operator')}
+                <div className={`text-xs ${navBadgeBg} px-2 py-1 rounded font-medium`}>
+                  {isOnAdminRoute ? 'Admin' : (isOnHBMRoute ? 'HBM' : (user?.role === 'ADMIN' ? 'Admin' : 'Operator'))}
                 </div>
 
-                {/* Hamburger Menu Button */}
+                {/* Logout Icon (always visible) */}
                 <button
-                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  className={`p-2 rounded-lg ${navHover} focus:outline-none focus:ring-2 focus:ring-white/30`}
-                  aria-label="Toggle menu"
+                  onClick={handleLogout}
+                  title="Logout"
+                  className="p-2 rounded-lg text-red-300 hover:text-white hover:bg-red-600 transition-colors focus:outline-none"
+                  aria-label="Logout"
                 >
-                  {mobileMenuOpen ? (
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  ) : (
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                    </svg>
-                  )}
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
                 </button>
+
+                {/* Hamburger — hidden on HBM (nothing left to show) */}
+                {!isOnHBMRoute && (
+                  <button
+                    onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                    className={`p-2 rounded-lg ${navHover} focus:outline-none focus:ring-2 focus:ring-white/30`}
+                    aria-label="Toggle menu"
+                  >
+                    {mobileMenuOpen ? (
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    ) : (
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                      </svg>
+                    )}
+                  </button>
+                )}
               </div>
             </div>
 
@@ -181,7 +224,7 @@ function App() {
                     <div>
                       <p className="font-semibold">{user?.username || 'User'}</p>
                       <p className={`text-xs ${navInfoSubText}`}>
-                        {user?.role} | {isOnHBMRoute ? 'HBM Module' : 'Crane Module'}
+                        {user?.role} | {isOnAdminRoute ? 'Admin Panel' : (isOnHBMRoute ? 'HBM Module' : 'Crane Module')}
                       </p>
                     </div>
                   </div>
@@ -189,13 +232,70 @@ function App() {
 
                 {/* Navigation Links */}
                 <div className="space-y-1">
-                  {isOnHBMRoute ? (
+                  {isOnAdminRoute ? (
+                    /* ========== ADMIN NAVIGATION ========== */
+                    <>
+                      <p className="px-3 pt-1 pb-1 text-xs font-semibold text-slate-400 uppercase tracking-widest">Management</p>
+
+                      <Link
+                        to="/create-user"
+                        className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/create-user' ? 'bg-violet-700 text-white' : 'hover:bg-slate-700'}`}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span className="font-medium">User Management</span>
+                      </Link>
+
+                      <Link
+                        to="/telegram-settings"
+                        className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/telegram-settings' ? 'bg-violet-700 text-white' : 'hover:bg-slate-700'}`}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                        </svg>
+                        <span className="font-medium">Telegram Alerts</span>
+                      </Link>
+
+                      <Link
+                        to="/fabrication"
+                        className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/fabrication' ? 'bg-violet-700 text-white' : 'hover:bg-slate-700'}`}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span className="font-medium">Fabrication</span>
+                      </Link>
+
+                      <div className="border-t border-slate-700 my-2" />
+                      <p className="px-3 pb-1 text-xs font-semibold text-slate-400 uppercase tracking-widest">Switch Module</p>
+
+                      <Link
+                        to="/"
+                        className="flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors bg-blue-700 hover:bg-blue-600 text-white"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                        </svg>
+                        <span className="font-medium">Crane Maintenance</span>
+                      </Link>
+
+                      <Link
+                        to="/hbm/dashboard"
+                        className="flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors bg-emerald-700 hover:bg-emerald-600 text-white"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                        <span className="font-medium">HBM Checksheets</span>
+                      </Link>
+                    </>
+                  ) : isOnHBMRoute ? (
                     /* ========== HBM NAVIGATION ========== */
                     <>
                       <Link
                         to="/hbm/dashboard"
-                        className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/hbm/dashboard' ? navActive + ' text-white' : navHover
-                          }`}
+                        className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/hbm/dashboard' ? navActive + ' text-white' : navHover}`}
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -204,46 +304,36 @@ function App() {
                       </Link>
 
                       <Link
-                        to="/hbm/machines"
-                        className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/hbm/machines' ? navActive + ' text-white' : navHover
-                          }`}
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        <span className="font-medium">Machines</span>
-                      </Link>
-
-                      <Link
-                        to="/hbm/checksheets/new"
-                        className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/hbm/checksheets/new' ? navActive + ' text-white' : navHover
-                          }`}
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                        </svg>
-                        <span className="font-medium">New Checksheet</span>
-                      </Link>
-
-                      <Link
                         to="/hbm/download"
-                        className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/hbm/download' ? navActive + ' text-white' : navHover
-                          }`}
+                        className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/hbm/download' ? navActive + ' text-white' : navHover}`}
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                         </svg>
                         <span className="font-medium">Download</span>
                       </Link>
+
+                      {isAdminUser && (
+                        <>
+                          <div className="border-t border-emerald-700 my-1" />
+                          <Link
+                            to="/create-user"
+                            className="flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors bg-slate-700 hover:bg-slate-600 text-white"
+                          >
+                            <svg className="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                            </svg>
+                            <span className="font-medium">Admin Panel</span>
+                          </Link>
+                        </>
+                      )}
                     </>
                   ) : (
                     /* ========== CRANE MAINTENANCE NAVIGATION ========== */
                     <>
                       <Link
                         to="/"
-                        className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/' ? navActive + ' text-white' : navHover
-                          }`}
+                        className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/' ? navActive + ' text-white' : navHover}`}
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -253,8 +343,7 @@ function App() {
 
                       <Link
                         to="/new-inspection"
-                        className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/new-inspection' ? navActive + ' text-white' : navHover
-                          }`}
+                        className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/new-inspection' ? navActive + ' text-white' : navHover}`}
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
@@ -264,8 +353,7 @@ function App() {
 
                       <Link
                         to="/maintenance-calendar"
-                        className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/maintenance-calendar' ? navActive + ' text-white' : navHover
-                          }`}
+                        className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/maintenance-calendar' ? navActive + ' text-white' : navHover}`}
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -275,8 +363,7 @@ function App() {
 
                       <Link
                         to="/reports"
-                        className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/reports' ? navActive + ' text-white' : navHover
-                          }`}
+                        className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/reports' ? navActive + ' text-white' : navHover}`}
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -284,44 +371,19 @@ function App() {
                         <span className="font-medium">Reports</span>
                       </Link>
 
-                      {user?.role === 'ADMIN' && (
-                        <Link
-                          to="/create-user"
-                          className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/create-user' ? navActive + ' text-white' : navHover
-                            }`}
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                          </svg>
-                          <span className="font-medium">Create User</span>
-                        </Link>
-                      )}
-                      {user?.role === 'ADMIN' && (
-                        <Link
-                          to="/fabrication"
-                          className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/fabrication'
-                              ? navActive + ' text-white'
-                              : navHover
-                            }`}
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6" />
-                          </svg>
-                          <span className="font-medium">Fabrication</span>
-                        </Link>
-                      )}
-
-                      {user?.role === 'ADMIN' && (
-                        <Link
-                          to="/telegram-settings"
-                          className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/telegram-settings' ? navActive + ' text-white' : navHover
-                            }`}
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                          </svg>
-                          <span className="font-medium">Telegram Alerts</span>
-                        </Link>
+                      {isAdminUser && (
+                        <>
+                          <div className="border-t border-blue-500 my-1" />
+                          <Link
+                            to="/create-user"
+                            className="flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors bg-slate-700 hover:bg-slate-600 text-white"
+                          >
+                            <svg className="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                            </svg>
+                            <span className="font-medium">Admin Panel</span>
+                          </Link>
+                        </>
                       )}
                     </>
                   )}
@@ -363,7 +425,11 @@ function App() {
           {/* ========== CRANE MAINTENANCE ROUTES ========== */}
           <Route
             path="/"
-            element={user ? <Dashboard /> : <Navigate to="/login" replace />}
+            element={
+              !user ? <Navigate to="/login" replace />
+              : isAdminUser ? <Navigate to="/create-user" replace />
+              : <Dashboard />
+            }
           />
 
           <Route
@@ -649,6 +715,84 @@ function App() {
             element={
               user && (isHBMUser || isAdminUser) ? (
                 <DownloadChecksheet />
+              ) : user ? (
+                <Navigate to="/" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+
+          <Route
+            path="/hbm/bar-bundle/new"
+            element={
+              user && (isHBMUser || isAdminUser) ? (
+                <BarBundleAreaForm />
+              ) : user ? (
+                <Navigate to="/" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+
+          <Route
+            path="/hbm/bar-bundle/history"
+            element={
+              user && (isHBMUser || isAdminUser) ? (
+                <BarBundleAreaHistory />
+              ) : user ? (
+                <Navigate to="/" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+
+          <Route
+            path="/hbm/bar-bundle/:id"
+            element={
+              user && (isHBMUser || isAdminUser) ? (
+                <BarBundleAreaView />
+              ) : user ? (
+                <Navigate to="/" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+
+          <Route
+            path="/hbm/before-rolling/new"
+            element={
+              user && (isHBMUser || isAdminUser) ? (
+                <BeforeRollingForm />
+              ) : user ? (
+                <Navigate to="/" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+
+          <Route
+            path="/hbm/before-rolling/history"
+            element={
+              user && (isHBMUser || isAdminUser) ? (
+                <BeforeRollingHistory />
+              ) : user ? (
+                <Navigate to="/" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+
+          <Route
+            path="/hbm/before-rolling/:id"
+            element={
+              user && (isHBMUser || isAdminUser) ? (
+                <BeforeRollingView />
               ) : user ? (
                 <Navigate to="/" replace />
               ) : (

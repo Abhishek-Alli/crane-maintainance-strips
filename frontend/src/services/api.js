@@ -188,6 +188,7 @@ export const telegramAPI = {
   getRecipients: () => api.get('/telegram/recipients'),
   addRecipient: (data) => api.post('/telegram/recipients', data),
   toggleRecipient: (id) => api.put(`/telegram/recipients/${id}/toggle`),
+  updateRecipientChecksheets: (id, checksheet_types) => api.put(`/telegram/recipients/${id}/checksheets`, { checksheet_types }),
   deleteRecipient: (id) => api.delete(`/telegram/recipients/${id}`),
   sendTest: (data) => api.post('/telegram/test', data),
 };
@@ -245,9 +246,33 @@ export const hbmAPI = {
   getPumpHouseLogById: (id) => api.get(`/hbm/pumphouse/${id}`),
   createPumpHouseLog: (data) => api.post('/hbm/pumphouse', data),
 
+  // Bar Bundle Area logs
+  getBarBundleLogs: (params) => api.get('/hbm/bar-bundle', { params }),
+  getBarBundleLogById: (id) => api.get(`/hbm/bar-bundle/${id}`),
+  createBarBundleLog: (data) => api.post('/hbm/bar-bundle', data),
+
+  // Before Rolling logs
+  getBeforeRollingLogs: (params) => api.get('/hbm/before-rolling', { params }),
+  getBeforeRollingLogById: (id) => api.get(`/hbm/before-rolling/${id}`),
+  createBeforeRollingLog: (data) => api.post('/hbm/before-rolling', data),
+
   // PDF downloads
   downloadPDF: (type, id) =>
     api.get(`/hbm/pdf/${type}/${id}`, { responseType: 'blob' }),
+};
+
+/* =============================
+   USER API
+============================= */
+export const userAPI = {
+  getAll: () => api.get('/users'),
+  create: (data) => api.post('/users/create', data),
+  delete: (id) => api.delete(`/users/${id}`),
+  getPermissions: (id) => api.get(`/users/${id}/hbm-permissions`),
+  updatePermissions: (id, data) => api.put(`/users/${id}/hbm-permissions`, data),
+  getCranePermissions: (id) => api.get(`/users/${id}/crane-permissions`),
+  updateCranePermissions: (id, data) => api.put(`/users/${id}/crane-permissions`, data),
+  changePassword: (id, password) => api.put(`/users/${id}`, { password }),
 };
 
 export const pumpHouseAPI = {

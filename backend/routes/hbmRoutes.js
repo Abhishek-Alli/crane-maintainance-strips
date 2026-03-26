@@ -55,8 +55,18 @@ router.get('/pumphouse', HbmController.getPumpHouseLogs);
 router.get('/pumphouse/:id', HbmController.getPumpHouseLogById);
 router.post('/pumphouse', HbmController.createPumpHouseLog);
 
+// Bar Bundle Area logs
+router.get('/bar-bundle', HbmController.getBarBundleLogs);
+router.get('/bar-bundle/:id', HbmController.getBarBundleLogById);
+router.post('/bar-bundle', HbmController.createBarBundleLog);
+
+// Before Rolling logs
+router.get('/before-rolling', HbmController.getBeforeRollingLogs);
+router.get('/before-rolling/:id', HbmController.getBeforeRollingLogById);
+router.post('/before-rolling', HbmController.createBeforeRollingLog);
+
 // PDF download  –  GET /api/hbm/pdf/:type/:id
-// type: dc-motor | cooling-bed | mill-mech | rolling-stand | pumphouse
+// type: dc-motor | cooling-bed | mill-mech | rolling-stand | pumphouse | bar-bundle
 router.get('/pdf/:type/:id', HbmController.downloadHbmPDF);
 
 module.exports = router;

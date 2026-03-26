@@ -12,6 +12,7 @@ router.use(authorize('ADMIN'));
 router.get('/recipients', TelegramController.getRecipients);
 router.post('/recipients', TelegramController.addRecipient);
 router.put('/recipients/:id/toggle', TelegramController.toggleRecipient);
+router.put('/recipients/:id/checksheets', TelegramController.updateChecksheets);
 router.delete('/recipients/:id', TelegramController.deleteRecipient);
 
 router.post('/test', TelegramController.sendTest);

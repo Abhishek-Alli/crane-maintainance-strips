@@ -4,12 +4,13 @@ import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
 
 const HbmDashboard = () => {
-  const [stats, setStats] = useState(null);
   const [recentDcMotor, setRecentDcMotor] = useState([]);
   const [recentRollingStand, setRecentRollingStand] = useState([]);
   const [recentMillMech, setRecentMillMech] = useState([]);
   const [recentCoolingBed, setRecentCoolingBed] = useState([]);
   const [recentPumpHouse, setRecentPumpHouse] = useState([]);
+  const [recentBarBundle, setRecentBarBundle] = useState([]);
+  const [recentBeforeRolling, setRecentBeforeRolling] = useState([]);
   const [loading, setLoading] = useState(true);
 
 
@@ -17,21 +18,23 @@ const HbmDashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      const [statsRes, dcRes, rsRes, mmRes, cbRes, phRes] = await Promise.allSettled([
-        hbmAPI.getDashboardStats(),
+      const [dcRes, rsRes, mmRes, cbRes, phRes, bbRes, brRes] = await Promise.allSettled([
         hbmAPI.getDcMotorLogs({ limit: 5 }),
         hbmAPI.getRollingStandLogs({ limit: 5 }),
         hbmAPI.getMillMechLogs({ limit: 5 }),
         hbmAPI.getCoolingBedLogs({ limit: 5 }),
         hbmAPI.getPumpHouseLogs({ limit: 5 }),
+        hbmAPI.getBarBundleLogs({ limit: 5 }),
+        hbmAPI.getBeforeRollingLogs({ limit: 5 }),
       ]);
 
-      if (statsRes.status === 'fulfilled')   setStats(statsRes.value.data);
       if (dcRes.status === 'fulfilled')      setRecentDcMotor(dcRes.value.data);
       if (rsRes.status === 'fulfilled')      setRecentRollingStand(rsRes.value.data);
       if (mmRes.status === 'fulfilled')      setRecentMillMech(mmRes.value.data);
       if (cbRes.status === 'fulfilled')      setRecentCoolingBed(cbRes.value.data);
       if (phRes.status === 'fulfilled')      setRecentPumpHouse(phRes.value.data);
+      if (bbRes.status === 'fulfilled')      setRecentBarBundle(bbRes.value.data);
+      if (brRes.status === 'fulfilled')      setRecentBeforeRolling(brRes.value.data);
     } catch (error) {
       toast.error('Failed to load dashboard data');
     } finally {
@@ -71,35 +74,6 @@ const HbmDashboard = () => {
           <p className="text-gray-500 mt-1 text-sm">{today}</p>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-          {[
-            { label: 'Active Machines', value: stats?.active_machines ?? 0, sub: `of ${stats?.total_machines ?? 0} total`, color: 'emerald' },
-            { label: 'Sheets Today', value: (stats?.today_checksheets ?? 0) + (stats?.dc_motor_today ?? 0), color: 'blue' },
-            { label: 'DC Motor Today', value: stats?.dc_motor_today ?? 0, color: 'indigo' },
-            { label: 'Issues (7 days)', value: stats?.weekly_issues ?? 0, color: stats?.weekly_issues > 0 ? 'red' : 'green' },
-            { label: 'Action Pending', value: stats?.action_pending ?? 0, color: stats?.action_pending > 0 ? 'orange' : 'green' },
-            { label: 'Templates', value: stats?.active_templates ?? 0, color: 'purple' },
-          ].map((card, i) => {
-            const colorMap = {
-              emerald: 'bg-emerald-50 border-emerald-200 text-emerald-700',
-              blue: 'bg-blue-50 border-blue-200 text-blue-700',
-              indigo: 'bg-indigo-50 border-indigo-200 text-indigo-700',
-              red: 'bg-red-50 border-red-200 text-red-700',
-              green: 'bg-green-50 border-green-200 text-green-700',
-              orange: 'bg-orange-50 border-orange-200 text-orange-700',
-              purple: 'bg-purple-50 border-purple-200 text-purple-700',
-            };
-            return (
-              <div key={i} className={`border rounded-xl p-4 ${colorMap[card.color]}`}>
-                <p className="text-xs font-medium text-gray-500 leading-tight">{card.label}</p>
-                <p className={`text-3xl font-bold mt-1`}>{card.value}</p>
-                {card.sub && <p className="text-xs text-gray-400 mt-1">{card.sub}</p>}
-              </div>
-            );
-          })}
-        </div>
-
         {/* Quick Actions */}
         <div className="mb-6">
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Quick Actions</h2>
@@ -110,6 +84,8 @@ const HbmDashboard = () => {
               { to: '/hbm/mill-mech/new', label: 'Mill Mechanical', sub: 'Daily checksheet', color: 'orange', icon: '🔩' },
               { to: '/hbm/cooling-bed/new', label: 'Cooling Bed', sub: 'Daily checksheet', color: 'cyan', icon: '❄' },
               { to: '/hbm/pumphouse/new', label: 'Pumphouse Checksheet', sub: 'Daily checksheet', color: 'blue', icon: '💧' },
+              { to: '/hbm/bar-bundle/new', label: 'Bar Bundle Area', sub: 'Daily checksheet', color: 'purple', icon: '📦' },
+              { to: '/hbm/before-rolling/new', label: 'Before Rolling', sub: 'Pre-rolling checksheet', color: 'gray', icon: '🔄' },
             ].map((action, i) => {
               const borderMap = {
                 indigo: 'hover:border-indigo-300 hover:bg-indigo-50',
@@ -119,6 +95,7 @@ const HbmDashboard = () => {
                 blue: 'hover:border-blue-300 hover:bg-blue-50',
                 emerald: 'hover:border-emerald-300 hover:bg-emerald-50',
                 gray: 'hover:border-gray-300 hover:bg-gray-50',
+                purple: 'hover:border-purple-300 hover:bg-purple-50',
               };
               return (
                 <Link key={i} to={action.to}
@@ -290,6 +267,78 @@ const HbmDashboard = () => {
                     className="flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors">
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold text-gray-900 text-sm">Pumphouse</p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {formatDate(log.log_date)}
+                        {log.checked_by && ` · ${log.checked_by}`}
+                        {log.filled_by_name && ` · ${log.filled_by_name}`}
+                      </p>
+                    </div>
+                    <div className="ml-3 flex-shrink-0">
+                      {parseInt(log.not_ok_count) > 0 ? (
+                        <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full font-semibold">
+                          {log.not_ok_count} NOT OK
+                        </span>
+                      ) : (
+                        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-semibold">OK</span>
+                      )}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Bar Bundle Area Logs */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="font-bold text-gray-900">Bar Bundle Area Logs</h2>
+              <Link to="/hbm/bar-bundle/new" className="text-xs text-purple-600 font-medium hover:underline">+ New</Link>
+            </div>
+            {recentBarBundle.length === 0 ? (
+              <div className="p-8 text-center text-gray-400 text-sm">No Bar Bundle Area logs yet</div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {recentBarBundle.map(log => (
+                  <Link key={log.id} to={`/hbm/bar-bundle/${log.id}`}
+                    className="flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-gray-900 text-sm">Bar Bundle Area</p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {formatDate(log.log_date)}
+                        {log.checked_by && ` · ${log.checked_by}`}
+                        {log.filled_by_name && ` · ${log.filled_by_name}`}
+                      </p>
+                    </div>
+                    <div className="ml-3 flex-shrink-0">
+                      {parseInt(log.not_ok_count) > 0 ? (
+                        <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full font-semibold">
+                          {log.not_ok_count} NOT OK
+                        </span>
+                      ) : (
+                        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-semibold">OK</span>
+                      )}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Before Rolling Logs */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="font-bold text-gray-900">Before Rolling Logs</h2>
+              <Link to="/hbm/before-rolling/new" className="text-xs text-blue-700 font-medium hover:underline">+ New</Link>
+            </div>
+            {recentBeforeRolling.length === 0 ? (
+              <div className="p-8 text-center text-gray-400 text-sm">No Before Rolling logs yet</div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {recentBeforeRolling.map(log => (
+                  <Link key={log.id} to={`/hbm/before-rolling/${log.id}`}
+                    className="flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-gray-900 text-sm">Before Rolling</p>
                       <p className="text-xs text-gray-500 mt-0.5">
                         {formatDate(log.log_date)}
                         {log.checked_by && ` · ${log.checked_by}`}

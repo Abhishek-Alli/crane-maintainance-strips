@@ -328,6 +328,115 @@ class UserController {
   }
 
   /**
+   * Get HBM permissions for a user
+   * GET /api/users/:id/hbm-permissions
+   */
+  static async getPermissions(req, res) {
+    try {
+      const { id } = req.params;
+      const result = await query(
+        `SELECT allowed_checksheets, can_download_pdf, can_delete, can_edit_submitted
+         FROM hbm_user_permissions WHERE user_id = $1`,
+        [id]
+      );
+
+      if (result.rows.length === 0) {
+        // Return defaults if no row yet
+        return res.json({
+          success: true,
+          data: {
+            allowed_checksheets: null,
+            can_download_pdf: true,
+            can_delete: false,
+            can_edit_submitted: false,
+          }
+        });
+      }
+
+      res.json({ success: true, data: result.rows[0] });
+    } catch (error) {
+      console.error('Get permissions error:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch permissions' });
+    }
+  }
+
+  /**
+   * Update HBM permissions for a user
+   * PUT /api/users/:id/hbm-permissions
+   */
+  static async updatePermissions(req, res) {
+    try {
+      const { id } = req.params;
+      const { allowed_checksheets, can_download_pdf, can_delete, can_edit_submitted } = req.body;
+
+      await query(
+        `INSERT INTO hbm_user_permissions (user_id, allowed_checksheets, can_download_pdf, can_delete, can_edit_submitted, updated_at)
+         VALUES ($1, $2, $3, $4, $5, NOW())
+         ON CONFLICT (user_id) DO UPDATE SET
+           allowed_checksheets  = EXCLUDED.allowed_checksheets,
+           can_download_pdf     = EXCLUDED.can_download_pdf,
+           can_delete           = EXCLUDED.can_delete,
+           can_edit_submitted   = EXCLUDED.can_edit_submitted,
+           updated_at           = NOW()`,
+        [id, allowed_checksheets, can_download_pdf, can_delete, can_edit_submitted]
+      );
+
+      res.json({ success: true, message: 'Permissions updated' });
+    } catch (error) {
+      console.error('Update permissions error:', error);
+      res.status(500).json({ success: false, message: 'Failed to update permissions' });
+    }
+  }
+
+  /**
+   * Get Crane Maintenance section permissions for a user
+   * GET /api/users/:id/crane-permissions
+   */
+  static async getCranePermissions(req, res) {
+    try {
+      const { id } = req.params;
+      const result = await query(
+        `SELECT allowed_sections FROM crane_user_permissions WHERE user_id = $1`,
+        [id]
+      );
+
+      if (result.rows.length === 0) {
+        return res.json({ success: true, data: { allowed_sections: null } });
+      }
+
+      res.json({ success: true, data: result.rows[0] });
+    } catch (error) {
+      console.error('Get crane permissions error:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch crane permissions' });
+    }
+  }
+
+  /**
+   * Update Crane Maintenance section permissions for a user
+   * PUT /api/users/:id/crane-permissions
+   */
+  static async updateCranePermissions(req, res) {
+    try {
+      const { id } = req.params;
+      const { allowed_sections } = req.body;
+
+      await query(
+        `INSERT INTO crane_user_permissions (user_id, allowed_sections, updated_at)
+         VALUES ($1, $2, NOW())
+         ON CONFLICT (user_id) DO UPDATE SET
+           allowed_sections = EXCLUDED.allowed_sections,
+           updated_at       = NOW()`,
+        [id, allowed_sections]
+      );
+
+      res.json({ success: true, message: 'Crane permissions updated' });
+    } catch (error) {
+      console.error('Update crane permissions error:', error);
+      res.status(500).json({ success: false, message: 'Failed to update crane permissions' });
+    }
+  }
+
+  /**
    * Delete user (Admin only)
    * DELETE /api/users/:id
    */

@@ -1,34 +1,19 @@
 const express = require('express');
 const router = express.Router();
 const UserController = require('../controllers/userController');
+const { authenticate, authorize } = require('../middleware/auth');
 
-/**
- * GET /api/users
- * Get all users (Admin only)
- */
+router.use(authenticate);
+router.use(authorize('ADMIN'));
+
 router.get('/', UserController.getAll);
-
-/**
- * POST /api/users/create
- * Create a new user (Admin only)
- */
 router.post('/create', UserController.createUser);
-
-/**
- * GET /api/users/:id
- * Get user by ID (Admin only)
- */
+router.get('/:id/hbm-permissions', UserController.getPermissions);
+router.put('/:id/hbm-permissions', UserController.updatePermissions);
+router.get('/:id/crane-permissions', UserController.getCranePermissions);
+router.put('/:id/crane-permissions', UserController.updateCranePermissions);
 router.get('/:id', UserController.getById);
-
-/**
- * PUT /api/users/:id
- * Update user (Admin only)
- */
 router.put('/:id', UserController.updateUser);
-
-/**
- * DELETE /api/users/:id
- * Delete user (Admin only)
- */
 router.delete('/:id', UserController.deleteUser);
+
 module.exports = router;

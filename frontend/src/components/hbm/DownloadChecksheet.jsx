@@ -7,6 +7,8 @@ const CHECKSHEET_TYPES = [
   { value: 'mill-mech', label: 'Mill Mechanical', fetchLogs: (p) => hbmAPI.getMillMechLogs(p) },
   { value: 'cooling-bed', label: 'Cooling Bed', fetchLogs: (p) => hbmAPI.getCoolingBedLogs(p) },
   { value: 'pumphouse', label: 'Pumphouse', fetchLogs: (p) => hbmAPI.getPumpHouseLogs(p) },
+  { value: 'bar-bundle', label: 'Bar Bundle Area', fetchLogs: (p) => hbmAPI.getBarBundleLogs(p) },
+  { value: 'before-rolling', label: 'Before Rolling', fetchLogs: (p) => hbmAPI.getBeforeRollingLogs(p) },
 ];
 
 function getDatesInRange(from, to) {

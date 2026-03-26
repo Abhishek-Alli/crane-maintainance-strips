@@ -1133,6 +1133,277 @@ class HbmController {
     }
   }
   // ==========================================
+  // BAR BUNDLE AREA CHECKSHEET LOGS
+  // ==========================================
+
+  static async getBarBundleLogs(req, res) {
+    try {
+      const { date_from, date_to, limit: lim } = req.query;
+      const limit = parseInt(lim) || 50;
+      const conditions = [];
+      const params = [];
+      let paramIdx = 1;
+
+      if (date_from) { conditions.push(`l.log_date >= $${paramIdx++}`); params.push(date_from); }
+      if (date_to)   { conditions.push(`l.log_date <= $${paramIdx++}`); params.push(date_to); }
+
+      const whereClause = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
+      params.push(limit);
+
+      const result = await query(
+        `SELECT l.*, u.username as filled_by_name,
+          COUNT(i.id) as total_items,
+          COUNT(i.id) FILTER (WHERE i.status = 'NOT_OK') as not_ok_count
+         FROM hbm_bar_bundle_logs l
+         JOIN users u ON l.filled_by = u.id
+         LEFT JOIN hbm_bar_bundle_items i ON i.log_id = l.id
+         ${whereClause}
+         GROUP BY l.id, u.username
+         ORDER BY l.log_date DESC, l.created_at DESC
+         LIMIT $${paramIdx}`,
+        params
+      );
+
+      res.json({ success: true, data: result.rows, count: result.rows.length });
+    } catch (error) {
+      console.error('Bar Bundle get logs error:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch Bar Bundle logs' });
+    }
+  }
+
+  static async getBarBundleLogById(req, res) {
+    try {
+      const { id } = req.params;
+
+      const logResult = await query(
+        `SELECT l.*, u.username as filled_by_name
+         FROM hbm_bar_bundle_logs l
+         JOIN users u ON l.filled_by = u.id
+         WHERE l.id = $1`,
+        [id]
+      );
+
+      if (logResult.rows.length === 0)
+        return res.status(404).json({ success: false, message: 'Bar Bundle log not found' });
+
+      const itemsResult = await query(
+        `SELECT * FROM hbm_bar_bundle_items WHERE log_id = $1
+         ORDER BY section_name, block_name, item_name`,
+        [id]
+      );
+
+      res.json({ success: true, data: { ...logResult.rows[0], items: itemsResult.rows } });
+    } catch (error) {
+      console.error('Bar Bundle get log error:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch Bar Bundle log' });
+    }
+  }
+
+  static async createBarBundleLog(req, res) {
+    try {
+      const {
+        log_date, checked_by,
+        sec1_result, sec2_result, sec3_result, sec4_result,
+        items
+      } = req.body;
+
+      if (!log_date) {
+        return res.status(400).json({ success: false, message: 'Date is required' });
+      }
+
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ success: false, message: 'At least one check item is required' });
+      }
+
+      for (const item of items) {
+        if (item.status === 'NOT_OK') {
+          if (!item.remark || item.remark.trim() === '')
+            return res.status(400).json({ success: false, message: `Remark is compulsory for NOT OK item: ${item.item_name}` });
+          if (!item.action_taken || item.action_taken.trim() === '')
+            return res.status(400).json({ success: false, message: `Action Taken is compulsory for NOT OK item: ${item.item_name}` });
+        }
+      }
+
+      let log;
+      await transaction(async (client) => {
+        const logResult = await client.query(
+          `INSERT INTO hbm_bar_bundle_logs
+             (log_date, checked_by, sec1_result, sec2_result, sec3_result, sec4_result, filled_by)
+           VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+          [
+            log_date, checked_by || null,
+            sec1_result || null, sec2_result || null, sec3_result || null, sec4_result || null,
+            req.user.id
+          ]
+        );
+
+        log = logResult.rows[0];
+
+        for (const item of items) {
+          await client.query(
+            `INSERT INTO hbm_bar_bundle_items
+               (log_id, section_name, block_name, item_name, status, remark, action_taken, block_remark)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+            [log.id, item.section_name, item.block_name, item.item_name,
+             item.status, item.remark || null, item.action_taken || null, item.block_remark || null]
+          );
+        }
+      });
+
+      res.status(201).json({ success: true, message: 'Bar Bundle log submitted successfully', data: log });
+
+      sendHbmChecksheetNotification({
+        checksheetType: 'Bar Bundle Area',
+        date: log_date,
+        filledBy: req.user.username,
+        submittedAt: new Date(),
+        items
+      }).catch((e) => console.error('Telegram Bar Bundle notify error:', e));
+    } catch (error) {
+      console.error('Bar Bundle create log error:', error);
+      res.status(500).json({ success: false, message: 'Failed to submit Bar Bundle log' });
+    }
+  }
+
+  // ==========================================
+  // BEFORE ROLLING CHECKSHEET LOGS
+  // ==========================================
+
+  static async getBeforeRollingLogs(req, res) {
+    try {
+      const { date_from, date_to, limit: lim } = req.query;
+      const limit = parseInt(lim) || 50;
+      const conditions = [];
+      const params = [];
+      let paramIdx = 1;
+
+      if (date_from) { conditions.push(`l.log_date >= $${paramIdx++}`); params.push(date_from); }
+      if (date_to)   { conditions.push(`l.log_date <= $${paramIdx++}`); params.push(date_to); }
+
+      const whereClause = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
+      params.push(limit);
+
+      const result = await query(
+        `SELECT l.*, u.username as filled_by_name,
+          COUNT(i.id) as total_items,
+          COUNT(i.id) FILTER (WHERE i.status = 'NOT_OK') as not_ok_count
+         FROM hbm_before_rolling_logs l
+         JOIN users u ON l.filled_by = u.id
+         LEFT JOIN hbm_before_rolling_items i ON i.log_id = l.id
+         ${whereClause}
+         GROUP BY l.id, u.username
+         ORDER BY l.log_date DESC, l.created_at DESC
+         LIMIT $${paramIdx}`,
+        params
+      );
+
+      res.json({ success: true, data: result.rows, count: result.rows.length });
+    } catch (error) {
+      console.error('Before Rolling get logs error:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch Before Rolling logs' });
+    }
+  }
+
+  static async getBeforeRollingLogById(req, res) {
+    try {
+      const { id } = req.params;
+
+      const logResult = await query(
+        `SELECT l.*, u.username as filled_by_name
+         FROM hbm_before_rolling_logs l
+         JOIN users u ON l.filled_by = u.id
+         WHERE l.id = $1`,
+        [id]
+      );
+
+      if (logResult.rows.length === 0)
+        return res.status(404).json({ success: false, message: 'Before Rolling log not found' });
+
+      const itemsResult = await query(
+        `SELECT * FROM hbm_before_rolling_items WHERE log_id = $1
+         ORDER BY section_name, block_name, item_name`,
+        [id]
+      );
+
+      res.json({ success: true, data: { ...logResult.rows[0], items: itemsResult.rows } });
+    } catch (error) {
+      console.error('Before Rolling get log error:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch Before Rolling log' });
+    }
+  }
+
+  static async createBeforeRollingLog(req, res) {
+    try {
+      const {
+        log_date, checked_by, mill_shift_incharge, mechanical_engineer,
+        sec1_result, sec2_result, sec3_result, sec4_result,
+        items
+      } = req.body;
+
+      if (!log_date) {
+        return res.status(400).json({ success: false, message: 'Date is required' });
+      }
+
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ success: false, message: 'At least one check item is required' });
+      }
+
+      for (const item of items) {
+        if (item.status === 'NOT_OK') {
+          if (!item.remark || item.remark.trim() === '')
+            return res.status(400).json({ success: false, message: `Remark is compulsory for NOT OK item: ${item.item_name}` });
+          if (!item.action_taken || item.action_taken.trim() === '')
+            return res.status(400).json({ success: false, message: `Action Taken is compulsory for NOT OK item: ${item.item_name}` });
+        }
+      }
+
+      let log;
+      await transaction(async (client) => {
+        const logResult = await client.query(
+          `INSERT INTO hbm_before_rolling_logs
+             (log_date, checked_by, mill_shift_incharge, mechanical_engineer,
+              sec1_result, sec2_result, sec3_result, sec4_result, filled_by)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+          [
+            log_date,
+            checked_by          || null,
+            mill_shift_incharge || null,
+            mechanical_engineer || null,
+            sec1_result || null, sec2_result || null, sec3_result || null, sec4_result || null,
+            req.user.id
+          ]
+        );
+
+        log = logResult.rows[0];
+
+        for (const item of items) {
+          await client.query(
+            `INSERT INTO hbm_before_rolling_items
+               (log_id, section_name, block_name, item_name, item_value, status, remark, action_taken, block_remark)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+            [log.id, item.section_name, item.block_name, item.item_name,
+             item.item_value || null, item.status, item.remark || null,
+             item.action_taken || null, item.block_remark || null]
+          );
+        }
+      });
+
+      res.status(201).json({ success: true, message: 'Before Rolling log submitted successfully', data: log });
+
+      sendHbmChecksheetNotification({
+        checksheetType: 'Before Rolling',
+        date: log_date,
+        filledBy: req.user.username,
+        submittedAt: new Date(),
+        items
+      }).catch((e) => console.error('Telegram Before Rolling notify error:', e));
+    } catch (error) {
+      console.error('Before Rolling create log error:', error);
+      res.status(500).json({ success: false, message: 'Failed to submit Before Rolling log' });
+    }
+  }
+
+  // ==========================================
   // PDF DOWNLOAD
   // ==========================================
 
@@ -1145,6 +1416,8 @@ class HbmController {
       'mill-mech':     { logTable: 'hbm_mill_mech_logs',     itemTable: 'hbm_mill_mech_items',     title: 'Mill Mechanical Maintenance Checksheet' },
       'rolling-stand': { logTable: 'hbm_rolling_stand_logs', itemTable: 'hbm_rolling_stand_items', title: 'Rolling Stand Maintenance Checksheet'   },
       'pumphouse':     { logTable: 'hbm_pumphouse_logs',     itemTable: 'hbm_pumphouse_items',     title: 'Pumphouse Maintenance Checksheet'       },
+      'bar-bundle':    { logTable: 'hbm_bar_bundle_logs',    itemTable: 'hbm_bar_bundle_items',    title: 'Bar Bundle Area Checksheet'             },
+      'before-rolling':{ logTable: 'hbm_before_rolling_logs', itemTable: 'hbm_before_rolling_items', title: 'HBM Before Rolling Checksheet'         },
     };
 
     const meta = typeMap[type];

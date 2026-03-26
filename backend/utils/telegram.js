@@ -7,11 +7,22 @@ const { query } = require('../config/database');
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const DEFAULT_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 
+// Maps human-readable checksheet type labels → DB key stored in checksheet_types[]
+const TYPE_LABEL_TO_KEY = {
+  'DC Motor':        'dc-motor',
+  'Rolling Stand':   'rolling-stand',
+  'Mill Mechanical': 'mill-mech',
+  'Cooling Bed':     'cooling-bed',
+  'Pumphouse':       'pumphouse',
+  'Bar Bundle Area': 'bar-bundle',
+  'Before Rolling':  'before-rolling',
+};
+
 /**
  * Send a message to a single Telegram chat ID
  */
 function sendToChat(chatId, message) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const payload = JSON.stringify({
       chat_id: chatId,
       text: message,
@@ -38,7 +49,7 @@ function sendToChat(chatId, message) {
             resolve(parsed);
           } else {
             console.error(`Telegram API error for chat ${chatId}:`, parsed.description);
-            resolve(null); // resolve null instead of reject so other sends continue
+            resolve(null);
           }
         } catch (e) {
           console.error('Failed to parse Telegram response:', e);
@@ -58,15 +69,29 @@ function sendToChat(chatId, message) {
 }
 
 /**
- * Get all active chat IDs from database + default from .env
+ * Internal: send a message to an explicit list of chat IDs
+ */
+async function sendToIds(chatIds, message) {
+  if (!BOT_TOKEN) {
+    console.error('TELEGRAM_BOT_TOKEN not set – skipping message');
+    return [];
+  }
+  if (chatIds.length === 0) {
+    console.warn('No Telegram chat IDs to send to – message skipped');
+    return [];
+  }
+  const results = await Promise.all(chatIds.map((id) => sendToChat(id, message)));
+  const sent = results.filter(Boolean).length;
+  console.log(`Telegram: sent to ${sent}/${chatIds.length} recipients`);
+  return results;
+}
+
+/**
+ * Get ALL active chat IDs (no type filter) — used for broadcasts
  */
 async function getAllChatIds() {
   const chatIds = new Set();
-
-  // Always include the default chat ID from .env
-  if (DEFAULT_CHAT_ID) {
-    chatIds.add(DEFAULT_CHAT_ID);
-  }
+  if (DEFAULT_CHAT_ID) chatIds.add(DEFAULT_CHAT_ID);
 
   try {
     const { rows } = await query(
@@ -74,7 +99,6 @@ async function getAllChatIds() {
     );
     rows.forEach((r) => chatIds.add(r.chat_id));
   } catch (err) {
-    // Table may not exist yet – use default only
     console.error('telegram_recipients query failed (table may not exist):', err.message);
   }
 
@@ -82,28 +106,45 @@ async function getAllChatIds() {
 }
 
 /**
- * Send a Telegram message to ALL registered recipients
+ * Get chat IDs filtered by checksheet type key.
+ * Recipients with checksheet_types = NULL receive all types.
+ * Recipients with a non-empty array receive only the listed types.
+ * DEFAULT_CHAT_ID from .env always receives everything.
+ */
+async function getChatIdsForType(typeKey) {
+  const chatIds = new Set();
+  if (DEFAULT_CHAT_ID) chatIds.add(DEFAULT_CHAT_ID);
+
+  try {
+    const { rows } = await query(
+      `SELECT chat_id FROM telegram_recipients
+       WHERE is_active = true
+         AND (checksheet_types IS NULL OR $1 = ANY(checksheet_types))`,
+      [typeKey]
+    );
+    rows.forEach((r) => chatIds.add(r.chat_id));
+  } catch (err) {
+    // If column doesn't exist yet (migration not run), fall back to all active
+    console.error('getChatIdsForType query failed, falling back to all:', err.message);
+    try {
+      const { rows } = await query(
+        'SELECT chat_id FROM telegram_recipients WHERE is_active = true'
+      );
+      rows.forEach((r) => chatIds.add(r.chat_id));
+    } catch (e) {
+      console.error('Fallback query also failed:', e.message);
+    }
+  }
+
+  return [...chatIds];
+}
+
+/**
+ * Send a Telegram message to ALL registered recipients (broadcast)
  */
 async function sendTelegramMessage(message) {
-  if (!BOT_TOKEN) {
-    console.error('TELEGRAM_BOT_TOKEN not set – skipping message');
-    return [];
-  }
-
   const chatIds = await getAllChatIds();
-
-  if (chatIds.length === 0) {
-    console.warn('No Telegram chat IDs configured – message not sent');
-    return [];
-  }
-
-  const results = await Promise.all(
-    chatIds.map((id) => sendToChat(id, message))
-  );
-
-  const sent = results.filter(Boolean).length;
-  console.log(`Telegram: sent to ${sent}/${chatIds.length} recipients`);
-  return results;
+  return sendToIds(chatIds, message);
 }
 
 /**
@@ -115,13 +156,12 @@ async function sendTestMessage(chatId) {
 }
 
 /**
- * Send long text as multiple Telegram messages if it exceeds Telegram's 4096-char limit.
+ * Send long text in chunks of ≤4000 chars to a specific set of chat IDs
  */
-async function sendLongMessage(text) {
-  const MAX = 4000; // leave buffer below 4096
-  if (text.length <= MAX) return sendTelegramMessage(text);
+async function sendLongMessageToIds(chatIds, text) {
+  const MAX = 4000;
+  if (text.length <= MAX) return sendToIds(chatIds, text);
 
-  // Split on newlines to avoid cutting mid-word / mid-tag
   const lines = text.split('\n');
   const chunks = [];
   let current = '';
@@ -137,12 +177,21 @@ async function sendLongMessage(text) {
   if (current.trim()) chunks.push(current.trim());
 
   for (const chunk of chunks) {
-    await sendTelegramMessage(chunk);
+    await sendToIds(chatIds, chunk);
   }
 }
 
 /**
+ * Send long text as multiple Telegram messages (broadcast version)
+ */
+async function sendLongMessage(text) {
+  const chatIds = await getAllChatIds();
+  return sendLongMessageToIds(chatIds, text);
+}
+
+/**
  * Build and send a Telegram notification when an HBM checksheet is submitted.
+ * Only sends to recipients subscribed to that checksheet type.
  *
  * @param {object} opts
  * @param {string}  opts.checksheetType  - e.g. 'DC Motor', 'Cooling Bed', …
@@ -157,11 +206,20 @@ async function sendLongMessage(text) {
 async function sendHbmChecksheetNotification(opts) {
   const { checksheetType, date, time, shift, filledBy, submittedAt, remarks, items = [] } = opts;
 
+  // Resolve type key for filtering
+  const typeKey = TYPE_LABEL_TO_KEY[checksheetType] || checksheetType.toLowerCase().replace(/\s+/g, '-');
+
+  // Get only the recipients subscribed to this checksheet type
+  const chatIds = await getChatIdsForType(typeKey);
+  if (chatIds.length === 0) {
+    console.log(`Telegram: no recipients subscribed to "${checksheetType}" – skipping`);
+    return [];
+  }
+
   const okItems    = items.filter((i) => i.status !== 'NOT_OK');
   const notOkItems = items.filter((i) => i.status === 'NOT_OK');
   const totalItems = items.length;
 
-  // Format submitted-at timestamp (IST)
   const submittedStr = submittedAt
     ? submittedAt.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: false })
     : 'N/A';
@@ -169,7 +227,6 @@ async function sendHbmChecksheetNotification(opts) {
   const shiftLabel = shift ? ` | Shift: <b>${shift}</b>` : '';
   const timeLabel  = time  ? ` | Time: <b>${time}</b>`  : '';
 
-  // ── Header ──
   let message =
     `🔔 <b>HBM Checksheet Submitted</b>\n` +
     `━━━━━━━━━━━━━━━━━━━\n` +
@@ -183,7 +240,6 @@ async function sendHbmChecksheetNotification(opts) {
     message += `📝 Overall Remarks: <i>${remarks.trim()}</i>\n`;
   }
 
-  // ── Group all items by section › block ──
   const grouped = {};
   for (const item of items) {
     const sectionKey = [item.section_name, item.block_name].filter(Boolean).join(' › ') || 'General';
@@ -211,12 +267,12 @@ async function sendHbmChecksheetNotification(opts) {
     message += `\n✅ <b>All items OK — No issues found.</b>\n`;
   }
 
-  return sendLongMessage(message);
+  return sendLongMessageToIds(chatIds, message);
 }
 
 module.exports = {
   sendTelegramMessage,
   sendTestMessage,
   sendToChat,
-  sendHbmChecksheetNotification
+  sendHbmChecksheetNotification,
 };

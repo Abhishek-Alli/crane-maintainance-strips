@@ -9,7 +9,7 @@ class TelegramController {
   static async getRecipients(req, res) {
     try {
       const { rows } = await query(
-        'SELECT id, chat_id, label, is_active, created_at FROM telegram_recipients ORDER BY created_at DESC'
+        'SELECT id, chat_id, label, is_active, checksheet_types, created_at FROM telegram_recipients ORDER BY created_at DESC'
       );
       res.json({ success: true, recipients: rows });
     } catch (error) {
@@ -95,6 +95,34 @@ class TelegramController {
       }
     } catch (error) {
       console.error('Test message error:', error);
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  // PUT /api/telegram/recipients/:id/checksheets
+  // Body: { checksheet_types: ['dc-motor','mill-mech'] } or { checksheet_types: null } for all
+  static async updateChecksheets(req, res) {
+    try {
+      const { id } = req.params;
+      const { checksheet_types } = req.body;
+
+      // null / empty array → NULL in DB (receives all types)
+      const value = Array.isArray(checksheet_types) && checksheet_types.length > 0
+        ? checksheet_types
+        : null;
+
+      const { rows } = await query(
+        'UPDATE telegram_recipients SET checksheet_types = $1 WHERE id = $2 RETURNING *',
+        [value, parseInt(id, 10)]
+      );
+
+      if (rows.length === 0) {
+        return res.status(404).json({ success: false, message: 'Recipient not found' });
+      }
+
+      res.json({ success: true, recipient: rows[0] });
+    } catch (error) {
+      console.error('Update checksheets error:', error);
       res.status(500).json({ success: false, message: error.message });
     }
   }
