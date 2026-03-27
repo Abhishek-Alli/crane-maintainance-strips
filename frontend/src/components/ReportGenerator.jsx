@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import DatePicker from 'react-datepicker';
 import { toast } from 'react-toastify';
 import { configAPI, craneAPI, reportAPI } from '../services/api';
@@ -213,8 +214,16 @@ const ReportGenerator = () => {
 
         {/* Header */}
         <div className="bg-white p-4 rounded-lg shadow">
-          <h1 className="text-xl font-bold text-gray-900">Maintenance Reports</h1>
-          <p className="text-sm text-gray-500 mt-1">Generate and export inspection reports</p>
+          <div className="flex items-center gap-3 mb-1">
+            <Link to="/" title="Back to Dashboard"
+              className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </Link>
+            <h1 className="text-xl font-bold text-gray-900">Maintenance Reports</h1>
+          </div>
+          <p className="text-sm text-gray-500 mt-1 ml-11">Generate and export inspection reports</p>
         </div>
 
         {/* Report Config */}

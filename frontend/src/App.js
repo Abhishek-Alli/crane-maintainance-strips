@@ -161,6 +161,45 @@ function App() {
                   </Link>
                 )}
 
+                {/* Maintenance Calendar icon — Crane route only */}
+                {!isOnHBMRoute && !isOnAdminRoute && (
+                  <Link
+                    to="/maintenance-calendar"
+                    title="Maintenance Calendar"
+                    className={`p-2 rounded-lg ${navHover} ${location.pathname === '/maintenance-calendar' ? navActive : ''}`}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </Link>
+                )}
+
+                {/* New Inspection icon — Crane route only */}
+                {!isOnHBMRoute && !isOnAdminRoute && (
+                  <Link
+                    to="/new-inspection"
+                    title="New Inspection"
+                    className={`p-2 rounded-lg ${navHover} ${location.pathname === '/new-inspection' ? navActive : ''}`}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                    </svg>
+                  </Link>
+                )}
+
+                {/* Download / Reports icon — Crane route only */}
+                {!isOnHBMRoute && !isOnAdminRoute && (
+                  <Link
+                    to="/reports"
+                    title="Reports & Download"
+                    className={`p-2 rounded-lg ${navHover} ${location.pathname === '/reports' ? navActive : ''}`}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                  </Link>
+                )}
+
                 {/* Admin Panel icon — HBM route, admin only */}
                 {isOnHBMRoute && isAdminUser && (
                   <Link
@@ -191,8 +230,8 @@ function App() {
                   </svg>
                 </button>
 
-                {/* Hamburger — hidden on HBM (nothing left to show) */}
-                {!isOnHBMRoute && (
+                {/* Hamburger — Admin only (crane & HBM icons cover navigation) */}
+                {isOnAdminRoute && (
                   <button
                     onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                     className={`p-2 rounded-lg ${navHover} focus:outline-none focus:ring-2 focus:ring-white/30`}

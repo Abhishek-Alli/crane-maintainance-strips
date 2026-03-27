@@ -3,6 +3,7 @@
 // =============================
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -326,6 +327,17 @@ const InspectionForm = ({ onSuccess }) => {
 
   return (
     <div className="min-h-screen bg-gray-100 pb-28 p-4 space-y-4">
+
+      {/* Back button + title */}
+      <div className="flex items-center gap-3">
+        <Link to="/" title="Back to Dashboard"
+          className="p-2 rounded-lg bg-white shadow text-gray-600 hover:bg-gray-50 transition-colors">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </Link>
+        <h1 className="text-lg font-bold text-gray-900">New Inspection</h1>
+      </div>
 
       <div className="bg-white p-4 rounded shadow space-y-3">Select Date<br/>
               <Controller

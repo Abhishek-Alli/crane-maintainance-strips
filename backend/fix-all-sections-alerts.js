@@ -7,6 +7,8 @@
 
 const { pool } = require('./config/database');
 
+
+
 async function fixAllSectionsAlerts() {
   const client = await pool.connect();
 

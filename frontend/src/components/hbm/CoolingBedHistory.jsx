@@ -40,9 +40,17 @@ const CoolingBedHistory = () => {
       <div className="max-w-5xl mx-auto">
 
         <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Cooling Bed History</h1>
-            <p className="text-sm text-gray-500">{logs.length} records</p>
+          <div className="flex items-center gap-3">
+            <Link to="/hbm/dashboard" title="Back to Dashboard"
+              className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </Link>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Cooling Bed History</h1>
+              <p className="text-sm text-gray-500">{logs.length} records</p>
+            </div>
           </div>
           <Link to="/hbm/cooling-bed/new"
             className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg font-semibold text-sm hover:bg-emerald-700 transition-colors">

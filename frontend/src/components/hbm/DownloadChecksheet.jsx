@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { hbmAPI } from '../../services/api';
 
 const CHECKSHEET_TYPES = [
@@ -96,8 +97,16 @@ export default function DownloadChecksheet() {
       <div className="max-w-3xl mx-auto">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">Download Checksheets</h1>
-          <p className="text-gray-500 text-sm mt-1">Select a checksheet type and date range to download PDFs</p>
+          <div className="flex items-center gap-3 mb-1">
+            <Link to="/hbm/dashboard" title="Back to Dashboard"
+              className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </Link>
+            <h1 className="text-2xl font-bold text-gray-800">Download Checksheets</h1>
+          </div>
+          <p className="text-gray-500 text-sm mt-1 ml-11">Select a checksheet type and date range to download PDFs</p>
         </div>
 
         {/* Filter Card */}
