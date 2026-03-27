@@ -103,8 +103,8 @@ function HbmPermissionsPanel({ userId, onClose }) {
 
   useEffect(() => {
     userAPI.getPermissions(userId)
-      .then(data => {
-        const p = data.data;
+      .then(res => {
+        const p = res.data;
         setPerms({
           allowed_checksheets: p.allowed_checksheets,
           can_download_pdf:    p.can_download_pdf,

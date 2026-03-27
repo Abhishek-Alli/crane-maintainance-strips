@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { userAPI } from './services/api';
 // import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -55,6 +56,7 @@ function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [hbmAllowedSheets, setHbmAllowedSheets] = useState(null); // null = all allowed
   const location = useLocation();
 
   // Close mobile menu when route changes
@@ -90,6 +92,18 @@ function App() {
     setUser(userData);
   };
 
+  // Fetch HBM permissions when an HBM user logs in
+  useEffect(() => {
+    if (!user) return;
+    const loginType = user.loginType || user.user_type;
+    if (loginType !== 'HBM_CHECKSHEETS') return;
+    userAPI.getPermissions(user.id)
+      .then(res => {
+        setHbmAllowedSheets(res.data?.allowed_checksheets ?? null);
+      })
+      .catch(() => setHbmAllowedSheets(null));
+  }, [user]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
@@ -114,6 +128,10 @@ function App() {
     if (isHBMUser) return '/hbm/dashboard';
     return '/';
   };
+
+  // Returns true if current user can access a given HBM sheet key
+  const canAccessSheet = (key) =>
+    isAdminUser || hbmAllowedSheets === null || (Array.isArray(hbmAllowedSheets) && hbmAllowedSheets.includes(key));
 
   // Nav colors based on module
   const navBg        = isOnAdminRoute ? 'bg-slate-900'         : isOnHBMRoute ? 'bg-emerald-600'       : 'bg-blue-600';
@@ -515,7 +533,7 @@ function App() {
             path="/hbm/dashboard"
             element={
               user && (isHBMUser || isAdminUser) ? (
-                <HbmDashboard />
+                <HbmDashboard allowedSheets={isAdminUser ? null : hbmAllowedSheets} />
               ) : user ? (
                 <Navigate to="/" replace />
               ) : (
@@ -538,44 +556,9 @@ function App() {
             }
           />
 
-          <Route
-            path="/hbm/dc-motor/new"
-            element={
-              user && (isHBMUser || isAdminUser) ? (
-                <DcMotorForm />
-              ) : user ? (
-                <Navigate to="/" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-
-          <Route
-            path="/hbm/dc-motor/history"
-            element={
-              user && (isHBMUser || isAdminUser) ? (
-                <DcMotorHistory />
-              ) : user ? (
-                <Navigate to="/" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-
-          <Route
-            path="/hbm/dc-motor/:id"
-            element={
-              user && (isHBMUser || isAdminUser) ? (
-                <DcMotorView />
-              ) : user ? (
-                <Navigate to="/" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
+          <Route path="/hbm/dc-motor/new" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('dc-motor') ? <DcMotorForm /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hbm/dc-motor/history" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('dc-motor') ? <DcMotorHistory /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hbm/dc-motor/:id" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('dc-motor') ? <DcMotorView /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
 
 
 
@@ -593,161 +576,21 @@ function App() {
           />
 
 
-          <Route
-            path="/hbm/rolling-stand/new"
-            element={
-              user && (isHBMUser || isAdminUser) ? (
-                <RollingStandForm />
-              ) : user ? (
-                <Navigate to="/" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
+          <Route path="/hbm/rolling-stand/new" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('rolling-stand') ? <RollingStandForm /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hbm/rolling-stand/history" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('rolling-stand') ? <RollingStandHistory /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hbm/rolling-stand/:id" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('rolling-stand') ? <RollingStandView /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
 
-          <Route
-            path="/hbm/rolling-stand/history"
-            element={
-              user && (isHBMUser || isAdminUser) ? (
-                <RollingStandHistory />
-              ) : user ? (
-                <Navigate to="/" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
+          <Route path="/hbm/cooling-bed/new" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('cooling-bed') ? <CoolingBedForm /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hbm/cooling-bed/history" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('cooling-bed') ? <CoolingBedHistory /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hbm/cooling-bed/:id" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('cooling-bed') ? <CoolingBedView /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
 
-          <Route
-            path="/hbm/rolling-stand/:id"
-            element={
-              user && (isHBMUser || isAdminUser) ? (
-                <RollingStandView />
-              ) : user ? (
-                <Navigate to="/" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
+          <Route path="/hbm/mill-mech/new" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('mill-mech') ? <MillMechForm /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hbm/mill-mech/history" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('mill-mech') ? <MillMechHistory /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hbm/mill-mech/:id" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('mill-mech') ? <MillMechView /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
 
-          <Route
-            path="/hbm/cooling-bed/new"
-            element={
-              user && (isHBMUser || isAdminUser) ? (
-                <CoolingBedForm />
-              ) : user ? (
-                <Navigate to="/" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-
-          <Route
-            path="/hbm/cooling-bed/history"
-            element={
-              user && (isHBMUser || isAdminUser) ? (
-                <CoolingBedHistory />
-              ) : user ? (
-                <Navigate to="/" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-
-          <Route
-            path="/hbm/cooling-bed/:id"
-            element={
-              user && (isHBMUser || isAdminUser) ? (
-                <CoolingBedView />
-              ) : user ? (
-                <Navigate to="/" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-
-          <Route
-            path="/hbm/mill-mech/new"
-            element={
-              user && (isHBMUser || isAdminUser) ? (
-                <MillMechForm />
-              ) : user ? (
-                <Navigate to="/" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-
-          <Route
-            path="/hbm/mill-mech/history"
-            element={
-              user && (isHBMUser || isAdminUser) ? (
-                <MillMechHistory />
-              ) : user ? (
-                <Navigate to="/" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-
-          <Route
-            path="/hbm/mill-mech/:id"
-            element={
-              user && (isHBMUser || isAdminUser) ? (
-                <MillMechView />
-              ) : user ? (
-                <Navigate to="/" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-
-          <Route
-            path="/hbm/pumphouse/new"
-            element={
-              user && (isHBMUser || isAdminUser) ? (
-                <PumpHouseForm />
-              ) : user ? (
-                <Navigate to="/" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-
-          <Route
-            path="/hbm/pumphouse/history"
-            element={
-              user && (isHBMUser || isAdminUser) ? (
-                <PumpHouseHistory />
-              ) : user ? (
-                <Navigate to="/" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-
-          <Route
-            path="/hbm/pumphouse/:id"
-            element={
-              user && (isHBMUser || isAdminUser) ? (
-                <PumpHouseView />
-              ) : user ? (
-                <Navigate to="/" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
+          <Route path="/hbm/pumphouse/new" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('pumphouse') ? <PumpHouseForm /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hbm/pumphouse/history" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('pumphouse') ? <PumpHouseHistory /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hbm/pumphouse/:id" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('pumphouse') ? <PumpHouseView /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
 
           <Route
             path="/hbm/download"
@@ -762,83 +605,13 @@ function App() {
             }
           />
 
-          <Route
-            path="/hbm/bar-bundle/new"
-            element={
-              user && (isHBMUser || isAdminUser) ? (
-                <BarBundleAreaForm />
-              ) : user ? (
-                <Navigate to="/" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
+          <Route path="/hbm/bar-bundle/new" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('bar-bundle') ? <BarBundleAreaForm /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hbm/bar-bundle/history" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('bar-bundle') ? <BarBundleAreaHistory /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hbm/bar-bundle/:id" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('bar-bundle') ? <BarBundleAreaView /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
 
-          <Route
-            path="/hbm/bar-bundle/history"
-            element={
-              user && (isHBMUser || isAdminUser) ? (
-                <BarBundleAreaHistory />
-              ) : user ? (
-                <Navigate to="/" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-
-          <Route
-            path="/hbm/bar-bundle/:id"
-            element={
-              user && (isHBMUser || isAdminUser) ? (
-                <BarBundleAreaView />
-              ) : user ? (
-                <Navigate to="/" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-
-          <Route
-            path="/hbm/before-rolling/new"
-            element={
-              user && (isHBMUser || isAdminUser) ? (
-                <BeforeRollingForm />
-              ) : user ? (
-                <Navigate to="/" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-
-          <Route
-            path="/hbm/before-rolling/history"
-            element={
-              user && (isHBMUser || isAdminUser) ? (
-                <BeforeRollingHistory />
-              ) : user ? (
-                <Navigate to="/" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-
-          <Route
-            path="/hbm/before-rolling/:id"
-            element={
-              user && (isHBMUser || isAdminUser) ? (
-                <BeforeRollingView />
-              ) : user ? (
-                <Navigate to="/" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
+          <Route path="/hbm/before-rolling/new" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('before-rolling') ? <BeforeRollingForm /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hbm/before-rolling/history" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('before-rolling') ? <BeforeRollingHistory /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hbm/before-rolling/:id" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('before-rolling') ? <BeforeRollingView /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
 
           <Route
             path="/fabrication"

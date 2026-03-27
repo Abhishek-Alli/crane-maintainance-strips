@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
 
-const HbmDashboard = () => {
+const HbmDashboard = ({ allowedSheets }) => {
+  const canAccess = (key) => !allowedSheets || allowedSheets.includes(key);
   const [recentDcMotor, setRecentDcMotor] = useState([]);
   const [recentRollingStand, setRecentRollingStand] = useState([]);
   const [recentMillMech, setRecentMillMech] = useState([]);
@@ -79,14 +80,14 @@ const HbmDashboard = () => {
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Quick Actions</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             {[
-              { to: '/hbm/dc-motor/new', label: 'DC Motor Maintenance', sub: 'Daily checksheet', color: 'indigo', icon: '⚡' },
-              { to: '/hbm/rolling-stand/new', label: 'Rolling Stand', sub: 'Daily checksheet', color: 'teal', icon: '⚙' },
-              { to: '/hbm/mill-mech/new', label: 'Mill Mechanical', sub: 'Daily checksheet', color: 'orange', icon: '🔩' },
-              { to: '/hbm/cooling-bed/new', label: 'Cooling Bed', sub: 'Daily checksheet', color: 'cyan', icon: '❄' },
-              { to: '/hbm/pumphouse/new', label: 'Pumphouse Checksheet', sub: 'Daily checksheet', color: 'blue', icon: '💧' },
-              { to: '/hbm/bar-bundle/new', label: 'Bar Bundle Area', sub: 'Daily checksheet', color: 'purple', icon: '📦' },
-              { to: '/hbm/before-rolling/new', label: 'Before Rolling', sub: 'Pre-rolling checksheet', color: 'gray', icon: '🔄' },
-            ].map((action, i) => {
+              { key: 'dc-motor',       to: '/hbm/dc-motor/new',       label: 'DC Motor Maintenance', sub: 'Daily checksheet',       color: 'indigo', icon: '⚡' },
+              { key: 'rolling-stand',  to: '/hbm/rolling-stand/new',  label: 'Rolling Stand',         sub: 'Daily checksheet',       color: 'teal',   icon: '⚙' },
+              { key: 'mill-mech',      to: '/hbm/mill-mech/new',      label: 'Mill Mechanical',       sub: 'Daily checksheet',       color: 'orange', icon: '🔩' },
+              { key: 'cooling-bed',    to: '/hbm/cooling-bed/new',    label: 'Cooling Bed',           sub: 'Daily checksheet',       color: 'cyan',   icon: '❄' },
+              { key: 'pumphouse',      to: '/hbm/pumphouse/new',      label: 'Pumphouse Checksheet',  sub: 'Daily checksheet',       color: 'blue',   icon: '💧' },
+              { key: 'bar-bundle',     to: '/hbm/bar-bundle/new',     label: 'Bar Bundle Area',       sub: 'Daily checksheet',       color: 'purple', icon: '📦' },
+              { key: 'before-rolling', to: '/hbm/before-rolling/new', label: 'Before Rolling',        sub: 'Pre-rolling checksheet', color: 'gray',   icon: '🔄' },
+            ].filter(action => canAccess(action.key)).map((action, i) => {
               const borderMap = {
                 indigo: 'hover:border-indigo-300 hover:bg-indigo-50',
                 teal: 'hover:border-teal-300 hover:bg-teal-50',
@@ -113,6 +114,7 @@ const HbmDashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
 
           {/* DC Motor Logs */}
+          {canAccess('dc-motor') && (
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="font-bold text-gray-900">DC Motor Logs</h2>
@@ -146,8 +148,9 @@ const HbmDashboard = () => {
               </div>
             )}
           </div>
+          )}
 
-          {/* Mill Mechanical Logs */}
+          {canAccess('mill-mech') && (
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="font-bold text-gray-900">Mill Mechanical Logs</h2>
@@ -162,27 +165,19 @@ const HbmDashboard = () => {
                     className="flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors">
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold text-gray-900 text-sm">Mill Mechanical</p>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {formatDate(log.log_date)} · {formatTime(log.log_time)} · {log.shift}
-                        {log.filled_by_name && ` · ${log.filled_by_name}`}
-                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5">{formatDate(log.log_date)} · {formatTime(log.log_time)} · {log.shift}{log.filled_by_name && ` · ${log.filled_by_name}`}</p>
                     </div>
                     <div className="ml-3 flex-shrink-0">
-                      {parseInt(log.not_ok_count) > 0 ? (
-                        <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full font-semibold">
-                          {log.not_ok_count} NOT OK
-                        </span>
-                      ) : (
-                        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-semibold">OK</span>
-                      )}
+                      {parseInt(log.not_ok_count) > 0 ? <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full font-semibold">{log.not_ok_count} NOT OK</span> : <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-semibold">OK</span>}
                     </div>
                   </Link>
                 ))}
               </div>
             )}
           </div>
+          )}
 
-          {/* Cooling Bed Logs */}
+          {canAccess('cooling-bed') && (
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="font-bold text-gray-900">Cooling Bed Logs</h2>
@@ -197,27 +192,19 @@ const HbmDashboard = () => {
                     className="flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors">
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold text-gray-900 text-sm">Cooling Bed</p>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {formatDate(log.log_date)} · {formatTime(log.log_time)} · {log.shift}
-                        {log.filled_by_name && ` · ${log.filled_by_name}`}
-                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5">{formatDate(log.log_date)} · {formatTime(log.log_time)} · {log.shift}{log.filled_by_name && ` · ${log.filled_by_name}`}</p>
                     </div>
                     <div className="ml-3 flex-shrink-0">
-                      {parseInt(log.not_ok_count) > 0 ? (
-                        <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full font-semibold">
-                          {log.not_ok_count} NOT OK
-                        </span>
-                      ) : (
-                        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-semibold">OK</span>
-                      )}
+                      {parseInt(log.not_ok_count) > 0 ? <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full font-semibold">{log.not_ok_count} NOT OK</span> : <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-semibold">OK</span>}
                     </div>
                   </Link>
                 ))}
               </div>
             )}
           </div>
+          )}
 
-          {/* Rolling Stand Logs */}
+          {canAccess('rolling-stand') && (
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="font-bold text-gray-900">Rolling Stand Logs</h2>
@@ -232,27 +219,19 @@ const HbmDashboard = () => {
                     className="flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors">
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold text-gray-900 text-sm">Rolling Stand</p>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {formatDate(log.log_date)} · {formatTime(log.log_time)} · {log.shift}
-                        {log.filled_by_name && ` · ${log.filled_by_name}`}
-                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5">{formatDate(log.log_date)} · {formatTime(log.log_time)} · {log.shift}{log.filled_by_name && ` · ${log.filled_by_name}`}</p>
                     </div>
                     <div className="ml-3 flex-shrink-0">
-                      {parseInt(log.not_ok_count) > 0 ? (
-                        <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full font-semibold">
-                          {log.not_ok_count} NOT OK
-                        </span>
-                      ) : (
-                        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-semibold">OK</span>
-                      )}
+                      {parseInt(log.not_ok_count) > 0 ? <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full font-semibold">{log.not_ok_count} NOT OK</span> : <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-semibold">OK</span>}
                     </div>
                   </Link>
                 ))}
               </div>
             )}
           </div>
+          )}
 
-          {/* Pumphouse Logs */}
+          {canAccess('pumphouse') && (
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="font-bold text-gray-900">Pumphouse Logs</h2>
@@ -267,28 +246,19 @@ const HbmDashboard = () => {
                     className="flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors">
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold text-gray-900 text-sm">Pumphouse</p>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {formatDate(log.log_date)}
-                        {log.checked_by && ` · ${log.checked_by}`}
-                        {log.filled_by_name && ` · ${log.filled_by_name}`}
-                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5">{formatDate(log.log_date)}{log.checked_by && ` · ${log.checked_by}`}{log.filled_by_name && ` · ${log.filled_by_name}`}</p>
                     </div>
                     <div className="ml-3 flex-shrink-0">
-                      {parseInt(log.not_ok_count) > 0 ? (
-                        <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full font-semibold">
-                          {log.not_ok_count} NOT OK
-                        </span>
-                      ) : (
-                        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-semibold">OK</span>
-                      )}
+                      {parseInt(log.not_ok_count) > 0 ? <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full font-semibold">{log.not_ok_count} NOT OK</span> : <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-semibold">OK</span>}
                     </div>
                   </Link>
                 ))}
               </div>
             )}
           </div>
+          )}
 
-          {/* Bar Bundle Area Logs */}
+          {canAccess('bar-bundle') && (
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="font-bold text-gray-900">Bar Bundle Area Logs</h2>
@@ -303,28 +273,19 @@ const HbmDashboard = () => {
                     className="flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors">
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold text-gray-900 text-sm">Bar Bundle Area</p>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {formatDate(log.log_date)}
-                        {log.checked_by && ` · ${log.checked_by}`}
-                        {log.filled_by_name && ` · ${log.filled_by_name}`}
-                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5">{formatDate(log.log_date)}{log.checked_by && ` · ${log.checked_by}`}{log.filled_by_name && ` · ${log.filled_by_name}`}</p>
                     </div>
                     <div className="ml-3 flex-shrink-0">
-                      {parseInt(log.not_ok_count) > 0 ? (
-                        <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full font-semibold">
-                          {log.not_ok_count} NOT OK
-                        </span>
-                      ) : (
-                        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-semibold">OK</span>
-                      )}
+                      {parseInt(log.not_ok_count) > 0 ? <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full font-semibold">{log.not_ok_count} NOT OK</span> : <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-semibold">OK</span>}
                     </div>
                   </Link>
                 ))}
               </div>
             )}
           </div>
+          )}
 
-          {/* Before Rolling Logs */}
+          {canAccess('before-rolling') && (
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="font-bold text-gray-900">Before Rolling Logs</h2>
@@ -339,26 +300,17 @@ const HbmDashboard = () => {
                     className="flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors">
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold text-gray-900 text-sm">Before Rolling</p>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {formatDate(log.log_date)}
-                        {log.checked_by && ` · ${log.checked_by}`}
-                        {log.filled_by_name && ` · ${log.filled_by_name}`}
-                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5">{formatDate(log.log_date)}{log.checked_by && ` · ${log.checked_by}`}{log.filled_by_name && ` · ${log.filled_by_name}`}</p>
                     </div>
                     <div className="ml-3 flex-shrink-0">
-                      {parseInt(log.not_ok_count) > 0 ? (
-                        <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full font-semibold">
-                          {log.not_ok_count} NOT OK
-                        </span>
-                      ) : (
-                        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-semibold">OK</span>
-                      )}
+                      {parseInt(log.not_ok_count) > 0 ? <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full font-semibold">{log.not_ok_count} NOT OK</span> : <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-semibold">OK</span>}
                     </div>
                   </Link>
                 ))}
               </div>
             )}
           </div>
+          )}
 
         </div>
       </div>
