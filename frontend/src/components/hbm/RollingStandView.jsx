@@ -52,8 +52,10 @@ const RollingStandView = () => {
     if (!result) return null;
     return (
       <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
-        result === 'OK' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-      }`}>{result === 'OK' ? 'OK' : 'NOT OK'}</span>
+        result === 'OK' ? 'bg-green-100 text-green-700'
+        : result === 'OFF' ? 'bg-gray-100 text-gray-600'
+        : 'bg-red-100 text-red-700'
+      }`}>{result === 'OK' ? 'OK' : result === 'OFF' ? 'OFF' : 'NOT OK'}</span>
     );
   };
 
@@ -113,8 +115,10 @@ const RollingStandView = () => {
                     {item.item_name}
                   </p>
                   <span className={`text-sm font-bold px-3 py-1 rounded-lg ${
-                    item.status === 'OK' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                  }`}>{item.status === 'OK' ? 'OK' : 'NOT OK'}</span>
+                    item.status === 'OK' ? 'bg-green-100 text-green-700'
+                    : item.status === 'OFF' ? 'bg-gray-100 text-gray-600'
+                    : 'bg-red-100 text-red-700'
+                  }`}>{item.status === 'OK' ? 'OK' : item.status === 'OFF' ? 'OFF' : 'NOT OK'}</span>
                 </div>
                 {item.status === 'NOT_OK' && (
                   <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">

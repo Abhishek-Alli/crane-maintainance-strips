@@ -170,7 +170,7 @@ const BeforeRollingForm = () => {
   const navigate = useNavigate();
 
   const [header, setHeader] = useState({
-    log_date:             new Date().toISOString().split('T')[0],
+    log_date:             new Date().toLocaleDateString('en-CA'),
     checked_by:           '',
     mill_shift_incharge:  '',
     mechanical_engineer:  '',
@@ -291,7 +291,7 @@ const BeforeRollingForm = () => {
                   Date <span className="text-red-500">*</span>
                 </label>
                 <input type="date" value={header.log_date} required
-                  max={new Date().toISOString().split('T')[0]}
+                  max={new Date().toLocaleDateString('en-CA')}
                   onChange={e => setHeader(p => ({ ...p, log_date: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
               </div>

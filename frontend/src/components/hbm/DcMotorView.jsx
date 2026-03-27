@@ -187,8 +187,11 @@ const DcMotorView = () => {
                         <p className={`text-sm font-medium ${item.status === 'NOT_OK' ? 'text-red-800' : 'text-gray-800'}`}>
                           {item.item_name}
                         </p>
-                        <span className={`text-sm font-bold px-3 py-1 rounded-lg ${item.status === 'OK' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                          {item.status === 'OK' ? 'OK' : 'NOT OK'}
+                        <span className={`text-sm font-bold px-3 py-1 rounded-lg ${
+                          item.status === 'OK' ? 'bg-green-100 text-green-700'
+                          : item.status === 'OFF' ? 'bg-gray-100 text-gray-600'
+                          : 'bg-red-100 text-red-700'}`}>
+                          {item.status === 'OK' ? 'OK' : item.status === 'OFF' ? 'OFF' : 'NOT OK'}
                         </span>
                       </div>
                       {item.status === 'NOT_OK' && (

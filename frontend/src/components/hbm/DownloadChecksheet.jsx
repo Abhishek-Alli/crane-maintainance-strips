@@ -29,7 +29,7 @@ function formatDate(dateStr) {
 }
 
 export default function DownloadChecksheet() {
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toLocaleDateString('en-CA');
   const [selectedType, setSelectedType] = useState('dc-motor');
   const [fromDate, setFromDate] = useState(today);
   const [toDate, setToDate] = useState(today);

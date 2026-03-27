@@ -91,7 +91,7 @@ const HbmChecksheet = () => {
   const [formData, setFormData] = useState({
     machine_id: '',
     template_id: '',
-    checksheet_date: new Date().toISOString().split('T')[0],
+    checksheet_date: new Date().toLocaleDateString('en-CA'),
     checksheet_time: new Date().toTimeString().slice(0, 5),
     shift: 'GENERAL',
     remarks: ''
@@ -427,7 +427,7 @@ const HbmChecksheet = () => {
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Date <span className="text-red-500">*</span></label>
                 <input type="date" value={formData.checksheet_date} required
-                  max={new Date().toISOString().split('T')[0]}
+                  max={new Date().toLocaleDateString('en-CA')}
                   onChange={e => setFormData(p => ({ ...p, checksheet_date: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
               </div>

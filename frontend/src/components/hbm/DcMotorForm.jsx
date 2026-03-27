@@ -82,20 +82,17 @@ const ItemRow = ({ block, section, item, value, onChange }) => {
       <div className="flex flex-col sm:flex-row sm:items-center gap-2">
         <p className="flex-1 text-sm font-medium text-gray-800">{item}</p>
         <div className="flex gap-2 flex-shrink-0">
-          <button type="button"
-            onClick={() => onChange(key, { status: 'OK', remark: '', action_taken: '' })}
-            className={`px-5 py-1.5 rounded-lg text-sm font-bold border-2 transition-all ${
-              value?.status === 'OK'
-                ? 'bg-green-500 border-green-500 text-white shadow-sm'
-                : 'bg-white border-gray-300 text-gray-600 hover:border-green-400 hover:text-green-600'
-            }`}>OK</button>
-          <button type="button"
-            onClick={() => onChange(key, { status: 'NOT_OK', remark: value?.remark || '', action_taken: value?.action_taken || '' })}
-            className={`px-4 py-1.5 rounded-lg text-sm font-bold border-2 transition-all ${
-              value?.status === 'NOT_OK'
-                ? 'bg-red-500 border-red-500 text-white shadow-sm'
-                : 'bg-white border-gray-300 text-gray-600 hover:border-red-400 hover:text-red-600'
-            }`}>NOT OK</button>
+          {['OK', 'NOT_OK', 'OFF'].map((s) => (
+            <button key={s} type="button"
+              onClick={() => onChange(key, { status: s, remark: s === 'NOT_OK' ? (value?.remark || '') : '', action_taken: s === 'NOT_OK' ? (value?.action_taken || '') : '' })}
+              className={`px-4 py-1.5 rounded-lg text-sm font-bold border-2 transition-all ${
+                value?.status === s
+                  ? s === 'OK' ? 'bg-green-500 border-green-500 text-white shadow-sm'
+                    : s === 'NOT_OK' ? 'bg-red-500 border-red-500 text-white shadow-sm'
+                    : 'bg-gray-500 border-gray-500 text-white shadow-sm'
+                  : 'bg-white border-gray-300 text-gray-600 hover:border-gray-400'
+              }`}>{s === 'NOT_OK' ? 'NOT OK' : s}</button>
+          ))}
         </div>
       </div>
 
@@ -127,7 +124,7 @@ const ItemRow = ({ block, section, item, value, onChange }) => {
 const DcMotorForm = () => {
   const navigate = useNavigate();
   const [header, setHeader] = useState({
-    log_date: new Date().toISOString().split('T')[0],
+    log_date: new Date().toLocaleDateString('en-CA'),
     log_time: new Date().toTimeString().slice(0, 5),
     shift: 'DAY',
     heat_start: '',
@@ -249,7 +246,7 @@ const DcMotorForm = () => {
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Date <span className="text-red-500">*</span></label>
                 <input type="date" value={header.log_date} required
-                  max={new Date().toISOString().split('T')[0]}
+                  max={new Date().toLocaleDateString('en-CA')}
                   onChange={e => setHeader(p => ({ ...p, log_date: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
               </div>
