@@ -1,808 +1,560 @@
-# Crane Maintenance Inspection System
+# SRJ Strips and Pipes — Maintenance Portal
 
-## Production-Ready Web Application
-
-A comprehensive digital solution to replace handwritten crane maintenance forms with strict validation, automated alerts, maintenance scheduling, and multi-format export capabilities.
+A full-stack web application for managing crane maintenance inspections, HBM (Hot Bar Mill) checksheets, and user administration at SRJ Strips and Pipes Pvt Ltd.
 
 ---
 
 ## Table of Contents
 
-1. [Features](#features)
-2. [System Architecture](#system-architecture)
-3. [Technology Stack](#technology-stack)
-4. [Installation](#installation)
-5. [Configuration](#configuration)
-6. [Database Setup](#database-setup)
-7. [Running the Application](#running-the-application)
-8. [API Documentation](#api-documentation)
-9. [Business Rules](#business-rules)
-10. [User Guide](#user-guide)
-11. [Deployment](#deployment)
+1. [Modules](#modules)
+2. [Technology Stack](#technology-stack)
+3. [Project Structure](#project-structure)
+4. [Prerequisites](#prerequisites)
+5. [Local Setup](#local-setup)
+6. [Environment Variables](#environment-variables)
+7. [Database Setup](#database-setup)
+8. [Running the Application](#running-the-application)
+9. [Deployment](#deployment)
+10. [CI/CD Pipeline](#cicd-pipeline)
+11. [Key Features](#key-features)
 12. [Troubleshooting](#troubleshooting)
 
 ---
 
-## Features
+## Modules
 
-### Core Features
-- **Digital Inspection Forms**: One crane = one inspection form per day
-- **Dropdown-Only Data Entry**: Eliminates handwriting errors
-- **Automatic Alert Detection**: Rule-based alert engine (EQUAL_TO, NOT_EQUAL_TO)
-- **Maintenance Scheduling**: Daily/Weekly/Monthly frequency with DUE/PENDING notifications
-- **Multi-Format Export**:
-  - Excel (.xlsx)
-  - PDF with formatted report
-  - Google Sheets auto-sync
-- **Real-Time Dashboard**: Statistics, notifications, recent inspections
-- **Fully Configurable**: All inspection items, sections, and rules stored in database
+The portal has **three separate login modules**, each with its own UI theme:
 
-### Technical Features
-- Frontend + Backend validation (identical rules)
-- RESTful API architecture
-- PostgreSQL with referential integrity
-- Transaction-based inspection creation
-- Automatic next maintenance date calculation
-- Google Sheets API integration
-- Responsive UI with Tailwind CSS
-
----
-
-## System Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        CLIENT (Browser)                      │
-│                    React + Tailwind CSS                      │
-└──────────────────────────┬──────────────────────────────────┘
-                           │ HTTP/REST
-┌──────────────────────────┴──────────────────────────────────┐
-│                     API SERVER (Node.js)                     │
-│  Express + Validation + Business Logic + Export Services    │
-└──────────────────────────┬──────────────────────────────────┘
-                           │
-        ┌──────────────────┼──────────────────┐
-        │                  │                  │
-        ▼                  ▼                  ▼
-  ┌──────────┐      ┌──────────┐      ┌──────────┐
-  │PostgreSQL│      │  Google  │      │  File    │
-  │ Database │      │  Sheets  │      │  Export  │
-  │          │      │   API    │      │(Excel/PDF)│
-  └──────────┘      └──────────┘      └──────────┘
-```
+| Module | Theme | Default Route | Description |
+|---|---|---|---|
+| **Crane Maintenance** | Blue | `/` | Daily crane inspection forms, reports, maintenance calendar |
+| **HBM Checksheets** | Emerald | `/hbm/dashboard` | 7 daily checksheets for Hot Bar Mill equipment |
+| **Admin** | Slate/Dark | `/create-user` | User management, permissions, system settings |
 
 ---
 
 ## Technology Stack
 
-### Backend
-- **Node.js** (v16+)
-- **Express.js** - Web framework
-- **PostgreSQL** (v13+) - Database
-- **pg** - PostgreSQL client
-- **express-validator** - Request validation
-- **ExcelJS** - Excel generation
-- **PDFKit** - PDF generation
-- **googleapis** - Google Sheets integration
-
 ### Frontend
-- **React** (v18+)
-- **React Router** - Navigation
-- **Tailwind CSS** - Styling
-- **React Hook Form** - Form management
-- **Axios** - HTTP client
-- **React DatePicker** - Date selection
-- **React Toastify** - Notifications
+| Tool | Version | Purpose |
+|---|---|---|
+| React | 18.2.0 | UI framework |
+| React Router DOM | 6.20.1 | Client-side routing |
+| Tailwind CSS | 3.3.6 | Styling |
+| Axios | 1.6.2 | HTTP client |
+| React Hook Form | 7.48.2 | Form state management |
+| React Toastify | 9.1.3 | Toast notifications |
+| React DatePicker | 4.21.0 | Date selection |
+| date-fns | 2.30.0 | Date utilities |
+
+### Backend
+| Tool | Version | Purpose |
+|---|---|---|
+| Node.js | 16+ | Runtime |
+| Express.js | 4.18.2 | Web framework |
+| pg | 8.11.3 | PostgreSQL client |
+| jsonwebtoken | 9.0.2 | JWT authentication |
+| bcryptjs | 3.0.3 | Password hashing |
+| ExcelJS | 4.4.0 | Excel (.xlsx) export |
+| PDFKit | 0.14.0 | PDF report generation |
+| googleapis | 128.0.0 | Google Sheets integration |
+| node-cron | 4.2.1 | Scheduled tasks (maintenance alerts) |
+| helmet | 7.1.0 | HTTP security headers |
+| cors | 2.8.5 | Cross-origin resource sharing |
+| morgan | 1.10.0 | HTTP request logging |
+| compression | 1.7.4 | Gzip response compression |
+| joi + express-validator | latest | Input validation |
+
+### Database
+| Tool | Purpose |
+|---|---|
+| PostgreSQL 13+ | Primary database |
+| Google Sheets API | Secondary data sync (inspection records) |
+
+### Infrastructure
+| Tool | Purpose |
+|---|---|
+| Vercel | Cloud deployment (frontend + API functions) |
+| PM2 | Process manager for local/LAN deployment |
+| Nginx | Reverse proxy for local network hosting |
 
 ---
 
-## Installation
+## Project Structure
 
-### Prerequisites
-- Node.js v16 or higher
-- PostgreSQL v13 or higher
-- npm or yarn package manager
-- Google Cloud Platform account (for Google Sheets integration)
-
-### Step 1: Clone Repository
-```bash
-cd /path/to/crane-maintainance
 ```
-
-### Step 2: Install Dependencies
-```bash
-# Install root dependencies
-npm install
-
-# Install backend dependencies
-cd backend
-npm install
-
-# Install frontend dependencies
-cd ../frontend
-npm install
+crane-maintainance/
+├── backend/                        # Express.js API server
+│   ├── config/
+│   │   └── database.js             # PostgreSQL connection pool
+│   ├── controllers/                # Route handlers
+│   │   ├── authController.js       # Login / JWT
+│   │   ├── userController.js       # User CRUD + permissions
+│   │   ├── hbmController.js        # All 7 HBM checksheets
+│   │   ├── inspectionController.js # Crane inspection forms
+│   │   ├── reportController.js     # Excel / PDF export
+│   │   └── ...
+│   ├── routes/                     # Express routers
+│   ├── middleware/
+│   │   └── auth.js                 # authenticate + authorize middleware
+│   ├── migrations/                 # SQL migration files (000–022)
+│   ├── cron/                       # Scheduled jobs (alerts, daily summary)
+│   ├── services/                   # Google Sheets, PDF, Excel services
+│   ├── utils/                      # Telegram alerts, email helpers
+│   ├── validators/                 # Joi/express-validator schemas
+│   └── server.js                   # App entry point (port 5001)
+│
+├── frontend/                       # React application
+│   ├── public/
+│   │   └── srj-logo.png            # Company logo
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── hbm/                # All HBM checksheet components
+│   │   │   │   ├── HbmDashboard.jsx
+│   │   │   │   ├── DcMotorForm.jsx / DcMotorView.jsx / DcMotorHistory.jsx
+│   │   │   │   ├── RollingStandForm.jsx / ...
+│   │   │   │   ├── MillMechForm.jsx / ...
+│   │   │   │   ├── CoolingBedForm.jsx / ...
+│   │   │   │   ├── PumpHouseForm.jsx / ...
+│   │   │   │   ├── BarBundleAreaForm.jsx / ...
+│   │   │   │   ├── BeforeRollingForm.jsx / ...
+│   │   │   │   └── DownloadChecksheet.jsx
+│   │   │   ├── fabrication/        # Fabrication tracking
+│   │   │   ├── Login.jsx           # Login page (3 module selector)
+│   │   │   ├── CreateUser.jsx      # Admin user management
+│   │   │   ├── Dashboard.jsx       # Crane maintenance dashboard
+│   │   │   ├── InspectionForm.jsx  # New crane inspection
+│   │   │   ├── ReportGenerator.jsx # Download reports
+│   │   │   ├── MaintenanceCalendarPage.jsx
+│   │   │   └── TelegramSettings.jsx
+│   │   ├── services/
+│   │   │   └── api.js              # Axios instance + all API calls
+│   │   └── App.js                  # Routes + navigation + auth
+│   └── package.json
+│
+├── api/                            # Vercel serverless API functions
+├── vercel.json                     # Vercel deployment config + cron jobs
+├── package.json                    # Root scripts (dev, build, install-all)
+└── README.md
 ```
 
 ---
 
-## Configuration
+## Prerequisites
 
-### Backend Configuration
+- **Node.js** v16 or higher
+- **npm** v8 or higher
+- **PostgreSQL** v13 or higher
+- Google Cloud account (only if using Google Sheets sync)
 
-1. **Create `.env` file** in `backend/` directory:
+---
+
+## Local Setup
+
+### 1. Install Dependencies
+
+```bash
+# From the root directory — installs all (root + backend + frontend)
+npm run install-all
+```
+
+Or manually:
+
+```bash
+npm install
+cd backend && npm install
+cd ../frontend && npm install
+```
+
+### 2. Configure Environment Variables
+
+See [Environment Variables](#environment-variables) section below.
+
+### 3. Set Up Database
+
+See [Database Setup](#database-setup) section below.
+
+### 4. Run the Application
+
+```bash
+# From root — runs backend + frontend concurrently
+npm run dev
+```
+
+---
+
+## Environment Variables
+
+Create a `.env` file inside the `backend/` folder:
 
 ```env
-# Database Configuration
+# ── Database ──────────────────────────────────────
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=crane_maintenance
 DB_USER=postgres
-DB_PASSWORD=your_secure_password
+DB_PASSWORD=your_password
 
-# Server Configuration
-PORT=5000
-NODE_ENV=production
+# For cloud databases, use this instead of the above:
+# DATABASE_URL=postgresql://user:password@host:5432/dbname
 
-# Google Sheets Configuration
-GOOGLE_SHEETS_CREDENTIALS_PATH=./config/google-credentials.json
-GOOGLE_SHEETS_SPREADSHEET_ID=your_spreadsheet_id_here
-GOOGLE_SHEETS_SHEET_NAME=Inspection_Data
+# ── Server ────────────────────────────────────────
+PORT=5001
+NODE_ENV=development
 
-# CORS Configuration
+# ── Auth ──────────────────────────────────────────
+JWT_SECRET=your_jwt_secret_key
+JWT_EXPIRES_IN=7d
+
+# ── CORS ──────────────────────────────────────────
 CORS_ORIGIN=http://localhost:3000
+
+# ── Google Sheets (optional) ──────────────────────
+GOOGLE_SHEETS_CREDENTIALS_PATH=./config/google-credentials.json
+GOOGLE_SHEETS_SPREADSHEET_ID=your_spreadsheet_id
+
+# ── Telegram Alerts (optional) ────────────────────
+TELEGRAM_BOT_TOKEN=your_bot_token
+TELEGRAM_CHAT_ID=your_chat_id
 ```
 
-2. **Google Sheets Setup**:
-
-   a. Go to [Google Cloud Console](https://console.cloud.google.com/)
-
-   b. Create a new project
-
-   c. Enable Google Sheets API
-
-   d. Create Service Account credentials
-
-   e. Download JSON key file
-
-   f. Save as `backend/config/google-credentials.json`
-
-   g. Share your Google Spreadsheet with the service account email
-
-   h. Copy Spreadsheet ID from URL and update `.env`
-
-### Frontend Configuration
-
-1. **Create `.env` file** in `frontend/` directory:
+Create a `.env` file inside the `frontend/` folder:
 
 ```env
-REACT_APP_API_URL=http://localhost:5000/api
+REACT_APP_API_URL=http://localhost:5001/api
 ```
 
 ---
 
 ## Database Setup
 
-### Step 1: Create Database
+### 1. Create the Database
 
 ```bash
-# Login to PostgreSQL
 psql -U postgres
+```
 
-# Create database
+```sql
 CREATE DATABASE crane_maintenance;
-
-# Exit
 \q
 ```
 
-### Step 2: Run Schema Migration
+### 2. Run Migrations
+
+Run all migration files in order:
 
 ```bash
 cd backend
 
-# Run the schema SQL file
-psql -U postgres -d crane_maintenance -f ../database-schema.sql
+psql -U postgres -d crane_maintenance -f migrations/000_complete_schema.sql
+psql -U postgres -d crane_maintenance -f migrations/008_user_type_and_hbm.sql
+psql -U postgres -d crane_maintenance -f migrations/012_hbm_universal_update.sql
+psql -U postgres -d crane_maintenance -f migrations/013_rolling_stand.sql
+psql -U postgres -d crane_maintenance -f migrations/014_mill_mech.sql
+psql -U postgres -d crane_maintenance -f migrations/015_cooling_bed.sql
+psql -U postgres -d crane_maintenance -f migrations/016_pumphouse_checksheet.sql
+psql -U postgres -d crane_maintenance -f migrations/017_bar_bundle_checksheet.sql
+psql -U postgres -d crane_maintenance -f migrations/018_before_rolling_checksheet.sql
+psql -U postgres -d crane_maintenance -f migrations/019_telegram_checksheet_subscriptions.sql
+psql -U postgres -d crane_maintenance -f migrations/020_hbm_user_permissions.sql
+psql -U postgres -d crane_maintenance -f migrations/021_crane_user_permissions.sql
+psql -U postgres -d crane_maintenance -f migrations/022_add_off_status.sql
 ```
 
-This will:
-- Create all tables (sheds, cranes, inspection_sections, inspection_items, inspections, etc.)
-- Create enums for data types
-- Set up foreign key constraints
-- Create indexes for performance
-- Insert seed data (3 sheds, 7 sections, 42 inspection items, 6 sample cranes)
+### 3. Create First Admin User
 
-### Database Schema Overview
+Connect to the database and insert an admin user manually:
 
-**Master Tables:**
-- `sheds` - Shed/location definitions
-- `inspection_sections` - 7 main inspection sections
-- `inspection_items` - Individual inspection items with dropdown values and alert rules
-- `cranes` - Crane definitions with maintenance frequency
+```sql
+INSERT INTO users (username, password_hash, role, user_type)
+VALUES (
+  'admin',
+  '$2b$10$...', -- bcrypt hash of your password
+  'ADMIN',
+  'ADMIN'
+);
+```
 
-**Transaction Tables:**
-- `inspections` - Inspection form headers
-- `inspection_values` - Actual inspection data (one row per item checked)
-- `maintenance_schedule` - Maintenance due tracking
-- `google_sheets_log` - Sync audit trail
+Or use the backend seed script if available:
+
+```bash
+cd backend
+node scripts/createAdmin.js
+```
+
+### Database Schema — Key Tables
+
+| Table | Purpose |
+|---|---|
+| `users` | All users (Crane / HBM / Admin) |
+| `hbm_user_permissions` | Per-user HBM sheet access |
+| `crane_user_permissions` | Per-user crane section access |
+| `hbm_dc_motor_logs` / `hbm_dc_motor_items` | DC Motor checksheet data |
+| `hbm_rolling_stand_logs` / `hbm_rolling_stand_items` | Rolling Stand data |
+| `hbm_mill_mech_logs` / `hbm_mill_mech_items` | Mill Mechanical data |
+| `hbm_cooling_bed_logs` / `hbm_cooling_bed_items` | Cooling Bed data |
+| `hbm_pumphouse_checksheets` / `hbm_pumphouse_items` | Pumphouse data |
+| `hbm_bar_bundle_logs` / `hbm_bar_bundle_items` | Bar Bundle Area data |
+| `hbm_before_rolling_logs` / `hbm_before_rolling_items` | Before Rolling data |
+| `inspections` / `inspection_values` | Crane inspection forms |
+| `cranes` / `sheds` | Crane and shed master data |
+| `maintenance_schedule` | Maintenance due tracking |
 
 ---
 
 ## Running the Application
 
-### Development Mode
+### Development
 
-**Option 1: Run Both Together (Recommended)**
 ```bash
-# From root directory
+# Root directory — starts both backend and frontend
 npm run dev
+
+# Backend only (port 5001)
+cd backend && npm run dev
+
+# Frontend only (port 3000)
+cd frontend && npm start
 ```
 
-**Option 2: Run Separately**
+### Production Build
 
-Terminal 1 (Backend):
 ```bash
-cd backend
-npm run dev
+# Build React frontend
+cd frontend && npm run build
+
+# Start backend in production
+cd backend && npm start
 ```
 
-Terminal 2 (Frontend):
-```bash
-cd frontend
-npm start
-```
+### Access URLs
 
-### Production Mode
-
-**Backend:**
-```bash
-cd backend
-npm start
-```
-
-**Frontend:**
-```bash
-cd frontend
-npm run build
-# Serve the build folder with a web server (nginx, Apache, etc.)
-```
-
-### Access Application
-
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:5000
-- **API Health Check**: http://localhost:5000/health
-
----
-
-## API Documentation
-
-### Base URL
-```
-http://localhost:5000/api
-```
-
-### Endpoints
-
-#### Inspections
-
-**Create Inspection**
-```http
-POST /inspections
-Content-Type: application/json
-
-{
-  "inspection_date": "2024-01-15",
-  "recorded_by": "John Doe",
-  "shed_id": 1,
-  "crane_id": 1,
-  "maintenance_start_time": "09:00",
-  "maintenance_stop_time": "10:30",
-  "remarks": "General remarks",
-  "sections": [
-    {
-      "section_id": 1,
-      "items": [
-        {
-          "item_id": 1,
-          "selected_value": "NORMAL",
-          "remarks": "Item-specific remarks"
-        }
-      ]
-    }
-  ]
-}
-```
-
-**Get All Inspections**
-```http
-GET /inspections?crane_id=1&from_date=2024-01-01&to_date=2024-01-31
-```
-
-**Get Inspection by ID**
-```http
-GET /inspections/:id
-```
-
-**Export to Excel**
-```http
-GET /inspections/:id/export/excel
-```
-
-**Export to PDF**
-```http
-GET /inspections/:id/export/pdf
-```
-
-**Sync to Google Sheets**
-```http
-POST /inspections/:id/sync
-```
-
-#### Cranes
-
-**Get All Cranes**
-```http
-GET /cranes?shed_id=1
-```
-
-**Get Dashboard Stats**
-```http
-GET /cranes/dashboard/stats
-```
-
-**Get Maintenance Notifications**
-```http
-GET /cranes/notifications
-```
-
-**Create Crane**
-```http
-POST /cranes
-Content-Type: application/json
-
-{
-  "shed_id": 1,
-  "crane_number": "CR-A-003",
-  "maintenance_frequency": "DAILY"
-}
-```
-
-#### Configuration
-
-**Get Sheds**
-```http
-GET /config/sheds
-```
-
-**Get Sections with Items**
-```http
-GET /config/sections
-```
-
-**Test Google Sheets Connection**
-```http
-GET /config/test-google-sheets
-```
-
----
-
-## Business Rules
-
-### 1. ONE CRANE = ONE FORM PER DAY
-- Database enforces unique constraint: `UNIQUE(crane_id, inspection_date)`
-- API validates before insertion
-- Frontend prevents duplicate submission
-
-### 2. COMPULSORY HEADER FIELDS
-All must be filled:
-- Date (date picker)
-- Recorded By (text)
-- Shed (dropdown)
-- Crane No (dropdown, filtered by shed)
-
-Form submission blocked if any missing.
-
-### 3. SECTION-LEVEL RULES
-- **Entire section is UNCOMPULSORY** - can be completely skipped
-- **If ANY field in a section is filled** → All COMPULSORY fields in that section MUST be filled
-- Validation enforced on backend AND frontend
-
-### 4. DROPDOWN-ONLY VALUES
-- All inspection values come from `inspection_items.dropdown_values`
-- Backend validates selected value against allowed values
-- No free text for inspection values
-
-### 5. ALERT RULE ENGINE
-
-**EQUAL_TO**: Alert if value equals `alert_value`
-```
-Example: Oil Level = LOW → ALERT
-```
-
-**NOT_EQUAL_TO**: Alert if value does NOT equal `alert_value`
-```
-Example: Wire Rope Drum != OKAY → ALERT
-```
-
-**NONE**: No alert for this item
-
-### 6. CRANE STATUS LOGIC
-After form submission:
-```
-IF any inspection_value.is_alert = true
-  → crane_status = 'MAINTENANCE_REQUIRED'
-ELSE
-  → crane_status = 'OK'
-```
-
-### 7. MAINTENANCE SCHEDULING
-
-**Next Maintenance Date Calculation:**
-```
-Next Date = Inspection Date + Frequency
-
-DAILY   → +1 day
-WEEKLY  → +7 days
-MONTHLY → +1 month
-```
-
-**Daily Status Check:**
-```
-IF today < next_date → OK
-IF today = next_date → DUE
-IF today > next_date → PENDING
-```
-
-### 8. GOOGLE SHEETS AUTO-SYNC
-- Every inspection submission automatically syncs to Google Sheets
-- Asynchronous (doesn't block response)
-- One row per inspection item
-- Audit log in `google_sheets_log` table
-
----
-
-## User Guide
-
-### Creating an Inspection
-
-1. **Navigate to "New Inspection"**
-2. **Fill Header (All Required)**:
-   - Select Date
-   - Enter Recorded By name
-   - Select Shed (dropdown will populate)
-   - Select Crane No (filtered by shed)
-   - Optionally: Maintenance times and general remarks
-
-3. **Fill Inspection Sections**:
-   - Each section has GREEN header
-   - Sections are optional - skip entirely if not applicable
-   - If you fill ANY field in a section:
-     - All fields marked with `*` (red asterisk) become required
-   - Select values from dropdowns
-   - Add item-specific remarks if needed
-
-4. **Review Alerts**:
-   - Alert preview appears at bottom if any alerts detected
-   - Yellow warning box shows items requiring attention
-
-5. **Submit**:
-   - Click "Submit Inspection"
-   - Success notification appears
-   - Data automatically syncs to Google Sheets
-   - Redirects to Dashboard
-
-### Dashboard Features
-
-**Statistics Cards:**
-- Total Cranes
-- Cranes OK
-- Maintenance Required
-- Due Today
-- Pending (overdue)
-
-**Maintenance Notifications Table:**
-- Shows cranes with DUE or PENDING maintenance
-- Sorted by days overdue
-- Color-coded: Yellow (DUE), Red (PENDING)
-
-**Recent Inspections Table:**
-- Latest inspections across all cranes
-- Status indicators (OK / MAINTENANCE REQUIRED)
-- Alert count highlighted
-- Export buttons (Excel, PDF)
-
-### Exporting Data
-
-**Excel Export:**
-- Click "Excel" button on any inspection
-- Downloads `.xlsx` file
-- One row per inspection item
-- Alerts highlighted in orange
-
-**PDF Export:**
-- Click "PDF" button on any inspection
-- Downloads formatted PDF report
-- Sections grouped
-- Alerts highlighted
-
-**Google Sheets:**
-- Automatic on every submission
-- Manual sync: `POST /api/inspections/:id/sync`
-- Check sync status in `google_sheets_log` table
+| Service | URL |
+|---|---|
+| Frontend | http://localhost:3000 |
+| Backend API | http://localhost:5001/api |
+| Health Check | http://localhost:5001/health |
 
 ---
 
 ## Deployment
 
-### Production Deployment Checklist
+### Current Deployment — Local Network (LAN)
 
-#### 1. Environment Variables
-- Set `NODE_ENV=production`
-- Use strong database password
-- Configure proper CORS origin
-- Secure Google Sheets credentials
+The application runs on a local Windows/Linux machine and is accessed by all plant users over the company LAN.
 
-#### 2. Database
-- Use managed PostgreSQL (AWS RDS, Google Cloud SQL, etc.)
-- Enable automated backups
-- Set up connection pooling
-- Create database read replicas for scaling
+**Backend — PM2:**
 
-#### 3. Backend
-- Use process manager (PM2, systemd)
-- Set up reverse proxy (nginx)
-- Enable HTTPS/SSL
-- Configure rate limiting
-- Set up logging (Winston, Morgan)
+```bash
+npm install -g pm2
 
-#### 4. Frontend
-- Build production bundle: `npm run build`
-- Serve with nginx or CDN
-- Enable gzip compression
-- Configure caching headers
-- Use environment-specific API URLs
+cd backend
+pm2 start server.js --name crane-api --env production
+pm2 save
+pm2 startup
+```
 
-#### 5. Google Sheets
-- Use service account credentials
-- Restrict API key permissions
-- Monitor API quotas
-- Set up error notifications
+**Frontend — Serve build with Nginx or `serve`:**
 
-### Sample nginx Configuration
+```bash
+cd frontend
+npm run build
+
+# Option 1: serve package
+npx serve -s build -l 3000
+
+# Option 2: Nginx (Linux)
+# Copy build/ to /var/www/html and configure nginx
+```
+
+**Nginx config (Linux LAN server):**
 
 ```nginx
-# Backend API
 server {
     listen 80;
-    server_name api.yourdomain.com;
+    server_name 192.168.x.x;   # your machine IP
 
-    location / {
-        proxy_pass http://localhost:5000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-    }
-}
-
-# Frontend
-server {
-    listen 80;
-    server_name yourdomain.com;
-    root /var/www/crane-maintenance/frontend/build;
+    # Serve React frontend
+    root /var/www/crane-maintainance/frontend/build;
     index index.html;
 
     location / {
         try_files $uri $uri/ /index.html;
     }
+
+    # Proxy API calls to Express backend
+    location /api/ {
+        proxy_pass http://localhost:5001;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
 }
 ```
 
-### PM2 Process Management
+Users access the app at: `http://192.168.x.x/`
+
+---
+
+### Cloud Deployment — Vercel
+
+The project includes a `vercel.json` for Vercel deployment.
+
+**vercel.json summary:**
+
+```json
+{
+  "buildCommand": "cd frontend && npm install && npm run build",
+  "outputDirectory": "frontend/build",
+  "crons": [
+    { "path": "/api/cron/maintenance-alert", "schedule": "0 3 * * *" },
+    { "path": "/api/cron/daily-summary",     "schedule": "30 12 * * *" }
+  ]
+}
+```
+
+**Deploy steps:**
 
 ```bash
-# Install PM2
-npm install -g pm2
+# Install Vercel CLI
+npm install -g vercel
 
-# Start backend
-cd backend
-pm2 start server.js --name crane-api
-
-# Save PM2 configuration
-pm2 save
-
-# Set up auto-restart on server reboot
-pm2 startup
+# Login and deploy
+vercel login
+vercel --prod
 ```
+
+Set environment variables in Vercel Dashboard → Project → Settings → Environment Variables.
+
+---
+
+## CI/CD Pipeline
+
+**No automated CI/CD pipeline is configured yet.**
+
+Deployments are currently done manually:
+
+1. Pull latest code from Git
+2. Run `npm run install-all`
+3. Run any new migration files
+4. Restart PM2: `pm2 restart crane-api`
+5. Rebuild frontend: `cd frontend && npm run build`
+
+### Recommended Future Setup (GitHub Actions)
+
+To add CI/CD, create `.github/workflows/deploy.yml`:
+
+```yaml
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - run: npm run install-all
+      - run: cd frontend && npm run build
+      - name: Deploy to server
+        run: |
+          # rsync or SSH deploy steps here
+```
+
+---
+
+## Key Features
+
+### Crane Maintenance Module
+- Digital daily inspection forms (one crane = one form per day)
+- Dropdown-only data entry (no free-text errors)
+- Automatic alert detection (rule-based: EQUAL_TO / NOT_EQUAL_TO)
+- Maintenance scheduling (Daily / Weekly / Monthly) with DUE / PENDING status
+- Export to Excel (.xlsx) and PDF
+- Google Sheets auto-sync on every submission
+- Maintenance Calendar view
+- Telegram notifications for overdue maintenance
+
+### HBM Checksheets Module
+- 7 daily checksheets: DC Motor, Rolling Stand, Mill Mechanical, Cooling Bed, Pumphouse, Bar Bundle Area, Before Rolling
+- Item status: **OK / NOT OK / OFF** (OFF = machine not in use that day)
+- NOT OK requires mandatory Remark + Action Taken
+- Per-user sheet access control (admin can restrict which sheets a user sees)
+- Download checksheets as PDF/Excel
+- History and view of past submissions
+
+### Admin Module
+- Create users with role: Crane Maintenance / HBM Checksheets / Admin
+- Per-user HBM sheet permissions (toggle individual sheets on/off)
+- Per-user crane section permissions
+- Change user passwords
+- Telegram alert subscriptions management
+
+### Authentication & Access Control
+- JWT-based authentication (7-day tokens)
+- Three user types: `CRANE_MAINTENANCE`, `HBM_CHECKSHEETS`, `ADMIN`
+- Role-based route protection (frontend + backend)
+- Session persisted in `localStorage`
 
 ---
 
 ## Troubleshooting
 
-### Database Connection Issues
-
-**Error: `ECONNREFUSED`**
+### Backend won't start
 ```bash
-# Check if PostgreSQL is running
-sudo systemctl status postgresql
+# Check PostgreSQL is running
+pg_ctl status -D /path/to/data
 
-# Start PostgreSQL
-sudo systemctl start postgresql
+# Check port 5001 is free
+netstat -ano | findstr :5001   # Windows
+lsof -i :5001                  # Linux/Mac
 
-# Verify connection
-psql -U postgres -d crane_maintenance
+# Check .env file exists in backend/
+ls backend/.env
 ```
 
-**Error: `password authentication failed`**
-- Check `.env` file for correct password
-- Verify PostgreSQL user exists
-- Check `pg_hba.conf` for authentication method
+### 403 Forbidden on API calls
+- The user's JWT token may be expired — log out and log back in
+- Check user role matches the route (Admin-only routes return 403 for non-admin)
 
-### Google Sheets Sync Failures
+### All HBM sheets visible despite permissions set
+- Ensure backend was restarted after code changes
+- Check that permissions were saved correctly in admin panel (toast "Permissions saved" should appear)
+- Verify `hbm_user_permissions` table has the correct row for the user
 
-**Error: `credentials file not found`**
-- Verify path in `.env`: `GOOGLE_SHEETS_CREDENTIALS_PATH`
-- Ensure file exists at specified location
-- Check file permissions (readable by Node.js process)
+### Database migration error
+```bash
+# Check current tables
+psql -U postgres -d crane_maintenance -c "\dt"
 
-**Error: `The caller does not have permission`**
-- Share spreadsheet with service account email
-- Grant "Editor" access
-- Verify Spreadsheet ID in `.env`
-
-**Error: `API quotas exceeded`**
-- Google Sheets API has rate limits
-- Implement exponential backoff
-- Consider batching multiple inspections
-
-### Frontend Issues
-
-**Blank Page After Build**
-- Check browser console for errors
-- Verify API URL in `.env`
-- Ensure backend is running
-- Check CORS configuration
-
-**Dropdown Not Populating**
-- Check API endpoint: `GET /api/config/sections`
-- Verify database has seed data
-- Check browser network tab for failed requests
-
-### Validation Errors
-
-**Section Completeness Validation**
-- Error occurs when section has some fields filled but missing compulsory fields
-- Review which fields are marked `COMPULSORY` in database
-- Check frontend validation matches backend logic
-
-**Duplicate Inspection Error**
-- One crane can only have one inspection per day
-- Check existing inspections: `GET /api/inspections?crane_id=X&inspection_date=YYYY-MM-DD`
-- Delete or update existing inspection if needed
-
----
-
-## System Maintenance
-
-### Regular Tasks
-
-**Daily:**
-- Monitor Google Sheets sync logs
-- Check error logs for failed API calls
-- Review maintenance notifications
-
-**Weekly:**
-- Database backup verification
-- Review disk space usage
-- Check API response times
-
-**Monthly:**
-- Database vacuum and analyze
-- Archive old inspection data
-- Review and optimize slow queries
-
-### Database Queries
-
-**Check Sync Status:**
-```sql
-SELECT * FROM google_sheets_log
-WHERE sync_status = 'FAILED'
-ORDER BY synced_at DESC;
+# Run specific migration manually
+psql -U postgres -d crane_maintenance -f backend/migrations/022_add_off_status.sql
 ```
 
-**Find Overdue Maintenance:**
-```sql
-SELECT * FROM v_maintenance_notifications
-WHERE notification_status = 'PENDING';
+### Frontend shows blank page
+```bash
+# Check if build exists
+ls frontend/build/
+
+# Rebuild
+cd frontend && npm run build
+
+# Check API URL in frontend/.env
+cat frontend/.env
 ```
-
-**Inspection Statistics:**
-```sql
-SELECT
-  DATE_TRUNC('month', inspection_date) as month,
-  COUNT(*) as total_inspections,
-  COUNT(CASE WHEN has_alerts THEN 1 END) as inspections_with_alerts
-FROM inspections
-GROUP BY month
-ORDER BY month DESC;
-```
-
----
-
-## Support & Contribution
-
-### Logs Location
-- Backend logs: `console.log` (configure Winston for file logging)
-- Frontend: Browser console
-- Database: PostgreSQL logs (location depends on installation)
-
-### Performance Optimization
-
-**Database:**
-- Indexes already created on frequently queried columns
-- Use `EXPLAIN ANALYZE` for slow queries
-- Consider partitioning `inspections` table by date for large datasets
-
-**API:**
-- Response times < 200ms for most endpoints
-- Use Redis for caching if needed
-- Implement pagination for large result sets
-
-**Frontend:**
-- Code splitting with React.lazy()
-- Image optimization
-- Implement service workers for offline capability
 
 ---
 
 ## License
 
-Proprietary - All Rights Reserved
+Proprietary — All Rights Reserved  
+SRJ Strips and Pipes Pvt Ltd
 
 ---
 
-## Version History
-
-**v1.0.0** (2024-01-15)
-- Initial production release
-- Complete CRUD operations for inspections
-- Automatic alert detection
-- Maintenance scheduling
-- Excel/PDF export
-- Google Sheets integration
-- Responsive dashboard
-
----
-
-## Contact
-
-For technical support or feature requests, please contact your system administrator.
-
----
-
-## Appendix
-
-### Sample Inspection Items
-
-**LT Gear Box – 1 (Cabin Side):**
-1. Oil Level (HIGH/NORMAL/LOW) - Alert if LOW
-2. Oil Leakage (YES/NO) - Alert if YES
-3. Noise (NORMAL/ABNORMAL) - Alert if ABNORMAL
-4. Vibration (NORMAL/ABNORMAL) - Alert if ABNORMAL
-5. Bearing Condition (GOOD/FAIR/POOR) - Alert if NOT GOOD
-6. Gear Condition (GOOD/WORN/DAMAGED) - Alert if NOT GOOD
-
-**CT – 1 (Cabin Side):**
-1. Wire Rope Condition (GOOD/WORN/DAMAGED) - Alert if NOT GOOD
-2. Wire Rope Drum (OKAY/DAMAGED) - Alert if NOT OKAY
-3. Brake Condition (WORKING/NOT WORKING) - Alert if NOT WORKING
-4. Hook Condition (GOOD/WORN/DAMAGED) - Alert if NOT GOOD
-5. Pulley Condition (GOOD/WORN/DAMAGED) - Alert if NOT GOOD
-6. Motor Temperature (NORMAL/HIGH) - Alert if HIGH
-
-(See `database-schema.sql` for complete list)
-
----
-
-**End of Documentation**
+*Last updated: April 2026*

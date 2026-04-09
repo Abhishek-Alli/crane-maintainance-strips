@@ -26,6 +26,10 @@ const blockConfig = {
   'STAND - C8': null,
   'STAND - C9': null,
   'STAND - C10': null,
+  'STAND - C11': null,
+  'STAND - C12': null,
+  'STAND - C13': null,
+  'STAND - C14': null,
   'CCS - 1': {
     'INTERNAL MOTOR': ['CARBON BRUSH', 'HOLDER', 'COMMUTATOR', 'NO. CARBON BUSH', 'CORROSION'],
     'CLEANING': ['MOTOR', 'FILTER PAD', 'BLOWER', 'CARBON CONSUMPTION', 'HOLDER CONSUMPTION'],
