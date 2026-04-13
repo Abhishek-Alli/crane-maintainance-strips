@@ -14,7 +14,8 @@ const ALL_HBM_SHEETS = [
   { key: 'water-param',    label: 'Water Parameters' },
   { key: 'ph-maint',       label: 'PH Maintenance' },
   { key: 'transformer',    label: 'HBM Transformer' },
-  { key: 'oil-level',      label: 'Daily Oil Level' },
+  { key: 'oil-level',         label: 'Daily Oil Level' },
+  { key: 'dc-motor-airflow',  label: 'DC Motor Airflow Report' },
 ];
 
 const ALL_CRANE_SECTIONS = [

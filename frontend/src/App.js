@@ -56,6 +56,9 @@ import TransformerView from './components/hbm/TransformerView';
 import OilLevelForm from './components/hbm/OilLevelForm';
 import OilLevelHistory from './components/hbm/OilLevelHistory';
 import OilLevelView from './components/hbm/OilLevelView';
+import DcMotorAirflowForm from './components/hbm/DcMotorAirflowForm';
+import DcMotorAirflowHistory from './components/hbm/DcMotorAirflowHistory';
+import DcMotorAirflowView from './components/hbm/DcMotorAirflowView';
 // import FabricationReport from "./components/fabrication/FabricationReport";
 // import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import FabricationReport from "./components/fabrication/FabricationReport";
@@ -647,6 +650,10 @@ function App() {
           <Route path="/hbm/oil-level/new" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('oil-level') ? <OilLevelForm /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
           <Route path="/hbm/oil-level/history" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('oil-level') ? <OilLevelHistory /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
           <Route path="/hbm/oil-level/:id" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('oil-level') ? <OilLevelView /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+
+          <Route path="/hbm/dc-motor-airflow/new" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('dc-motor-airflow') ? <DcMotorAirflowForm /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hbm/dc-motor-airflow/history" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('dc-motor-airflow') ? <DcMotorAirflowHistory /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hbm/dc-motor-airflow/:id" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('dc-motor-airflow') ? <DcMotorAirflowView /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
 
           <Route
             path="/fabrication"

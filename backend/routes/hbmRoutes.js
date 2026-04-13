@@ -93,6 +93,11 @@ router.get('/oil-level', HbmController.getOilLevelLogs);
 router.get('/oil-level/:id', HbmController.getOilLevelLogById);
 router.post('/oil-level', HbmController.createOilLevelLog);
 
+// DC Motor Airflow, Temperature & Vibration Report logs
+router.get('/dc-motor-airflow', HbmController.getDcMotorAirflowLogs);
+router.get('/dc-motor-airflow/:id', HbmController.getDcMotorAirflowLogById);
+router.post('/dc-motor-airflow', HbmController.createDcMotorAirflowLog);
+
 // PDF download  –  GET /api/hbm/pdf/:type/:id
 // type: dc-motor | cooling-bed | mill-mech | rolling-stand | pumphouse | bar-bundle
 router.get('/pdf/:type/:id', HbmController.downloadHbmPDF);

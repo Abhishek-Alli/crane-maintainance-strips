@@ -12,7 +12,9 @@ const CHECKSHEET_TYPES = [
   { value: 'before-rolling', label: 'Before Rolling',          fetchLogs: (p) => hbmAPI.getBeforeRollingLogs(p) },
   { value: 'water-param',    label: 'Water Parameters',        fetchLogs: (p) => hbmAPI.getWaterParamLogs(p),  downloadFn: (id) => hbmAPI.downloadWaterParamPDF(id) },
   { value: 'ph-maint',       label: 'PH Maintenance Work Sheet', fetchLogs: (p) => hbmAPI.getPhMaintLogs(p),  downloadFn: (id) => hbmAPI.downloadPhMaintPDF(id) },
-  { value: 'transformer',    label: 'HBM Transformer',           fetchLogs: (p) => hbmAPI.getTransformerLogs(p), downloadFn: (id) => hbmAPI.downloadTransformerPDF(id) },
+  { value: 'transformer',       label: 'HBM Transformer',                    fetchLogs: (p) => hbmAPI.getTransformerLogs(p),      downloadFn: (id) => hbmAPI.downloadTransformerPDF(id) },
+  { value: 'oil-level',         label: 'Daily Oil Level',                    fetchLogs: (p) => hbmAPI.getOilLevelLogs(p) },
+  { value: 'dc-motor-airflow',  label: 'DC Motor Airflow, Temp & Vibration', fetchLogs: (p) => hbmAPI.getDcMotorAirflowLogs(p) },
 ];
 
 function getDatesInRange(from, to) {

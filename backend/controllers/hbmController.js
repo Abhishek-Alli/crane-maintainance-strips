@@ -2688,6 +2688,155 @@ class HbmController {
       res.status(500).json({ success: false, message: 'Failed to submit Daily Oil Level Sheet' });
     }
   }
+
+  // ==========================================
+  // DC MOTOR AIRFLOW, TEMPERATURE & VIBRATION
+  // ==========================================
+
+  static async getDcMotorAirflowLogs(req, res) {
+    try {
+      const { date_from, date_to, limit: lim } = req.query;
+      const limit = parseInt(lim) || 50;
+      const conditions = [];
+      const params = [];
+      let paramIdx = 1;
+
+      if (date_from) { conditions.push(`l.log_date >= $${paramIdx++}`); params.push(date_from); }
+      if (date_to)   { conditions.push(`l.log_date <= $${paramIdx++}`); params.push(date_to); }
+
+      const whereClause = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
+      params.push(limit);
+
+      const result = await query(
+        `SELECT l.*, u.username as filled_by_name,
+          COUNT(e.id) FILTER (WHERE e.kpa_status = 'NOT_OK'
+            OR e.air_flow_condition = 'NOT_OK'
+            OR e.dc_motor_temp_status = 'NOT_OK'
+            OR e.de_bearing_temp_status = 'NOT_OK'
+            OR e.nde_bearing_temp_status = 'NOT_OK'
+            OR e.blower_motor_temp_status = 'NOT_OK'
+            OR e.motor_center_vib_status = 'NOT_OK'
+            OR e.encoder_side_vib_status = 'NOT_OK'
+            OR e.blower_vib_status = 'NOT_OK') as not_ok_count
+         FROM hbm_dc_motor_airflow_logs l
+         JOIN users u ON l.filled_by = u.id
+         LEFT JOIN hbm_dc_motor_airflow_entries e ON e.log_id = l.id
+         ${whereClause}
+         GROUP BY l.id, u.username
+         ORDER BY l.log_date DESC, l.created_at DESC
+         LIMIT $${paramIdx}`,
+        params
+      );
+
+      res.json({ success: true, data: result.rows, count: result.rows.length });
+    } catch (error) {
+      console.error('DC Motor Airflow get logs error:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch DC Motor Airflow logs' });
+    }
+  }
+
+  static async getDcMotorAirflowLogById(req, res) {
+    try {
+      const { id } = req.params;
+
+      const logResult = await query(
+        `SELECT l.*, u.username as filled_by_name
+         FROM hbm_dc_motor_airflow_logs l
+         JOIN users u ON l.filled_by = u.id
+         WHERE l.id = $1`,
+        [id]
+      );
+
+      if (logResult.rows.length === 0)
+        return res.status(404).json({ success: false, message: 'DC Motor Airflow log not found' });
+
+      const entriesResult = await query(
+        `SELECT * FROM hbm_dc_motor_airflow_entries WHERE log_id = $1 ORDER BY id`,
+        [id]
+      );
+
+      res.json({
+        success: true,
+        data: {
+          ...logResult.rows[0],
+          entries: entriesResult.rows,
+        }
+      });
+    } catch (error) {
+      console.error('DC Motor Airflow get log error:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch DC Motor Airflow log' });
+    }
+  }
+
+  static async createDcMotorAirflowLog(req, res) {
+    try {
+      const { log_date, shift_eng, reading_by, remark, entries } = req.body;
+
+      if (!log_date) {
+        return res.status(400).json({ success: false, message: 'Date is required' });
+      }
+
+      const n = (v) => (v != null && v !== '' ? v : null);
+
+      let log;
+      await transaction(async (client) => {
+        const logResult = await client.query(
+          `INSERT INTO hbm_dc_motor_airflow_logs (log_date, shift_eng, reading_by, remark, filled_by)
+           VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+          [log_date, n(shift_eng), n(reading_by), n(remark), req.user.id]
+        );
+
+        log = logResult.rows[0];
+
+        if (entries && Array.isArray(entries)) {
+          for (const e of entries) {
+            await client.query(
+              `INSERT INTO hbm_dc_motor_airflow_entries
+                 (log_id, stand_name,
+                  dc_motor_kw, blower_kw_rating,
+                  running_kpa, kpa_status,
+                  air_flow_condition,
+                  dc_motor_temp, dc_motor_temp_status,
+                  de_bearing_temp, de_bearing_temp_status,
+                  nde_bearing_temp, nde_bearing_temp_status,
+                  blower_motor_temp, blower_motor_temp_status,
+                  motor_center_vib, motor_center_vib_status,
+                  encoder_side_vib, encoder_side_vib_status,
+                  blower_vib, blower_vib_status)
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)`,
+              [
+                log.id,
+                e.stand_name,
+                n(e.dc_motor_kw),          n(e.blower_kw_rating),
+                n(e.running_kpa),          e.kpa_status || null,
+                e.air_flow_condition || null,
+                n(e.dc_motor_temp),        e.dc_motor_temp_status || null,
+                n(e.de_bearing_temp),      e.de_bearing_temp_status || null,
+                n(e.nde_bearing_temp),     e.nde_bearing_temp_status || null,
+                n(e.blower_motor_temp),    e.blower_motor_temp_status || null,
+                n(e.motor_center_vib),     e.motor_center_vib_status || null,
+                n(e.encoder_side_vib),     e.encoder_side_vib_status || null,
+                n(e.blower_vib),           e.blower_vib_status || null,
+              ]
+            );
+          }
+        }
+      });
+
+      res.status(201).json({ success: true, message: 'DC Motor Airflow sheet submitted successfully', data: log });
+
+      sendHbmChecksheetNotification({
+        checksheetType: 'DC Motor Airflow, Temperature & Vibration',
+        date: log_date,
+        filledBy: req.user.username,
+        submittedAt: new Date(),
+        items: (entries || []).map(e => ({ item_name: e.stand_name, status: e.kpa_status || 'OK' }))
+      }).catch((err) => console.error('Telegram DC Motor Airflow notify error:', err));
+    } catch (error) {
+      console.error('DC Motor Airflow create log error:', error);
+      res.status(500).json({ success: false, message: 'Failed to submit DC Motor Airflow sheet' });
+    }
+  }
 }
 
 /* ── PDF helper: row height ── */

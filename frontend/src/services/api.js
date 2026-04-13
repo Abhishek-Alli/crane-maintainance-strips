@@ -284,6 +284,11 @@ export const hbmAPI = {
   getOilLevelLogById: (id) => api.get(`/hbm/oil-level/${id}`),
   createOilLevelLog: (data) => api.post('/hbm/oil-level', data),
 
+  // DC Motor Airflow, Temperature & Vibration Report logs
+  getDcMotorAirflowLogs: (params) => api.get('/hbm/dc-motor-airflow', { params }),
+  getDcMotorAirflowLogById: (id) => api.get(`/hbm/dc-motor-airflow/${id}`),
+  createDcMotorAirflowLog: (data) => api.post('/hbm/dc-motor-airflow', data),
+
   // PDF downloads
   downloadPDF: (type, id) =>
     api.get(`/hbm/pdf/${type}/${id}`, { responseType: 'blob' }),
