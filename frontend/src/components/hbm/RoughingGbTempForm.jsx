@@ -51,7 +51,6 @@ const RoughingGbTempForm = () => {
 
   // Open/close accordion per stand
   const [openStands, setOpenStands] = useState({});
-  const toggleStand = (s) => setOpenStands(p => ({ ...p, [s]: !p[s] }));
 
   const [sec1Remark, setSec1Remark] = useState('');
   const [sec2Remark, setSec2Remark] = useState('');
