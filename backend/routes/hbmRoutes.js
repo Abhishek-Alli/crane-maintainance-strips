@@ -98,6 +98,11 @@ router.get('/dc-motor-airflow', HbmController.getDcMotorAirflowLogs);
 router.get('/dc-motor-airflow/:id', HbmController.getDcMotorAirflowLogById);
 router.post('/dc-motor-airflow', HbmController.createDcMotorAirflowLog);
 
+// Roughing Stand & Gearbox Bearing Temperature
+router.get('/roughing-gb-temp', HbmController.getRoughingGbTempLogs);
+router.get('/roughing-gb-temp/:id', HbmController.getRoughingGbTempLogById);
+router.post('/roughing-gb-temp', HbmController.createRoughingGbTempLog);
+
 // PDF download  –  GET /api/hbm/pdf/:type/:id
 // type: dc-motor | cooling-bed | mill-mech | rolling-stand | pumphouse | bar-bundle
 router.get('/pdf/:type/:id', HbmController.downloadHbmPDF);

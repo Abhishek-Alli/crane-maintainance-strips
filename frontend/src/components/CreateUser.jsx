@@ -16,6 +16,7 @@ const ALL_HBM_SHEETS = [
   { key: 'transformer',    label: 'HBM Transformer' },
   { key: 'oil-level',         label: 'Daily Oil Level' },
   { key: 'dc-motor-airflow',  label: 'DC Motor Airflow Report' },
+  { key: 'roughing-gb-temp', label: 'Roughing Stand & GB Bearing Temp' },
 ];
 
 const ALL_CRANE_SECTIONS = [

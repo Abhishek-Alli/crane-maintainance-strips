@@ -18,6 +18,7 @@ const HbmDashboard = ({ allowedSheets }) => {
   const [recentTransformer, setRecentTransformer] = useState([]);
   const [recentOilLevel, setRecentOilLevel]             = useState([]);
   const [recentDcMotorAirflow, setRecentDcMotorAirflow] = useState([]);
+  const [recentRoughingGbTemp, setRecentRoughingGbTemp] = useState([]);
   const [loading, setLoading] = useState(true);
 
 
@@ -27,7 +28,7 @@ const HbmDashboard = ({ allowedSheets }) => {
     try {
       const toArr = (v) => Array.isArray(v) ? v : (v?.data ?? []);
 
-      const [dcRes, rsRes, mmRes, cbRes, phRes, bbRes, brRes, ppRes, wpRes, pmRes, trRes, olRes, afRes] = await Promise.allSettled([
+      const [dcRes, rsRes, mmRes, cbRes, phRes, bbRes, brRes, ppRes, wpRes, pmRes, trRes, olRes, afRes, rgRes] = await Promise.allSettled([
         hbmAPI.getDcMotorLogs({ limit: 5 }),
         hbmAPI.getRollingStandLogs({ limit: 5 }),
         hbmAPI.getMillMechLogs({ limit: 5 }),
@@ -41,6 +42,7 @@ const HbmDashboard = ({ allowedSheets }) => {
         hbmAPI.getTransformerLogs({ limit: 5 }),
         hbmAPI.getOilLevelLogs({ limit: 5 }),
         hbmAPI.getDcMotorAirflowLogs({ limit: 5 }),
+        hbmAPI.getRoughingGbTempLogs({ limit: 5 }),
       ]);
 
       if (dcRes.status === 'fulfilled')  setRecentDcMotor(toArr(dcRes.value));
@@ -56,6 +58,7 @@ const HbmDashboard = ({ allowedSheets }) => {
       if (trRes.status === 'fulfilled')  setRecentTransformer(toArr(trRes.value));
       if (olRes.status === 'fulfilled')  setRecentOilLevel(toArr(olRes.value));
       if (afRes.status === 'fulfilled')  setRecentDcMotorAirflow(toArr(afRes.value));
+      if (rgRes.status === 'fulfilled')  setRecentRoughingGbTemp(toArr(rgRes.value));
     } catch (error) {
       toast.error('Failed to load dashboard data');
     } finally {
@@ -112,7 +115,8 @@ const HbmDashboard = ({ allowedSheets }) => {
               { key: 'ph-maint',       to: '/hbm/ph-maint/new',       label: 'PH Maintenance',        sub: 'Maintenance work sheet', color: 'amber',   icon: '🔧' },
               { key: 'transformer',    to: '/hbm/transformer/new',    label: 'HBM Transformer',       sub: 'Visual inspection',      color: 'rose',    icon: '⚡' },
               { key: 'oil-level',        to: '/hbm/oil-level/new',        label: 'Daily Oil Level',             sub: 'Tank levels & readings',    color: 'yellow',  icon: '🛢' },
-              { key: 'dc-motor-airflow', to: '/hbm/dc-motor-airflow/new', label: 'DC Motor Airflow Report',     sub: 'Temp & vibration readings', color: 'violet',  icon: '🌡' },
+              { key: 'dc-motor-airflow',   to: '/hbm/dc-motor-airflow/new',   label: 'DC Motor Airflow Report',     sub: 'Temp & vibration readings',   color: 'violet', icon: '🌡' },
+              { key: 'roughing-gb-temp',   to: '/hbm/roughing-gb-temp/new',   label: 'Roughing GB Temp',            sub: 'Bearing temp analysis',       color: 'pink',   icon: '🌡' },
             ].filter(action => canAccess(action.key)).map((action, i) => {
               const borderMap = {
                 indigo: 'hover:border-indigo-300 hover:bg-indigo-50',
@@ -128,6 +132,7 @@ const HbmDashboard = ({ allowedSheets }) => {
                 rose:   'hover:border-rose-300 hover:bg-rose-50',
                 yellow: 'hover:border-yellow-300 hover:bg-yellow-50',
                 violet: 'hover:border-violet-300 hover:bg-violet-50',
+                pink:   'hover:border-pink-300 hover:bg-pink-50',
               };
               return (
                 <Link key={i} to={action.to}
@@ -530,6 +535,33 @@ const HbmDashboard = ({ allowedSheets }) => {
                       ) : (
                         <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-semibold">All OK</span>
                       )}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+          )}
+
+          {canAccess('roughing-gb-temp') && (
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="font-bold text-gray-900">Roughing GB Temp Logs</h2>
+              <Link to="/hbm/roughing-gb-temp/new" className="text-xs text-pink-600 font-medium hover:underline">+ New</Link>
+            </div>
+            {recentRoughingGbTemp.length === 0 ? (
+              <div className="p-8 text-center text-gray-400 text-sm">No Roughing GB Temp logs yet</div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {recentRoughingGbTemp.map(log => (
+                  <Link key={log.id} to={`/hbm/roughing-gb-temp/${log.id}`}
+                    className="flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-gray-900 text-sm">Roughing GB Temp Report</p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {formatDate(log.log_date)}
+                        {log.filled_by_name && ` · ${log.filled_by_name}`}
+                      </p>
                     </div>
                   </Link>
                 ))}

@@ -15,6 +15,7 @@ const CHECKSHEET_TYPES = [
   { value: 'transformer',       label: 'HBM Transformer',                    fetchLogs: (p) => hbmAPI.getTransformerLogs(p),      downloadFn: (id) => hbmAPI.downloadTransformerPDF(id) },
   { value: 'oil-level',         label: 'Daily Oil Level',                    fetchLogs: (p) => hbmAPI.getOilLevelLogs(p) },
   { value: 'dc-motor-airflow',  label: 'DC Motor Airflow, Temp & Vibration', fetchLogs: (p) => hbmAPI.getDcMotorAirflowLogs(p) },
+  { value: 'roughing-gb-temp', label: 'Roughing Stand & GB Bearing Temp',    fetchLogs: (p) => hbmAPI.getRoughingGbTempLogs(p) },
 ];
 
 function getDatesInRange(from, to) {

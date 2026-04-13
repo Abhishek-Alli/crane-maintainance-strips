@@ -2837,6 +2837,159 @@ class HbmController {
       res.status(500).json({ success: false, message: 'Failed to submit DC Motor Airflow sheet' });
     }
   }
+
+
+  // ── Roughing GB Temp ──────────────────────────────────────────────────────
+
+  static async getRoughingGbTempLogs(req, res) {
+    try {
+      const { date_from, date_to, limit: lim } = req.query;
+      const limit = parseInt(lim) || 50;
+      const conditions = [];
+      const params = [];
+      let paramIdx = 1;
+
+      if (date_from) { conditions.push(`l.log_date >= $${paramIdx++}`); params.push(date_from); }
+      if (date_to)   { conditions.push(`l.log_date <= $${paramIdx++}`); params.push(date_to); }
+
+      const whereClause = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
+      params.push(limit);
+
+      const result = await query(
+        `SELECT l.*, u.username as filled_by_name
+         FROM hbm_roughing_gb_temp_logs l
+         JOIN users u ON l.filled_by = u.id
+         ${whereClause}
+         ORDER BY l.log_date DESC, l.created_at DESC
+         LIMIT $${paramIdx}`,
+        params
+      );
+
+      res.json({ success: true, data: result.rows, count: result.rows.length });
+    } catch (error) {
+      console.error('Roughing GB Temp get logs error:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch Roughing GB Temp logs' });
+    }
+  }
+
+  static async getRoughingGbTempLogById(req, res) {
+    try {
+      const { id } = req.params;
+
+      const logResult = await query(
+        `SELECT l.*, u.username as filled_by_name
+         FROM hbm_roughing_gb_temp_logs l
+         JOIN users u ON l.filled_by = u.id
+         WHERE l.id = $1`,
+        [id]
+      );
+
+      if (logResult.rows.length === 0)
+        return res.status(404).json({ success: false, message: 'Roughing GB Temp log not found' });
+
+      const standsResult = await query(
+        `SELECT * FROM hbm_roughing_gb_temp_stands WHERE log_id = $1 ORDER BY id`,
+        [id]
+      );
+
+      res.json({
+        success: true,
+        data: {
+          ...logResult.rows[0],
+          stands: standsResult.rows,
+        }
+      });
+    } catch (error) {
+      console.error('Roughing GB Temp get log error:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch Roughing GB Temp log' });
+    }
+  }
+
+  static async createRoughingGbTempLog(req, res) {
+    try {
+      const {
+        log_date, shift_eng, temp_taken_by,
+        s1_flywheel_de, s1_flywheel_nde,
+        s1_reduction_de, s1_reduction_nde, s1_reduction_output,
+        s1_pinion_de_top, s1_pinion_de_mid, s1_pinion_de_bot,
+        s1_pinion_nde_top, s1_pinion_nde_mid, s1_pinion_nde_bot,
+        s1_stand_de_top, s1_stand_de_mid, s1_stand_de_bot,
+        s1_stand_nde_top, s1_stand_nde_mid, s1_stand_nde_bot,
+        sec1_remark, sec2_remark, sec3_remark,
+        stands,
+      } = req.body;
+
+      if (!log_date) {
+        return res.status(400).json({ success: false, message: 'Date is required' });
+      }
+
+      const n = (v) => (v != null && v !== '' ? v : null);
+
+      let log;
+      await transaction(async (client) => {
+        const logResult = await client.query(
+          `INSERT INTO hbm_roughing_gb_temp_logs
+             (log_date, shift_eng, temp_taken_by,
+              s1_flywheel_de, s1_flywheel_nde,
+              s1_reduction_de, s1_reduction_nde, s1_reduction_output,
+              s1_pinion_de_top, s1_pinion_de_mid, s1_pinion_de_bot,
+              s1_pinion_nde_top, s1_pinion_nde_mid, s1_pinion_nde_bot,
+              s1_stand_de_top, s1_stand_de_mid, s1_stand_de_bot,
+              s1_stand_nde_top, s1_stand_nde_mid, s1_stand_nde_bot,
+              sec1_remark, sec2_remark, sec3_remark,
+              filled_by)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)
+           RETURNING *`,
+          [
+            log_date, n(shift_eng), n(temp_taken_by),
+            n(s1_flywheel_de), n(s1_flywheel_nde),
+            n(s1_reduction_de), n(s1_reduction_nde), n(s1_reduction_output),
+            n(s1_pinion_de_top), n(s1_pinion_de_mid), n(s1_pinion_de_bot),
+            n(s1_pinion_nde_top), n(s1_pinion_nde_mid), n(s1_pinion_nde_bot),
+            n(s1_stand_de_top), n(s1_stand_de_mid), n(s1_stand_de_bot),
+            n(s1_stand_nde_top), n(s1_stand_nde_mid), n(s1_stand_nde_bot),
+            n(sec1_remark), n(sec2_remark), n(sec3_remark),
+            req.user.id,
+          ]
+        );
+
+        log = logResult.rows[0];
+
+        if (stands && Array.isArray(stands)) {
+          for (const s of stands) {
+            const hasData = [s.gb_de, s.gb_inter, s.gb_output_top, s.gb_output_bot, s.gb_gearbox,
+                             s.s_de_top, s.s_de_bot, s.s_nde_top, s.s_nde_bot].some(x => x != null && x !== '');
+            if (!hasData) continue;
+            await client.query(
+              `INSERT INTO hbm_roughing_gb_temp_stands
+                 (log_id, stand_name,
+                  gb_de, gb_inter, gb_output_top, gb_output_bot, gb_gearbox,
+                  s_de_top, s_de_bot, s_nde_top, s_nde_bot)
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+              [
+                log.id, s.stand_name,
+                n(s.gb_de), n(s.gb_inter), n(s.gb_output_top), n(s.gb_output_bot), n(s.gb_gearbox),
+                n(s.s_de_top), n(s.s_de_bot), n(s.s_nde_top), n(s.s_nde_bot),
+              ]
+            );
+          }
+        }
+      });
+
+      res.status(201).json({ success: true, message: 'Roughing GB Temp sheet submitted successfully', data: log });
+
+      sendHbmChecksheetNotification({
+        checksheetType: 'Roughing Stand & Gearbox Bearing Temperature',
+        date: log_date,
+        filledBy: req.user.username,
+        submittedAt: new Date(),
+        items: []
+      }).catch((err) => console.error('Telegram Roughing GB Temp notify error:', err));
+    } catch (error) {
+      console.error('Roughing GB Temp create log error:', error);
+      res.status(500).json({ success: false, message: 'Failed to submit Roughing GB Temp sheet' });
+    }
+  }
 }
 
 /* ── PDF helper: row height ── */

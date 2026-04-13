@@ -289,6 +289,11 @@ export const hbmAPI = {
   getDcMotorAirflowLogById: (id) => api.get(`/hbm/dc-motor-airflow/${id}`),
   createDcMotorAirflowLog: (data) => api.post('/hbm/dc-motor-airflow', data),
 
+  // Roughing Stand & Gearbox Bearing Temperature
+  getRoughingGbTempLogs: (params) => api.get('/hbm/roughing-gb-temp', { params }),
+  getRoughingGbTempLogById: (id) => api.get(`/hbm/roughing-gb-temp/${id}`),
+  createRoughingGbTempLog: (data) => api.post('/hbm/roughing-gb-temp', data),
+
   // PDF downloads
   downloadPDF: (type, id) =>
     api.get(`/hbm/pdf/${type}/${id}`, { responseType: 'blob' }),

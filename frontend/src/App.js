@@ -59,6 +59,9 @@ import OilLevelView from './components/hbm/OilLevelView';
 import DcMotorAirflowForm from './components/hbm/DcMotorAirflowForm';
 import DcMotorAirflowHistory from './components/hbm/DcMotorAirflowHistory';
 import DcMotorAirflowView from './components/hbm/DcMotorAirflowView';
+import RoughingGbTempForm from './components/hbm/RoughingGbTempForm';
+import RoughingGbTempHistory from './components/hbm/RoughingGbTempHistory';
+import RoughingGbTempView from './components/hbm/RoughingGbTempView';
 // import FabricationReport from "./components/fabrication/FabricationReport";
 // import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import FabricationReport from "./components/fabrication/FabricationReport";
@@ -654,6 +657,10 @@ function App() {
           <Route path="/hbm/dc-motor-airflow/new" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('dc-motor-airflow') ? <DcMotorAirflowForm /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
           <Route path="/hbm/dc-motor-airflow/history" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('dc-motor-airflow') ? <DcMotorAirflowHistory /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
           <Route path="/hbm/dc-motor-airflow/:id" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('dc-motor-airflow') ? <DcMotorAirflowView /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+
+          <Route path="/hbm/roughing-gb-temp/new" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('roughing-gb-temp') ? <RoughingGbTempForm /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hbm/roughing-gb-temp/history" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('roughing-gb-temp') ? <RoughingGbTempHistory /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hbm/roughing-gb-temp/:id" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('roughing-gb-temp') ? <RoughingGbTempView /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
 
           <Route
             path="/fabrication"
