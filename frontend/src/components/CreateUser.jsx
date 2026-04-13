@@ -10,6 +10,11 @@ const ALL_HBM_SHEETS = [
   { key: 'pumphouse',      label: 'Pumphouse' },
   { key: 'bar-bundle',     label: 'Bar Bundle Area' },
   { key: 'before-rolling', label: 'Before Rolling' },
+  { key: 'pump-param',     label: 'Pump Parameter Report' },
+  { key: 'water-param',    label: 'Water Parameters' },
+  { key: 'ph-maint',       label: 'PH Maintenance' },
+  { key: 'transformer',    label: 'HBM Transformer' },
+  { key: 'oil-level',      label: 'Daily Oil Level' },
 ];
 
 const ALL_CRANE_SECTIONS = [
