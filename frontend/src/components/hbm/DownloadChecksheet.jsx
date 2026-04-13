@@ -3,13 +3,16 @@ import { Link } from 'react-router-dom';
 import { hbmAPI } from '../../services/api';
 
 const CHECKSHEET_TYPES = [
-  { value: 'dc-motor', label: 'DC Motor', fetchLogs: (p) => hbmAPI.getDcMotorLogs(p) },
-  { value: 'rolling-stand', label: 'Rolling Stand', fetchLogs: (p) => hbmAPI.getRollingStandLogs(p) },
-  { value: 'mill-mech', label: 'Mill Mechanical', fetchLogs: (p) => hbmAPI.getMillMechLogs(p) },
-  { value: 'cooling-bed', label: 'Cooling Bed', fetchLogs: (p) => hbmAPI.getCoolingBedLogs(p) },
-  { value: 'pumphouse', label: 'Pumphouse', fetchLogs: (p) => hbmAPI.getPumpHouseLogs(p) },
-  { value: 'bar-bundle', label: 'Bar Bundle Area', fetchLogs: (p) => hbmAPI.getBarBundleLogs(p) },
-  { value: 'before-rolling', label: 'Before Rolling', fetchLogs: (p) => hbmAPI.getBeforeRollingLogs(p) },
+  { value: 'dc-motor',       label: 'DC Motor',                fetchLogs: (p) => hbmAPI.getDcMotorLogs(p) },
+  { value: 'rolling-stand',  label: 'Rolling Stand',           fetchLogs: (p) => hbmAPI.getRollingStandLogs(p) },
+  { value: 'mill-mech',      label: 'Mill Mechanical',         fetchLogs: (p) => hbmAPI.getMillMechLogs(p) },
+  { value: 'cooling-bed',    label: 'Cooling Bed',             fetchLogs: (p) => hbmAPI.getCoolingBedLogs(p) },
+  { value: 'pumphouse',      label: 'Pumphouse',               fetchLogs: (p) => hbmAPI.getPumpHouseLogs(p) },
+  { value: 'bar-bundle',     label: 'Bar Bundle Area',         fetchLogs: (p) => hbmAPI.getBarBundleLogs(p) },
+  { value: 'before-rolling', label: 'Before Rolling',          fetchLogs: (p) => hbmAPI.getBeforeRollingLogs(p) },
+  { value: 'water-param',    label: 'Water Parameters',        fetchLogs: (p) => hbmAPI.getWaterParamLogs(p),  downloadFn: (id) => hbmAPI.downloadWaterParamPDF(id) },
+  { value: 'ph-maint',       label: 'PH Maintenance Work Sheet', fetchLogs: (p) => hbmAPI.getPhMaintLogs(p),  downloadFn: (id) => hbmAPI.downloadPhMaintPDF(id) },
+  { value: 'transformer',    label: 'HBM Transformer',           fetchLogs: (p) => hbmAPI.getTransformerLogs(p), downloadFn: (id) => hbmAPI.downloadTransformerPDF(id) },
 ];
 
 function getDatesInRange(from, to) {
@@ -72,8 +75,11 @@ export default function DownloadChecksheet() {
     const key = `${id}`;
     setDownloading(key);
     try {
-      const response = await hbmAPI.downloadPDF(selectedType, id);
-      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const response = typeConfig.downloadFn
+        ? await typeConfig.downloadFn(id)
+        : await hbmAPI.downloadPDF(selectedType, id);
+      const blob = response instanceof Blob ? response : (response.data instanceof Blob ? response.data : new Blob([response.data], { type: 'application/pdf' }));
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       const shiftPart = shift ? `-${shift}` : '';

@@ -1404,6 +1404,1002 @@ class HbmController {
   }
 
   // ==========================================
+  // PUMP PARAMETER REPORT LOGS
+  // ==========================================
+
+  static async getPumpParamLogs(req, res) {
+    try {
+      const { date_from, date_to, limit: lim } = req.query;
+      const limit = parseInt(lim) || 50;
+      const conditions = [];
+      const params = [];
+      let paramIdx = 1;
+
+      if (date_from) { conditions.push(`l.log_date >= $${paramIdx++}`); params.push(date_from); }
+      if (date_to)   { conditions.push(`l.log_date <= $${paramIdx++}`); params.push(date_to); }
+
+      const whereClause = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
+      params.push(limit);
+
+      const result = await query(
+        `SELECT l.*, u.username as filled_by_name,
+          COUNT(e.id) as total_entries,
+          COUNT(e.id) FILTER (WHERE e.kw IS NOT NULL OR e.amp IS NOT NULL) as filled_entries
+         FROM hbm_pump_param_logs l
+         JOIN users u ON l.filled_by = u.id
+         LEFT JOIN hbm_pump_param_entries e ON e.log_id = l.id
+         ${whereClause}
+         GROUP BY l.id, u.username
+         ORDER BY l.log_date DESC, l.created_at DESC
+         LIMIT $${paramIdx}`,
+        params
+      );
+
+      res.json({ success: true, data: result.rows, count: result.rows.length });
+    } catch (error) {
+      console.error('Pump Param get logs error:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch Pump Parameter logs' });
+    }
+  }
+
+  static async getPumpParamLogById(req, res) {
+    try {
+      const { id } = req.params;
+
+      const logResult = await query(
+        `SELECT l.*, u.username as filled_by_name
+         FROM hbm_pump_param_logs l
+         JOIN users u ON l.filled_by = u.id
+         WHERE l.id = $1`,
+        [id]
+      );
+
+      if (logResult.rows.length === 0)
+        return res.status(404).json({ success: false, message: 'Pump Parameter log not found' });
+
+      const entriesResult = await query(
+        `SELECT * FROM hbm_pump_param_entries WHERE log_id = $1 ORDER BY id`,
+        [id]
+      );
+
+      const sec2Result = await query(
+        `SELECT * FROM hbm_pump_param_sec2 WHERE log_id = $1 ORDER BY id`,
+        [id]
+      );
+
+      res.json({
+        success: true,
+        data: {
+          ...logResult.rows[0],
+          entries: entriesResult.rows,
+          sec2_items: sec2Result.rows,
+        }
+      });
+    } catch (error) {
+      console.error('Pump Param get log error:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch Pump Parameter log' });
+    }
+  }
+
+  static async createPumpParamLog(req, res) {
+    try {
+      const { log_date, size_value, entries, sec2_items } = req.body;
+
+      if (!log_date) {
+        return res.status(400).json({ success: false, message: 'Date is required' });
+      }
+
+      if (!entries || !Array.isArray(entries) || entries.length === 0) {
+        return res.status(400).json({ success: false, message: 'At least one pump entry is required' });
+      }
+
+      let log;
+      await transaction(async (client) => {
+        const logResult = await client.query(
+          `INSERT INTO hbm_pump_param_logs (log_date, size_value, filled_by)
+           VALUES ($1, $2, $3) RETURNING *`,
+          [log_date, size_value || null, req.user.id]
+        );
+
+        log = logResult.rows[0];
+
+        for (const entry of entries) {
+          await client.query(
+            `INSERT INTO hbm_pump_param_entries
+               (log_id, pump_name, drive_details, status, kw, amp, rpm, pressure, load_pct, kwh_diff)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+            [
+              log.id,
+              entry.pump_name,
+              entry.drive_details || null,
+              entry.status || null,
+              entry.kw != null && entry.kw !== '' ? entry.kw : null,
+              entry.amp != null && entry.amp !== '' ? entry.amp : null,
+              entry.rpm != null && entry.rpm !== '' ? entry.rpm : null,
+              entry.pressure != null && entry.pressure !== '' ? entry.pressure : null,
+              entry.load_pct != null && entry.load_pct !== '' ? entry.load_pct : null,
+              entry.kwh_diff != null && entry.kwh_diff !== '' ? entry.kwh_diff : null,
+            ]
+          );
+        }
+
+        if (sec2_items && Array.isArray(sec2_items)) {
+          for (const item of sec2_items) {
+            await client.query(
+              `INSERT INTO hbm_pump_param_sec2 (log_id, item_name, value_text, item_status)
+               VALUES ($1,$2,$3,$4)`,
+              [log.id, item.item_name, item.value_text || null, item.item_status || null]
+            );
+          }
+        }
+      });
+
+      res.status(201).json({ success: true, message: 'Pump Parameter report submitted successfully', data: log });
+
+      sendHbmChecksheetNotification({
+        checksheetType: 'Pump Parameter Report',
+        date: log_date,
+        filledBy: req.user.username,
+        submittedAt: new Date(),
+        items: entries.map(e => ({ item_name: e.pump_name, status: e.status || 'ON' }))
+      }).catch((e) => console.error('Telegram Pump Param notify error:', e));
+    } catch (error) {
+      console.error('Pump Param create log error:', error);
+      res.status(500).json({ success: false, message: 'Failed to submit Pump Parameter report' });
+    }
+  }
+
+  // ==========================================
+  // VISUAL INSPECTION & HBM TRANSFORMER
+  // ==========================================
+
+  static async getTransformerLogs(req, res) {
+    try {
+      const { date_from, date_to, limit = 50 } = req.query;
+      const conditions = [];
+      const params = [];
+      if (date_from) { params.push(date_from); conditions.push(`l.log_date >= $${params.length}`); }
+      if (date_to)   { params.push(date_to);   conditions.push(`l.log_date <= $${params.length}`); }
+      params.push(parseInt(limit) || 50);
+      const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+      const result = await query(
+        `SELECT l.*, u.username as filled_by_name
+         FROM hbm_transformer_logs l
+         JOIN users u ON l.filled_by = u.id
+         ${whereClause}
+         ORDER BY l.log_date DESC, l.created_at DESC
+         LIMIT $${params.length}`,
+        params
+      );
+      res.json(result.rows);
+    } catch (error) {
+      console.error('Transformer get logs error:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch Transformer logs' });
+    }
+  }
+
+  static async getTransformerLogById(req, res) {
+    try {
+      const { id } = req.params;
+      const logResult = await query(
+        `SELECT l.*, u.username as filled_by_name
+         FROM hbm_transformer_logs l
+         JOIN users u ON l.filled_by = u.id
+         WHERE l.id = $1`,
+        [id]
+      );
+      if (logResult.rows.length === 0)
+        return res.status(404).json({ success: false, message: 'Transformer log not found' });
+
+      const [s1, s2, s3] = await Promise.all([
+        query(`SELECT * FROM hbm_transformer_sec1 WHERE log_id = $1 ORDER BY id`, [id]),
+        query(`SELECT * FROM hbm_transformer_sec2 WHERE log_id = $1 ORDER BY id`, [id]),
+        query(`SELECT * FROM hbm_transformer_sec3 WHERE log_id = $1 ORDER BY id`, [id]),
+      ]);
+      res.json({ ...logResult.rows[0], sec1: s1.rows, sec2: s2.rows, sec3: s3.rows });
+    } catch (error) {
+      console.error('Transformer get by id error:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch Transformer log' });
+    }
+  }
+
+  static async createTransformerLog(req, res) {
+    try {
+      const { log_date, sec1, sec2, sec3, sec2_remark, sec3_remark } = req.body;
+      if (!log_date) return res.status(400).json({ success: false, message: 'Date is required' });
+
+      const n = (v) => (v !== '' && v != null ? parseFloat(v) : null);
+      const s = (v) => (v && String(v).trim() ? String(v).trim() : null);
+
+      let log;
+      await transaction(async (client) => {
+        const logResult = await client.query(
+          `INSERT INTO hbm_transformer_logs (log_date, sec2_remark, sec3_remark, filled_by)
+           VALUES ($1, $2, $3, $4) RETURNING *`,
+          [log_date, s(sec2_remark), s(sec3_remark), req.user.id]
+        );
+        log = logResult.rows[0];
+
+        for (const u of (sec1 || [])) {
+          await client.query(
+            `INSERT INTO hbm_transformer_sec1
+               (log_id,unit_name,rated_current,ct_ratio,bar_size,ht_current,ht_volt,
+                tap_count_diff,tap_position,wind_temperature,oil_temperature,
+                main_tank_oil_level,oltc_oil_level,silica_gel_color,
+                cleaning,electric_inspection,mech_inspection,relay_condition,
+                meter_condition,indicator,announce_meter,oil_leakage,tnc_operation,dc_supply)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)`,
+            [
+              log.id, u.unit_name,
+              n(u.rated_current), s(u.ct_ratio), s(u.bar_size),
+              n(u.ht_current), n(u.ht_volt),
+              n(u.tap_count_diff), n(u.tap_position),
+              n(u.wind_temperature), n(u.oil_temperature),
+              n(u.main_tank_oil_level), n(u.oltc_oil_level),
+              s(u.silica_gel_color),
+              s(u.cleaning), s(u.electric_inspection), s(u.mech_inspection),
+              s(u.relay_condition), s(u.meter_condition), s(u.indicator),
+              s(u.announce_meter), s(u.oil_leakage), s(u.tnc_operation), s(u.dc_supply),
+            ]
+          );
+        }
+
+        for (const u of (sec2 || [])) {
+          await client.query(
+            `INSERT INTO hbm_transformer_sec2
+               (log_id, unit_name, today_tap_count, yesterday_tap_count, difference)
+             VALUES ($1,$2,$3,$4,$5)`,
+            [log.id, u.unit_name, n(u.today_tap_count), n(u.yesterday_tap_count), n(u.difference)]
+          );
+        }
+
+        for (const u of (sec3 || [])) {
+          await client.query(
+            `INSERT INTO hbm_transformer_sec3
+               (log_id, unit_name, today_kwh, yesterday_kwh, diff_kwh, today_kvah, yesterday_kvah, diff_kvah)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+            [log.id, u.unit_name, n(u.today_kwh), n(u.yesterday_kwh), n(u.diff_kwh),
+             n(u.today_kvah), n(u.yesterday_kvah), n(u.diff_kvah)]
+          );
+        }
+      });
+
+      res.status(201).json({ success: true, id: log.id });
+
+      sendTelegramNotification({
+        checksheetType: 'Visual Inspection & HBM Transformer',
+        date: log_date,
+        filledBy: req.user.username,
+        submittedAt: new Date(),
+        items: (sec1 || []).map(u => ({ item_name: u.unit_name, status: 'OK' }))
+      }).catch((e) => console.error('Transformer notify error:', e));
+    } catch (error) {
+      console.error('Transformer create log error:', error);
+      res.status(500).json({ success: false, message: 'Failed to submit Transformer log' });
+    }
+  }
+
+  static async downloadTransformerPDF(req, res) {
+    const { id } = req.params;
+    try {
+      const logResult = await query(
+        `SELECT l.*, u.username AS filled_by_name
+         FROM hbm_transformer_logs l
+         JOIN users u ON l.filled_by = u.id
+         WHERE l.id = $1`,
+        [id]
+      );
+      if (logResult.rows.length === 0)
+        return res.status(404).json({ success: false, message: 'Transformer log not found' });
+
+      const log = logResult.rows[0];
+      const [s1, s2, s3] = await Promise.all([
+        query(`SELECT * FROM hbm_transformer_sec1 WHERE log_id = $1 ORDER BY id`, [id]),
+        query(`SELECT * FROM hbm_transformer_sec2 WHERE log_id = $1 ORDER BY id`, [id]),
+        query(`SELECT * FROM hbm_transformer_sec3 WHERE log_id = $1 ORDER BY id`, [id]),
+      ]);
+
+      const margin = 40;
+      const pageW  = 515;
+      const colX   = margin;
+      const v = (val) => (val != null ? String(val) : '—');
+
+      const doc = new PDFDocument({ margin, size: 'A4', bufferPages: true });
+      const buffers = [];
+      doc.on('data', buffers.push.bind(buffers));
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition',
+        `attachment; filename=hbm_transformer_${id}_${log.log_date || 'report'}.pdf`);
+
+      // ── Company Header ──
+      if (fs.existsSync(LOGO_PATH)) doc.image(LOGO_PATH, colX, 30, { width: 60, height: 60 });
+      doc.font('Helvetica-Bold').fontSize(14).fillColor('#000000')
+        .text('SRJ STRIPS AND PIPES PVT LTD', 110, 35, { width: pageW - 70 });
+      doc.font('Helvetica-Bold').fontSize(12).fillColor('#1e40af')
+        .text('HBM CHECKSHEET REPORT', 110, 55, { width: pageW - 70 });
+      doc.fillColor('#000000').font('Helvetica').fontSize(10)
+        .text('Visual Inspection & HBM Transformer', 110, 72, { width: pageW - 70 });
+      doc.moveTo(colX, 97).lineTo(colX + pageW, 97).stroke('#1e40af');
+      doc.y = 108;
+
+      doc.font('Helvetica-Bold').fontSize(10).fillColor('#000000');
+      doc.text(`Date      : ${new Date(log.log_date).toLocaleDateString('en-IN')}`, colX);
+      doc.text(`Filled By : ${log.filled_by_name}`, colX);
+      doc.text(`Submitted : ${new Date(log.created_at).toLocaleString('en-IN')}`, colX);
+      doc.moveDown(0.8);
+
+      // ── Helper: section banner ──
+      const sectionBanner = (title) => {
+        if (doc.y + 24 > 760) { doc.addPage(); doc.y = margin; }
+        doc.rect(colX, doc.y, pageW, 22).fill('#1e40af');
+        doc.font('Helvetica-Bold').fontSize(10).fillColor('#FFFFFF')
+          .text(title, colX + 8, doc.y - 15, { width: pageW - 16 });
+        doc.fillColor('#000000');
+        doc.y += 10;
+      };
+
+      // ── Helper: simple two-column info row ──
+      const infoRow = (label, val, y) => {
+        doc.font('Helvetica-Bold').fontSize(9).fillColor('#374151')
+          .text(label, colX + 4, y, { width: 130 });
+        doc.font('Helvetica').fontSize(9).fillColor('#000000')
+          .text(val, colX + 138, y, { width: pageW - 142 });
+      };
+
+      // ── SECTION 1 ──
+      sectionBanner('SECTION 1 — Visual Inspection');
+      doc.y += 4;
+
+      const SEC1_LABELS = [
+        ['rated_current','Rated Current'],['ct_ratio','CT Ratio'],['bar_size','Bar Size'],
+        ['ht_current','HT Current'],['ht_volt','HT Volt'],['tap_count_diff','Tap Count Diff'],
+        ['tap_position','Tap Position'],['wind_temperature','Wind Temp (°C)'],
+        ['oil_temperature','Oil Temp (°C)'],['main_tank_oil_level','Main Tank Oil Level (%)'],
+        ['oltc_oil_level','OLTC Oil Level (%)'],['silica_gel_color','Silica Gel Color'],
+        ['cleaning','Cleaning'],['electric_inspection','Electric Inspection'],
+        ['mech_inspection','Mech. Inspection'],['relay_condition','Relay Condition'],
+        ['meter_condition','Meter Condition'],['indicator','Indicator'],
+        ['announce_meter','Announce Meter'],['oil_leakage','Oil Leakage'],
+        ['tnc_operation','TNC Operation'],['dc_supply','DC Supply'],
+      ];
+
+      for (const unit of s1.rows) {
+        if (doc.y + 16 > 750) { doc.addPage(); doc.y = margin; }
+        doc.rect(colX, doc.y, pageW, 18).fill('#dbeafe');
+        doc.font('Helvetica-Bold').fontSize(10).fillColor('#1e40af')
+          .text(unit.unit_name, colX + 6, doc.y - 13, { width: pageW - 12 });
+        doc.fillColor('#000000');
+        doc.y += 6;
+
+        SEC1_LABELS.forEach(([key, lbl], i) => {
+          if (doc.y + 16 > 760) { doc.addPage(); doc.y = margin; }
+          if (i % 2 === 0) doc.rect(colX, doc.y, pageW, 16).fill('#f9fafb');
+          infoRow(lbl, v(unit[key]), doc.y + 3);
+          doc.y += 16;
+        });
+        doc.y += 6;
+      }
+
+      // ── SECTION 2 ──
+      if (doc.y + 60 > 760) { doc.addPage(); doc.y = margin; }
+      sectionBanner('SECTION 2 — OLTC Daily Report');
+      doc.y += 4;
+
+      // Table header
+      const s2ColW = [120, 115, 140, 140];
+      const drawS2Row = (y, c1, c2, c3, c4, isH) => {
+        const total = s2ColW.reduce((a, b) => a + b, 0);
+        if (isH) { doc.rect(colX, y, total, 20).fill('#1e40af'); doc.fillColor('#FFFFFF'); }
+        else { doc.fillColor('#000000'); }
+        doc.rect(colX, y, total, 20).stroke('#333');
+        let cx = colX;
+        s2ColW.forEach(w => { doc.moveTo(cx, y).lineTo(cx, y + 20).stroke('#333'); cx += w; });
+        const f = isH ? 'Helvetica-Bold' : 'Helvetica';
+        doc.font(f).fontSize(9);
+        doc.text(c1, colX + 4, y + 6, { width: s2ColW[0] - 8 });
+        doc.text(c2, colX + s2ColW[0] + 4, y + 6, { width: s2ColW[1] - 8, align: 'center' });
+        doc.text(c3, colX + s2ColW[0] + s2ColW[1] + 4, y + 6, { width: s2ColW[2] - 8, align: 'center' });
+        doc.text(c4, colX + s2ColW[0] + s2ColW[1] + s2ColW[2] + 4, y + 6, { width: s2ColW[3] - 8, align: 'center' });
+        doc.fillColor('#000000');
+      };
+
+      let cy = doc.y;
+      drawS2Row(cy, 'Unit', 'Today Tap Count', 'Yesterday Tap Count', 'Difference', true);
+      cy += 20;
+      for (const u of s2.rows) {
+        drawS2Row(cy, u.unit_name, v(u.today_tap_count), v(u.yesterday_tap_count), v(u.difference), false);
+        cy += 20;
+      }
+      doc.y = cy + 6;
+      if (log.sec2_remark) {
+        doc.font('Helvetica-Bold').fontSize(9).text('Remark: ', colX, doc.y, { continued: true });
+        doc.font('Helvetica').text(log.sec2_remark);
+      }
+      doc.y += 10;
+
+      // ── SECTION 3 ──
+      if (doc.y + 80 > 760) { doc.addPage(); doc.y = margin; }
+      sectionBanner('SECTION 3 — KWH & KVAH Daily Report');
+      doc.y += 4;
+
+      const s3ColW = [80, 70, 75, 75, 70, 75, 75];
+      const drawS3Row = (y, cols, isH) => {
+        const total = s3ColW.reduce((a, b) => a + b, 0);
+        if (isH) { doc.rect(colX, y, total, 24).fill('#1e40af'); doc.fillColor('#FFFFFF'); }
+        else { doc.fillColor('#000000'); }
+        doc.rect(colX, y, total, 24).stroke('#333');
+        let cx = colX;
+        s3ColW.forEach(w => { doc.moveTo(cx, y).lineTo(cx, y + 24).stroke('#333'); cx += w; });
+        const f = isH ? 'Helvetica-Bold' : 'Helvetica';
+        doc.font(f).fontSize(8);
+        let xPos = colX;
+        cols.forEach((c, i) => {
+          doc.text(c, xPos + 3, y + 7, { width: s3ColW[i] - 6, align: 'center' });
+          xPos += s3ColW[i];
+        });
+        doc.fillColor('#000000');
+      };
+
+      cy = doc.y;
+      drawS3Row(cy, ['Unit','KWH Today','KWH Yesterday','KWH Diff','KVAH Today','KVAH Yesterday','KVAH Diff'], true);
+      cy += 24;
+      for (const u of s3.rows) {
+        drawS3Row(cy, [u.unit_name, v(u.today_kwh), v(u.yesterday_kwh), v(u.diff_kwh), v(u.today_kvah), v(u.yesterday_kvah), v(u.diff_kvah)], false);
+        cy += 24;
+      }
+      doc.y = cy + 6;
+      if (log.sec3_remark) {
+        doc.font('Helvetica-Bold').fontSize(9).text('Remark: ', colX, doc.y, { continued: true });
+        doc.font('Helvetica').text(log.sec3_remark);
+      }
+
+      // ── Page Footers ──
+      const range = doc.bufferedPageRange();
+      for (let i = 0; i < range.count; i++) {
+        doc.switchToPage(range.start + i);
+        doc.font('Helvetica').fontSize(8).fillColor('#888888')
+          .text(`Generated: ${new Date().toLocaleString('en-IN')}   |   Page ${i + 1} of ${range.count}`,
+            colX, 820, { width: pageW, align: 'center' });
+      }
+
+      doc.on('end', () => res.send(Buffer.concat(buffers)));
+      doc.end();
+    } catch (error) {
+      console.error('Transformer PDF error:', error);
+      res.status(500).json({ success: false, message: 'Failed to generate PDF' });
+    }
+  }
+
+  // ==========================================
+  // PUMP HOUSE MAINTENANCE WORK SHEET
+  // ==========================================
+
+  static async getPhMaintLogs(req, res) {
+    try {
+      const { date_from, date_to, limit = 50 } = req.query;
+      const conditions = [];
+      const params = [];
+
+      if (date_from) { params.push(date_from); conditions.push(`l.log_date >= $${params.length}`); }
+      if (date_to)   { params.push(date_to);   conditions.push(`l.log_date <= $${params.length}`); }
+
+      params.push(parseInt(limit) || 50);
+      const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+      const result = await query(
+        `SELECT l.*, u.username as filled_by_name,
+          COUNT(i.id) as total_items
+         FROM hbm_ph_maint_logs l
+         JOIN users u ON l.filled_by = u.id
+         LEFT JOIN hbm_ph_maint_items i ON i.log_id = l.id
+         ${whereClause}
+         GROUP BY l.id, u.username
+         ORDER BY l.log_date DESC, l.created_at DESC
+         LIMIT $${params.length}`,
+        params
+      );
+      res.json(result.rows);
+    } catch (error) {
+      console.error('PH Maint get logs error:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch Pump House Maintenance logs' });
+    }
+  }
+
+  static async getPhMaintLogById(req, res) {
+    try {
+      const { id } = req.params;
+
+      const logResult = await query(
+        `SELECT l.*, u.username as filled_by_name
+         FROM hbm_ph_maint_logs l
+         JOIN users u ON l.filled_by = u.id
+         WHERE l.id = $1`,
+        [id]
+      );
+      if (logResult.rows.length === 0)
+        return res.status(404).json({ success: false, message: 'Pump House Maintenance log not found' });
+
+      const itemsResult = await query(
+        `SELECT * FROM hbm_ph_maint_items WHERE log_id = $1 ORDER BY item_no`,
+        [id]
+      );
+
+      res.json({ ...logResult.rows[0], items: itemsResult.rows });
+    } catch (error) {
+      console.error('PH Maint get by id error:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch Pump House Maintenance log' });
+    }
+  }
+
+  static async createPhMaintLog(req, res) {
+    try {
+      const { log_date, items } = req.body;
+      if (!log_date) return res.status(400).json({ success: false, message: 'Date is required' });
+
+      const validItems = (items || []).filter(i => i.item_text && i.item_text.trim());
+      if (validItems.length === 0)
+        return res.status(400).json({ success: false, message: 'At least one maintenance work item is required' });
+
+      let log;
+      await transaction(async (client) => {
+        const logResult = await client.query(
+          `INSERT INTO hbm_ph_maint_logs (log_date, filled_by)
+           VALUES ($1, $2) RETURNING *`,
+          [log_date, req.user.id]
+        );
+        log = logResult.rows[0];
+
+        for (let idx = 0; idx < validItems.length; idx++) {
+          await client.query(
+            `INSERT INTO hbm_ph_maint_items (log_id, item_no, item_text)
+             VALUES ($1, $2, $3)`,
+            [log.id, idx + 1, validItems[idx].item_text.trim()]
+          );
+        }
+      });
+
+      res.status(201).json({ success: true, id: log.id });
+
+      sendTelegramNotification({
+        checksheetType: 'Pump House Maintenance Work Sheet',
+        date: log_date,
+        filledBy: req.user.username,
+        submittedAt: new Date(),
+        items: validItems.map((i, idx) => ({ item_name: `${idx + 1}. ${i.item_text}`, status: 'OK' }))
+      }).catch((e) => console.error('PH Maint notify error:', e));
+    } catch (error) {
+      console.error('PH Maint create log error:', error);
+      res.status(500).json({ success: false, message: 'Failed to submit Pump House Maintenance log' });
+    }
+  }
+
+  // ==========================================
+  // PUMP HOUSE MAINTENANCE PDF DOWNLOAD
+  // ==========================================
+
+  static async downloadPhMaintPDF(req, res) {
+    const { id } = req.params;
+    try {
+      const logResult = await query(
+        `SELECT l.*, u.username AS filled_by_name
+         FROM hbm_ph_maint_logs l
+         JOIN users u ON l.filled_by = u.id
+         WHERE l.id = $1`,
+        [id]
+      );
+      if (logResult.rows.length === 0)
+        return res.status(404).json({ success: false, message: 'Maintenance log not found' });
+
+      const log = logResult.rows[0];
+
+      const itemsResult = await query(
+        `SELECT * FROM hbm_ph_maint_items WHERE log_id = $1 ORDER BY item_no`,
+        [id]
+      );
+      const items = itemsResult.rows;
+
+      const margin = 40;
+      const pageW  = 515;
+      const colX   = margin;
+
+      const doc = new PDFDocument({ margin, size: 'A4', bufferPages: true });
+      const buffers = [];
+      doc.on('data', buffers.push.bind(buffers));
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition',
+        `attachment; filename=hbm_ph_maint_${id}_${log.log_date || 'report'}.pdf`);
+
+      // ── Company Header ──
+      if (fs.existsSync(LOGO_PATH)) {
+        doc.image(LOGO_PATH, colX, 30, { width: 60, height: 60 });
+      }
+      doc.font('Helvetica-Bold').fontSize(14).fillColor('#000000')
+        .text('SRJ STRIPS AND PIPES PVT LTD', 110, 35, { width: pageW - 70 });
+      doc.font('Helvetica-Bold').fontSize(12).fillColor('#1e40af')
+        .text('HBM CHECKSHEET REPORT', 110, 55, { width: pageW - 70 });
+      doc.fillColor('#000000').font('Helvetica').fontSize(10)
+        .text('Pump House Maintenance Work Sheet', 110, 72, { width: pageW - 70 });
+      doc.moveTo(colX, 97).lineTo(colX + pageW, 97).stroke('#1e40af');
+      doc.y = 108;
+
+      // ── Log Info ──
+      doc.font('Helvetica-Bold').fontSize(10).fillColor('#000000');
+      doc.text(`Date        : ${new Date(log.log_date).toLocaleDateString('en-IN')}`, colX);
+      doc.text(`Filled By   : ${log.filled_by_name}`, colX);
+      doc.text(`Submitted   : ${new Date(log.created_at).toLocaleString('en-IN')}`, colX);
+      doc.moveDown(1);
+
+      // ── Section Header ──
+      doc.rect(colX, doc.y, pageW, 22).fill('#1e40af');
+      doc.font('Helvetica-Bold').fontSize(10).fillColor('#FFFFFF')
+        .text('Maintenance Work', colX + 8, doc.y - 16, { width: pageW - 16 });
+      doc.fillColor('#000000');
+      doc.y += 8;
+
+      // ── Work Items ──
+      items.forEach((item) => {
+        if (doc.y + 24 > 760) { doc.addPage(); doc.y = margin; }
+        doc.rect(colX, doc.y, pageW, 1).fill('#e5e7eb');
+        doc.y += 6;
+        doc.font('Helvetica-Bold').fontSize(10)
+          .text(`${item.item_no}.`, colX + 4, doc.y, { width: 20, continued: true });
+        doc.font('Helvetica').fontSize(10)
+          .text(`  ${item.item_text}`, { width: pageW - 30 });
+        doc.y += 6;
+      });
+
+      // ── Page Footers ──
+      const range = doc.bufferedPageRange();
+      for (let i = 0; i < range.count; i++) {
+        doc.switchToPage(range.start + i);
+        doc.font('Helvetica').fontSize(8).fillColor('#888888')
+          .text(
+            `Generated: ${new Date().toLocaleString('en-IN')}   |   Page ${i + 1} of ${range.count}`,
+            colX, 820, { width: pageW, align: 'center' }
+          );
+      }
+
+      doc.on('end', () => res.send(Buffer.concat(buffers)));
+      doc.end();
+
+    } catch (error) {
+      console.error('PH Maint PDF download error:', error);
+      res.status(500).json({ success: false, message: 'Failed to generate PDF' });
+    }
+  }
+
+  // ==========================================
+  // PUMP HOUSE WATER PARAMETERS
+  // ==========================================
+
+  static async getWaterParamLogs(req, res) {
+    try {
+      const { date_from, date_to, limit = 50 } = req.query;
+      const conditions = [];
+      const params = [];
+
+      if (date_from) { params.push(date_from); conditions.push(`l.log_date >= $${params.length}`); }
+      if (date_to)   { params.push(date_to);   conditions.push(`l.log_date <= $${params.length}`); }
+
+      params.push(parseInt(limit) || 50);
+      const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+      const result = await query(
+        `SELECT l.*, u.username as filled_by_name,
+          COUNT(e.id) as total_entries
+         FROM hbm_water_param_logs l
+         JOIN users u ON l.filled_by = u.id
+         LEFT JOIN hbm_water_param_entries e ON e.log_id = l.id
+         ${whereClause}
+         GROUP BY l.id, u.username
+         ORDER BY l.log_date DESC, l.created_at DESC
+         LIMIT $${params.length}`,
+        params
+      );
+      res.json(result.rows);
+    } catch (error) {
+      console.error('Water Param get logs error:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch Water Parameter logs' });
+    }
+  }
+
+  static async getWaterParamLogById(req, res) {
+    try {
+      const { id } = req.params;
+
+      const logResult = await query(
+        `SELECT l.*, u.username as filled_by_name
+         FROM hbm_water_param_logs l
+         JOIN users u ON l.filled_by = u.id
+         WHERE l.id = $1`,
+        [id]
+      );
+      if (logResult.rows.length === 0)
+        return res.status(404).json({ success: false, message: 'Water Parameter log not found' });
+
+      const entriesResult = await query(
+        `SELECT * FROM hbm_water_param_entries WHERE log_id = $1 ORDER BY id`,
+        [id]
+      );
+
+      res.json({ ...logResult.rows[0], entries: entriesResult.rows });
+    } catch (error) {
+      console.error('Water Param get by id error:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch Water Parameter log' });
+    }
+  }
+
+  static async createWaterParamLog(req, res) {
+    try {
+      const { log_date, remark, entries } = req.body;
+      if (!log_date) return res.status(400).json({ success: false, message: 'Date is required' });
+      if (!entries || !Array.isArray(entries) || entries.length === 0)
+        return res.status(400).json({ success: false, message: 'At least one water source entry is required' });
+
+      let log;
+      await transaction(async (client) => {
+        const logResult = await client.query(
+          `INSERT INTO hbm_water_param_logs (log_date, remark, filled_by)
+           VALUES ($1, $2, $3) RETURNING *`,
+          [log_date, remark || null, req.user.id]
+        );
+        log = logResult.rows[0];
+
+        for (const entry of entries) {
+          await client.query(
+            `INSERT INTO hbm_water_param_entries
+               (log_id, water_source, source_status, tds, tds_status, hardness, hardness_status, ph, ph_status, temperature, temp_status)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+            [
+              log.id,
+              entry.water_source,
+              entry.source_status || null,
+              entry.tds != null && entry.tds !== '' ? entry.tds : null,
+              entry.tds_status || null,
+              entry.hardness != null && entry.hardness !== '' ? entry.hardness : null,
+              entry.hardness_status || null,
+              entry.ph != null && entry.ph !== '' ? entry.ph : null,
+              entry.ph_status || null,
+              entry.temperature != null && entry.temperature !== '' ? entry.temperature : null,
+              entry.temp_status || null,
+            ]
+          );
+        }
+      });
+
+      res.status(201).json({ success: true, id: log.id });
+
+      sendTelegramNotification({
+        checksheetType: 'Pump House Water Parameters',
+        date: log_date,
+        filledBy: req.user.username,
+        submittedAt: new Date(),
+        items: entries.map(e => ({ item_name: e.water_source, status: e.source_status || 'ON' }))
+      }).catch((e) => console.error('Water Param notify error:', e));
+    } catch (error) {
+      console.error('Water Param create log error:', error);
+      res.status(500).json({ success: false, message: 'Failed to submit Water Parameter report' });
+    }
+  }
+
+  // ==========================================
+  // WATER PARAM PDF DOWNLOAD
+  // ==========================================
+
+  static async downloadWaterParamPDF(req, res) {
+    const { id } = req.params;
+    try {
+      const logResult = await query(
+        `SELECT l.*, u.username AS filled_by_name
+         FROM hbm_water_param_logs l
+         JOIN users u ON l.filled_by = u.id
+         WHERE l.id = $1`,
+        [id]
+      );
+      if (logResult.rows.length === 0)
+        return res.status(404).json({ success: false, message: 'Water Parameter log not found' });
+
+      const log = logResult.rows[0];
+
+      const entriesResult = await query(
+        `SELECT * FROM hbm_water_param_entries WHERE log_id = $1 ORDER BY id`,
+        [id]
+      );
+      const entries = entriesResult.rows;
+
+      // PDF layout constants
+      const margin  = 40;
+      const pageW   = 515;
+      const colX    = margin;
+
+      // Column widths: Source | Status | TDS | Hardness | PH | Temp
+      const c0 = 110; // Water Source
+      const c1 = 45;  // Status
+      const c2 = 75;  // TDS
+      const c3 = 80;  // Hardness
+      const c4 = 65;  // PH
+      const c5 = pageW - c0 - c1 - c2 - c3 - c4; // Temperature
+      const rowH = 36;
+
+      const doc = new PDFDocument({ margin, size: 'A4', bufferPages: true });
+      const buffers = [];
+      doc.on('data', buffers.push.bind(buffers));
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition',
+        `attachment; filename=hbm_water_param_${id}_${log.log_date || 'report'}.pdf`);
+
+      // ── Company Header ──
+      if (fs.existsSync(LOGO_PATH)) {
+        doc.image(LOGO_PATH, colX, 30, { width: 60, height: 60 });
+      }
+      doc.font('Helvetica-Bold').fontSize(14).fillColor('#000000')
+        .text('SRJ STRIPS AND PIPES PVT LTD', 110, 35, { width: pageW - 70 });
+      doc.font('Helvetica-Bold').fontSize(12).fillColor('#1e40af')
+        .text('HBM CHECKSHEET REPORT', 110, 55, { width: pageW - 70 });
+      doc.fillColor('#000000').font('Helvetica').fontSize(10)
+        .text('Pump House Water Parameters', 110, 72, { width: pageW - 70 });
+      doc.moveTo(colX, 97).lineTo(colX + pageW, 97).stroke('#1e40af');
+      doc.y = 108;
+
+      // ── Log Info ──
+      doc.font('Helvetica-Bold').fontSize(10).fillColor('#000000');
+      doc.text(`Date        : ${new Date(log.log_date).toLocaleDateString('en-IN')}`, colX);
+      doc.text(`Filled By   : ${log.filled_by_name}`, colX);
+      doc.text(`Submitted   : ${new Date(log.created_at).toLocaleString('en-IN')}`, colX);
+      if (log.remark) {
+        doc.moveDown(0.3);
+        doc.font('Helvetica-Bold').fontSize(9).text('Remark: ', colX, doc.y, { continued: true });
+        doc.font('Helvetica').text(log.remark);
+      }
+      doc.moveDown(1);
+
+      // ── Table header helper ──
+      const drawWaterRow = (y, src, status, tds, tdsSt, hard, hardSt, ph, phSt, temp, tempSt, isHeader) => {
+        const totalW = c0 + c1 + c2 + c3 + c4 + c5;
+
+        if (isHeader) {
+          doc.rect(colX, y, totalW, rowH).fill('#1e40af');
+          doc.fillColor('#FFFFFF');
+        } else {
+          const hasNotOk = [tdsSt, hardSt, phSt, tempSt].includes('NOT_OK');
+          if (status === 'OFF') {
+            doc.rect(colX, y, totalW, rowH).fill('#F3F4F6');
+          } else if (hasNotOk) {
+            doc.rect(colX, y, totalW, rowH).fill('#FEE2E2');
+          }
+          doc.fillColor('#000000');
+        }
+
+        doc.rect(colX, y, totalW, rowH).stroke('#333333');
+
+        // column dividers
+        let cx = colX + c0;
+        [c1, c2, c3, c4].forEach(w => {
+          doc.moveTo(cx, y).lineTo(cx, y + rowH).stroke('#333333');
+          cx += w;
+        });
+
+        const ty = y + 5;
+        const fs = isHeader ? 9 : 8;
+        doc.font(isHeader ? 'Helvetica-Bold' : 'Helvetica').fontSize(fs);
+
+        doc.text(src  || '—', colX + 3,             ty, { width: c0 - 6 });
+        doc.text(status || '—', colX + c0 + 2,      ty, { width: c1 - 4, align: 'center' });
+
+        if (!isHeader) {
+          // TDS cell: value + status
+          const tdsText = tds != null ? String(tds) : (status === 'OFF' ? 'OFF' : '—');
+          const tdsStText = tdsSt || '';
+          doc.font('Helvetica-Bold').fontSize(8)
+            .text(tdsText, colX + c0 + c1 + 2, ty, { width: c2 - 4, align: 'center' });
+          if (tdsStText) {
+            doc.font('Helvetica').fontSize(7)
+              .fillColor(tdsStText === 'OK' ? '#15803d' : '#b91c1c')
+              .text(tdsStText, colX + c0 + c1 + 2, ty + 10, { width: c2 - 4, align: 'center' });
+            doc.fillColor('#000000');
+          }
+
+          // Hardness cell
+          const hardText = hard != null ? String(hard) : (status === 'OFF' ? 'OFF' : '—');
+          const hardStText = hardSt || '';
+          doc.font('Helvetica-Bold').fontSize(8)
+            .text(hardText, colX + c0 + c1 + c2 + 2, ty, { width: c3 - 4, align: 'center' });
+          if (hardStText) {
+            doc.font('Helvetica').fontSize(7)
+              .fillColor(hardStText === 'OK' ? '#15803d' : '#b91c1c')
+              .text(hardStText, colX + c0 + c1 + c2 + 2, ty + 10, { width: c3 - 4, align: 'center' });
+            doc.fillColor('#000000');
+          }
+
+          // PH cell
+          const phText = ph != null ? String(ph) : (status === 'OFF' ? 'OFF' : '—');
+          const phStText = phSt || '';
+          doc.font('Helvetica-Bold').fontSize(8)
+            .text(phText, colX + c0 + c1 + c2 + c3 + 2, ty, { width: c4 - 4, align: 'center' });
+          if (phStText) {
+            doc.font('Helvetica').fontSize(7)
+              .fillColor(phStText === 'OK' ? '#15803d' : '#b91c1c')
+              .text(phStText, colX + c0 + c1 + c2 + c3 + 2, ty + 10, { width: c4 - 4, align: 'center' });
+            doc.fillColor('#000000');
+          }
+
+          // Temp cell
+          const tempText = temp != null ? String(temp) : (status === 'OFF' ? 'OFF' : '—');
+          const tempStText = tempSt || '';
+          doc.font('Helvetica-Bold').fontSize(8)
+            .text(tempText, colX + c0 + c1 + c2 + c3 + c4 + 2, ty, { width: c5 - 4, align: 'center' });
+          if (tempStText) {
+            doc.font('Helvetica').fontSize(7)
+              .fillColor(tempStText === 'OK' ? '#15803d' : '#b91c1c')
+              .text(tempStText, colX + c0 + c1 + c2 + c3 + c4 + 2, ty + 10, { width: c5 - 4, align: 'center' });
+            doc.fillColor('#000000');
+          }
+        } else {
+          // header row — simple text for each column
+          doc.font('Helvetica-Bold').fontSize(9);
+          doc.text(tds,  colX + c0 + c1 + 2,               ty, { width: c2 - 4, align: 'center' });
+          doc.text(hard, colX + c0 + c1 + c2 + 2,          ty, { width: c3 - 4, align: 'center' });
+          doc.text(ph,   colX + c0 + c1 + c2 + c3 + 2,     ty, { width: c4 - 4, align: 'center' });
+          doc.text(temp, colX + c0 + c1 + c2 + c3 + c4 + 2, ty, { width: c5 - 4, align: 'center' });
+        }
+
+        doc.fillColor('#000000');
+      };
+
+      // Draw table header
+      let curY = doc.y;
+      drawWaterRow(curY,
+        'Water Source', 'Status',
+        'TDS (ppm)', null, 'Hardness (ppm)', null,
+        'PH', null, 'Temp (°C)', null, true);
+      curY += rowH;
+
+      for (const e of entries) {
+        if (curY + rowH > 760) {
+          doc.addPage();
+          curY = margin;
+          drawWaterRow(curY,
+            'Water Source', 'Status',
+            'TDS (ppm)', null, 'Hardness (ppm)', null,
+            'PH', null, 'Temp (°C)', null, true);
+          curY += rowH;
+        }
+        drawWaterRow(curY,
+          e.water_source, e.source_status,
+          e.tds, e.tds_status,
+          e.hardness, e.hardness_status,
+          e.ph, e.ph_status,
+          e.temperature, e.temp_status,
+          false);
+        curY += rowH;
+      }
+
+      doc.y = curY + 10;
+
+      // ── Page Footers ──
+      const range = doc.bufferedPageRange();
+      for (let i = 0; i < range.count; i++) {
+        doc.switchToPage(range.start + i);
+        doc.font('Helvetica').fontSize(8).fillColor('#888888')
+          .text(
+            `Generated: ${new Date().toLocaleString('en-IN')}   |   Page ${i + 1} of ${range.count}`,
+            colX, 820, { width: pageW, align: 'center' }
+          );
+      }
+
+      doc.on('end', () => res.send(Buffer.concat(buffers)));
+      doc.end();
+
+    } catch (error) {
+      console.error('Water Param PDF download error:', error);
+      res.status(500).json({ success: false, message: 'Failed to generate PDF' });
+    }
+  }
+
+  // ==========================================
   // PDF DOWNLOAD
   // ==========================================
 
@@ -1569,6 +2565,129 @@ class HbmController {
       res.status(500).json({ success: false, message: 'Failed to generate PDF' });
     }
   }
+
+  // ==========================================
+  // DAILY OIL LEVEL SHEET
+  // ==========================================
+
+  static async getOilLevelLogs(req, res) {
+    try {
+      const { date_from, date_to, limit: lim } = req.query;
+      const limit = parseInt(lim) || 50;
+      const conditions = [];
+      const params = [];
+      let paramIdx = 1;
+
+      if (date_from) { conditions.push(`l.log_date >= $${paramIdx++}`); params.push(date_from); }
+      if (date_to)   { conditions.push(`l.log_date <= $${paramIdx++}`); params.push(date_to); }
+
+      const whereClause = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
+      params.push(limit);
+
+      const result = await query(
+        `SELECT l.*, u.username as filled_by_name,
+          COUNT(e.id) FILTER (WHERE e.oil_status = 'NOT_OK') as not_ok_count
+         FROM hbm_oil_level_logs l
+         JOIN users u ON l.filled_by = u.id
+         LEFT JOIN hbm_oil_level_entries e ON e.log_id = l.id
+         ${whereClause}
+         GROUP BY l.id, u.username
+         ORDER BY l.log_date DESC, l.created_at DESC
+         LIMIT $${paramIdx}`,
+        params
+      );
+
+      res.json({ success: true, data: result.rows, count: result.rows.length });
+    } catch (error) {
+      console.error('Oil Level get logs error:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch Oil Level logs' });
+    }
+  }
+
+  static async getOilLevelLogById(req, res) {
+    try {
+      const { id } = req.params;
+
+      const logResult = await query(
+        `SELECT l.*, u.username as filled_by_name
+         FROM hbm_oil_level_logs l
+         JOIN users u ON l.filled_by = u.id
+         WHERE l.id = $1`,
+        [id]
+      );
+
+      if (logResult.rows.length === 0)
+        return res.status(404).json({ success: false, message: 'Oil Level log not found' });
+
+      const entriesResult = await query(
+        `SELECT * FROM hbm_oil_level_entries WHERE log_id = $1 ORDER BY id`,
+        [id]
+      );
+
+      res.json({
+        success: true,
+        data: {
+          ...logResult.rows[0],
+          entries: entriesResult.rows,
+        }
+      });
+    } catch (error) {
+      console.error('Oil Level get log error:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch Oil Level log' });
+    }
+  }
+
+  static async createOilLevelLog(req, res) {
+    try {
+      const { log_date, shift_eng, reading_by, remark, entries } = req.body;
+
+      if (!log_date) {
+        return res.status(400).json({ success: false, message: 'Date is required' });
+      }
+
+      let log;
+      await transaction(async (client) => {
+        const logResult = await client.query(
+          `INSERT INTO hbm_oil_level_logs (log_date, shift_eng, reading_by, remark, filled_by)
+           VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+          [log_date, shift_eng || null, reading_by || null, remark || null, req.user.id]
+        );
+
+        log = logResult.rows[0];
+
+        if (entries && Array.isArray(entries)) {
+          for (const entry of entries) {
+            await client.query(
+              `INSERT INTO hbm_oil_level_entries
+                 (log_id, tank_name, oil_level, oil_status, pressure, temperature)
+               VALUES ($1,$2,$3,$4,$5,$6)`,
+              [
+                log.id,
+                entry.tank_name,
+                entry.oil_level   != null && entry.oil_level   !== '' ? entry.oil_level   : null,
+                entry.oil_status  || null,
+                entry.pressure    != null && entry.pressure    !== '' ? entry.pressure    : null,
+                entry.temperature != null && entry.temperature !== '' ? entry.temperature : null,
+              ]
+            );
+          }
+        }
+      });
+
+      res.status(201).json({ success: true, message: 'Daily Oil Level Sheet submitted successfully', data: log });
+
+      sendHbmChecksheetNotification({
+        checksheetType: 'Daily Oil Level Sheet',
+        date: log_date,
+        filledBy: req.user.username,
+        submittedAt: new Date(),
+        items: (entries || []).map(e => ({ item_name: e.tank_name, status: e.oil_status || 'OK' }))
+      }).catch((e) => console.error('Telegram Oil Level notify error:', e));
+    } catch (error) {
+      console.error('Oil Level create log error:', error);
+      res.status(500).json({ success: false, message: 'Failed to submit Daily Oil Level Sheet' });
+    }
+  }
 }
 
 /* ── PDF helper: row height ── */
@@ -1610,5 +2729,4 @@ function hbmDrawRow(doc, x, y, c1, c2, c3, c4, h, t1, t2, t3, t4, isHeader) {
 
   doc.fillColor('#000000');
 }
-
 module.exports = HbmController;

@@ -256,6 +256,34 @@ export const hbmAPI = {
   getBeforeRollingLogById: (id) => api.get(`/hbm/before-rolling/${id}`),
   createBeforeRollingLog: (data) => api.post('/hbm/before-rolling', data),
 
+  // Pump Parameter Report logs
+  getPumpParamLogs: (params) => api.get('/hbm/pump-param', { params }),
+  getPumpParamLogById: (id) => api.get(`/hbm/pump-param/${id}`),
+  createPumpParamLog: (data) => api.post('/hbm/pump-param', data),
+
+  // Visual Inspection & HBM Transformer logs
+  getTransformerLogs: (params) => api.get('/hbm/transformer', { params }),
+  getTransformerLogById: (id) => api.get(`/hbm/transformer/${id}`),
+  createTransformerLog: (data) => api.post('/hbm/transformer', data),
+  downloadTransformerPDF: (id) => api.get(`/hbm/transformer/${id}/pdf`, { responseType: 'blob' }),
+
+  // Pump House Maintenance Work Sheet logs
+  getPhMaintLogs: (params) => api.get('/hbm/ph-maint', { params }),
+  getPhMaintLogById: (id) => api.get(`/hbm/ph-maint/${id}`),
+  createPhMaintLog: (data) => api.post('/hbm/ph-maint', data),
+  downloadPhMaintPDF: (id) => api.get(`/hbm/ph-maint/${id}/pdf`, { responseType: 'blob' }),
+
+  // Pump House Water Parameter logs
+  getWaterParamLogs: (params) => api.get('/hbm/water-param', { params }),
+  getWaterParamLogById: (id) => api.get(`/hbm/water-param/${id}`),
+  createWaterParamLog: (data) => api.post('/hbm/water-param', data),
+  downloadWaterParamPDF: (id) => api.get(`/hbm/water-param/${id}/pdf`, { responseType: 'blob' }),
+
+  // Daily Oil Level Sheet logs
+  getOilLevelLogs: (params) => api.get('/hbm/oil-level', { params }),
+  getOilLevelLogById: (id) => api.get(`/hbm/oil-level/${id}`),
+  createOilLevelLog: (data) => api.post('/hbm/oil-level', data),
+
   // PDF downloads
   downloadPDF: (type, id) =>
     api.get(`/hbm/pdf/${type}/${id}`, { responseType: 'blob' }),

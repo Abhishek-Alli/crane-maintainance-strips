@@ -65,6 +65,34 @@ router.get('/before-rolling', HbmController.getBeforeRollingLogs);
 router.get('/before-rolling/:id', HbmController.getBeforeRollingLogById);
 router.post('/before-rolling', HbmController.createBeforeRollingLog);
 
+// Pump Parameter Report logs
+router.get('/pump-param', HbmController.getPumpParamLogs);
+router.get('/pump-param/:id', HbmController.getPumpParamLogById);
+router.post('/pump-param', HbmController.createPumpParamLog);
+
+// Visual Inspection & HBM Transformer logs
+router.get('/transformer', HbmController.getTransformerLogs);
+router.get('/transformer/:id/pdf', HbmController.downloadTransformerPDF);
+router.get('/transformer/:id', HbmController.getTransformerLogById);
+router.post('/transformer', HbmController.createTransformerLog);
+
+// Pump House Maintenance Work Sheet logs
+router.get('/ph-maint', HbmController.getPhMaintLogs);
+router.get('/ph-maint/:id/pdf', HbmController.downloadPhMaintPDF);
+router.get('/ph-maint/:id', HbmController.getPhMaintLogById);
+router.post('/ph-maint', HbmController.createPhMaintLog);
+
+// Pump House Water Parameter logs
+router.get('/water-param', HbmController.getWaterParamLogs);
+router.get('/water-param/:id/pdf', HbmController.downloadWaterParamPDF);
+router.get('/water-param/:id', HbmController.getWaterParamLogById);
+router.post('/water-param', HbmController.createWaterParamLog);
+
+// Daily Oil Level Sheet logs
+router.get('/oil-level', HbmController.getOilLevelLogs);
+router.get('/oil-level/:id', HbmController.getOilLevelLogById);
+router.post('/oil-level', HbmController.createOilLevelLog);
+
 // PDF download  –  GET /api/hbm/pdf/:type/:id
 // type: dc-motor | cooling-bed | mill-mech | rolling-stand | pumphouse | bar-bundle
 router.get('/pdf/:type/:id', HbmController.downloadHbmPDF);

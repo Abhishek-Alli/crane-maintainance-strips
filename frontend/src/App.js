@@ -41,6 +41,21 @@ import BarBundleAreaView from './components/hbm/BarBundleAreaView';
 import BeforeRollingForm from './components/hbm/BeforeRollingForm';
 import BeforeRollingHistory from './components/hbm/BeforeRollingHistory';
 import BeforeRollingView from './components/hbm/BeforeRollingView';
+import PumpParamForm from './components/hbm/PumpParamForm';
+import PumpParamHistory from './components/hbm/PumpParamHistory';
+import PumpParamView from './components/hbm/PumpParamView';
+import WaterParamForm from './components/hbm/WaterParamForm';
+import WaterParamHistory from './components/hbm/WaterParamHistory';
+import WaterParamView from './components/hbm/WaterParamView';
+import PhMaintForm from './components/hbm/PhMaintForm';
+import PhMaintHistory from './components/hbm/PhMaintHistory';
+import PhMaintView from './components/hbm/PhMaintView';
+import TransformerForm from './components/hbm/TransformerForm';
+import TransformerHistory from './components/hbm/TransformerHistory';
+import TransformerView from './components/hbm/TransformerView';
+import OilLevelForm from './components/hbm/OilLevelForm';
+import OilLevelHistory from './components/hbm/OilLevelHistory';
+import OilLevelView from './components/hbm/OilLevelView';
 // import FabricationReport from "./components/fabrication/FabricationReport";
 // import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import FabricationReport from "./components/fabrication/FabricationReport";
@@ -612,6 +627,26 @@ function App() {
           <Route path="/hbm/before-rolling/new" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('before-rolling') ? <BeforeRollingForm /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
           <Route path="/hbm/before-rolling/history" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('before-rolling') ? <BeforeRollingHistory /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
           <Route path="/hbm/before-rolling/:id" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('before-rolling') ? <BeforeRollingView /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+
+          <Route path="/hbm/pump-param/new" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('pump-param') ? <PumpParamForm /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hbm/pump-param/history" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('pump-param') ? <PumpParamHistory /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hbm/pump-param/:id" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('pump-param') ? <PumpParamView /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+
+          <Route path="/hbm/water-param/new" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('water-param') ? <WaterParamForm /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hbm/water-param/history" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('water-param') ? <WaterParamHistory /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hbm/water-param/:id" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('water-param') ? <WaterParamView /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+
+          <Route path="/hbm/ph-maint/new" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('ph-maint') ? <PhMaintForm /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hbm/ph-maint/history" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('ph-maint') ? <PhMaintHistory /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hbm/ph-maint/:id" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('ph-maint') ? <PhMaintView /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+
+          <Route path="/hbm/transformer/new" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('transformer') ? <TransformerForm /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hbm/transformer/history" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('transformer') ? <TransformerHistory /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hbm/transformer/:id" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('transformer') ? <TransformerView /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+
+          <Route path="/hbm/oil-level/new" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('oil-level') ? <OilLevelForm /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hbm/oil-level/history" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('oil-level') ? <OilLevelHistory /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hbm/oil-level/:id" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('oil-level') ? <OilLevelView /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
 
           <Route
             path="/fabrication"
