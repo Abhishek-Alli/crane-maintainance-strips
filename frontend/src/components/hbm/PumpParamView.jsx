@@ -223,7 +223,7 @@ const PumpParamView = () => {
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">Pump</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">Drive</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">Status</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-600">KW</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Hz</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">AMP</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">RPM</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">Pressure</th>
@@ -268,26 +268,44 @@ const PumpParamView = () => {
               <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Section 2 — Meter Readings</span>
               <div className="h-px flex-1 bg-gray-200" />
             </div>
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-5">
-              {log.sec2_items.map((item, idx) => (
-                <div key={item.id}
-                  className={`flex items-center justify-between px-5 py-3 ${idx < log.sec2_items.length - 1 ? 'border-b border-gray-100' : ''}`}>
-                  <p className="text-sm font-medium text-gray-800">{item.item_name}</p>
-                  <div className="flex items-center gap-2 ml-4 flex-shrink-0">
-                    {item.value_text && (
-                      <span className="text-sm font-semibold text-gray-900">{item.value_text}</span>
-                    )}
-                    {item.item_status && (
-                      <span className={`text-xs font-bold px-2 py-1 rounded-full ${
-                        item.item_status === 'OK'
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-red-100 text-red-700'
-                      }`}>{item.item_status === 'OK' ? 'OK' : 'NOT OK'}</span>
-                    )}
-                  </div>
+            {(() => {
+              const sec2Map = {};
+              (log.sec2_items || []).forEach(i => { sec2Map[i.item_name] = i; });
+              const rawWater   = parseFloat(sec2Map['RAW Water']?.value_text)   || 0;
+              const wasteWater = parseFloat(sec2Map['Waste Water']?.value_text) || 0;
+              const pureWater  = parseFloat(sec2Map['Pure Water']?.value_text)  || 0;
+              const wasteWaterPct = rawWater > 0 ? (wasteWater / rawWater * 100).toFixed(1) : null;
+              const pureWaterPct  = rawWater > 0 ? (pureWater  / rawWater * 100).toFixed(1) : null;
+
+              return (
+                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-5">
+                  {log.sec2_items.map((item, idx) => (
+                    <div key={item.id}
+                      className={`flex items-center justify-between px-5 py-3 ${idx < log.sec2_items.length - 1 ? 'border-b border-gray-100' : ''}`}>
+                      <p className="text-sm font-medium text-gray-800">{item.item_name}</p>
+                      <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+                        {item.value_text && (
+                          <span className="text-sm font-semibold text-gray-900">{item.value_text}</span>
+                        )}
+                        {item.item_name === 'Waste Water' && wasteWaterPct !== null && (
+                          <span className="text-xs font-bold px-2 py-1 rounded-lg bg-orange-100 text-orange-700">{wasteWaterPct}%</span>
+                        )}
+                        {item.item_name === 'Pure Water' && pureWaterPct !== null && (
+                          <span className="text-xs font-bold px-2 py-1 rounded-lg bg-blue-100 text-blue-700">{pureWaterPct}%</span>
+                        )}
+                        {item.item_status && (
+                          <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                            item.item_status === 'OK'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-red-100 text-red-700'
+                          }`}>{item.item_status === 'OK' ? 'OK' : 'NOT OK'}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              );
+            })()}
           </>
         )}
 
