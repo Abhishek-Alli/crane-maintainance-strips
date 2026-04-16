@@ -124,7 +124,6 @@ const PumpParamView = () => {
     const t = THRESHOLDS[e.pump_name];
     if (!t) return false;
     return (
-      (e.kw  != null && parseFloat(e.kw)  >= t.kw)  ||
       (e.amp != null && parseFloat(e.amp) >= t.amp) ||
       (e.rpm != null && parseFloat(e.rpm) >= t.rpm)
     );
@@ -194,7 +193,6 @@ const PumpParamView = () => {
               {highEntries.map(e => {
                 const t = THRESHOLDS[e.pump_name];
                 const highs = [];
-                if (e.kw  != null && parseFloat(e.kw)  >= t.kw)  highs.push(`KW: ${e.kw} (max ${t.kw})`);
                 if (e.amp != null && parseFloat(e.amp) >= t.amp) highs.push(`AMP: ${e.amp} (max ${t.amp})`);
                 if (e.rpm != null && parseFloat(e.rpm) >= t.rpm) highs.push(`RPM: ${e.rpm} (max ${t.rpm})`);
                 return (
@@ -226,7 +224,7 @@ const PumpParamView = () => {
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">Hz</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">AMP</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">RPM</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Pressure</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Pressure (kg/cm²)</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">Load %</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">24H KWH Diff</th>
                 </tr>
@@ -246,7 +244,7 @@ const PumpParamView = () => {
                             : 'bg-gray-100 text-gray-600'
                         }`}>{entry.status || '—'}</span>
                       </td>
-                      <td className="px-4 py-3">{isOff ? <span className="text-gray-400">—</span> : valBadge(entry.kw,  t?.kw)}</td>
+                      <td className="px-4 py-3 text-gray-700">{isOff ? <span className="text-gray-400">—</span> : (entry.kw ?? '—')}</td>
                       <td className="px-4 py-3">{isOff ? <span className="text-gray-400">—</span> : valBadge(entry.amp, t?.amp)}</td>
                       <td className="px-4 py-3">{isOff ? <span className="text-gray-400">—</span> : valBadge(entry.rpm, t?.rpm)}</td>
                       <td className="px-4 py-3 text-gray-700">{entry.pressure ?? '—'}</td>
@@ -273,9 +271,9 @@ const PumpParamView = () => {
               (log.sec2_items || []).forEach(i => { sec2Map[i.item_name] = i; });
               const rawWater   = parseFloat(sec2Map['RAW Water']?.value_text)   || 0;
               const wasteWater = parseFloat(sec2Map['Waste Water']?.value_text) || 0;
-              const pureWater  = parseFloat(sec2Map['Pure Water']?.value_text)  || 0;
+              const roWater    = parseFloat(sec2Map['RO Water']?.value_text)    || 0;
               const wasteWaterPct = rawWater > 0 ? (wasteWater / rawWater * 100).toFixed(1) : null;
-              const pureWaterPct  = rawWater > 0 ? (pureWater  / rawWater * 100).toFixed(1) : null;
+              const roWaterPct    = rawWater > 0 ? (roWater    / rawWater * 100).toFixed(1) : null;
 
               return (
                 <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-5">
@@ -290,8 +288,8 @@ const PumpParamView = () => {
                         {item.item_name === 'Waste Water' && wasteWaterPct !== null && (
                           <span className="text-xs font-bold px-2 py-1 rounded-lg bg-orange-100 text-orange-700">{wasteWaterPct}%</span>
                         )}
-                        {item.item_name === 'Pure Water' && pureWaterPct !== null && (
-                          <span className="text-xs font-bold px-2 py-1 rounded-lg bg-blue-100 text-blue-700">{pureWaterPct}%</span>
+                        {item.item_name === 'RO Water' && roWaterPct !== null && (
+                          <span className="text-xs font-bold px-2 py-1 rounded-lg bg-blue-100 text-blue-700">{roWaterPct}%</span>
                         )}
                         {item.item_status && (
                           <span className={`text-xs font-bold px-2 py-1 rounded-full ${

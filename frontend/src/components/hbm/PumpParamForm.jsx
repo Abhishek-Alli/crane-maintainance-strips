@@ -129,8 +129,7 @@ const SEC2_ITEMS = [
   { name: 'RO-3',       type: 'number', unit: 'm³' },
   { name: 'RAW Water',  type: 'computed', unit: 'm³' },
   { name: 'Waste Water',    type: 'number', unit: 'm³' },
-  { name: 'Pure Water',     type: 'number', unit: 'm³' },
-  { name: 'RO Water',   type: 'computed', unit: 'm³' },
+  { name: 'RO Water',   type: 'number', unit: 'm³' },
   { name: 'Earthing Water', type: 'number', unit: 'm³' },
   { name: 'Induction Heater DM Water Levels', type: 'text', placeholder: 'e.g. Top up' },
   { name: 'All HSM, TMT, PTM Earthing Points Water Supply', type: 'status' },
@@ -201,19 +200,13 @@ const PumpEntry = ({ pump, value, onChange }) => {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
           {/* Hz */}
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">
-              Hz
-              <span className="font-normal text-gray-400 ml-1">(&lt;{pump.kw_max})</span>
-            </label>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Hz</label>
             <input
               type="number" step="0.01" min="0"
               value={v.kw ?? ''}
               onChange={e => onChange(pump.name, { ...v, kw: e.target.value })}
               placeholder="0.00"
-              className={`w-full px-2 py-1.5 border-2 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 ${numFieldClass(numOk(v.kw, pump.kw_max))}`} />
-            {v.kw !== '' && v.kw != null && numOk(v.kw, pump.kw_max) === false && (
-              <p className="text-xs text-red-600 mt-0.5 font-semibold">High!</p>
-            )}
+              className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
           </div>
           {/* AMP */}
           <div>
@@ -255,7 +248,10 @@ const PumpEntry = ({ pump, value, onChange }) => {
           </div>
           {/* Pressure */}
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Pressure</label>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">
+              Pressure
+              <span className="font-normal text-gray-400 ml-1">(kg/cm²)</span>
+            </label>
             <input
               type="number" step="0.01" min="0"
               value={v.pressure ?? ''}
@@ -366,25 +362,18 @@ const PumpParamForm = () => {
     const ro1 = parseFloat(sec2Values['RO-1']?.value_text) || 0;
     const ro2 = parseFloat(sec2Values['RO-2']?.value_text) || 0;
     const ro3 = parseFloat(sec2Values['RO-3']?.value_text) || 0;
-    const rawWater  = ro1 + ro2 + ro3;
-    const wasteWater = parseFloat(sec2Values['Waste Water']?.value_text) || 0;
-    const roWater   = rawWater - wasteWater;
-
-    const computedValues = {
-      'RAW Water': rawWater > 0 ? rawWater.toFixed(2) : null,
-      'RO Water':  rawWater > 0 ? roWater.toFixed(2)  : null,
-    };
+    const rawWater = ro1 + ro2 + ro3;
 
     const sec2_items = SEC2_ITEMS
       .filter(item => {
-        if (item.type === 'computed') return !!computedValues[item.name];
+        if (item.type === 'computed') return rawWater > 0;
         return sec2Values[item.name]?.value_text || sec2Values[item.name]?.item_status;
       })
       .map(item => ({
         item_name:   item.name,
         value_text:  item.type === 'computed'
-          ? computedValues[item.name]
-          : (sec2Values[item.name]?.value_text  || null),
+          ? rawWater.toFixed(2)
+          : (sec2Values[item.name]?.value_text || null),
         item_status: sec2Values[item.name]?.item_status || null,
       }));
 
@@ -514,13 +503,12 @@ const PumpParamForm = () => {
             const ro1 = parseFloat(sec2Values['RO-1']?.value_text) || 0;
             const ro2 = parseFloat(sec2Values['RO-2']?.value_text) || 0;
             const ro3 = parseFloat(sec2Values['RO-3']?.value_text) || 0;
-            const rawWater = ro1 + ro2 + ro3;
+            const rawWater   = ro1 + ro2 + ro3;
             const wasteWater = parseFloat(sec2Values['Waste Water']?.value_text) || 0;
-            const pureWater  = parseFloat(sec2Values['Pure Water']?.value_text)  || 0;
-            const roWater = rawWater - wasteWater;
+            const roWater    = parseFloat(sec2Values['RO Water']?.value_text)    || 0;
 
             const wasteWaterPct = rawWater > 0 ? (wasteWater / rawWater * 100).toFixed(1) : null;
-            const pureWaterPct  = rawWater > 0 ? (pureWater  / rawWater * 100).toFixed(1) : null;
+            const roWaterPct    = rawWater > 0 ? (roWater    / rawWater * 100).toFixed(1) : null;
 
             return (
               <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-5">
@@ -537,13 +525,7 @@ const PumpParamForm = () => {
                           <input
                             type="text"
                             readOnly
-                            value={
-                              item.name === 'RAW Water'
-                                ? (rawWater > 0 ? rawWater.toFixed(2) : '—')
-                                : item.name === 'RO Water'
-                                  ? (rawWater > 0 ? roWater.toFixed(2) : '—')
-                                  : '—'
-                            }
+                            value={rawWater > 0 ? rawWater.toFixed(2) : '—'}
                             className="w-32 px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-700 cursor-not-allowed" />
                         )}
                         {/* Regular number inputs */}
@@ -555,15 +537,15 @@ const PumpParamForm = () => {
                             placeholder="0.00"
                             className="w-32 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                         )}
-                        {/* Percentage badge for Waste Water and Pure Water */}
+                        {/* Percentage badges */}
                         {item.name === 'Waste Water' && wasteWaterPct !== null && (
                           <span className="text-xs font-bold px-2 py-1 rounded-lg bg-orange-100 text-orange-700 whitespace-nowrap">
                             {wasteWaterPct}%
                           </span>
                         )}
-                        {item.name === 'Pure Water' && pureWaterPct !== null && (
+                        {item.name === 'RO Water' && roWaterPct !== null && (
                           <span className="text-xs font-bold px-2 py-1 rounded-lg bg-blue-100 text-blue-700 whitespace-nowrap">
-                            {pureWaterPct}%
+                            {roWaterPct}%
                           </span>
                         )}
                         {item.type === 'text' && (
