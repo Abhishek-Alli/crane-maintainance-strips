@@ -271,7 +271,7 @@ const PumpParamView = () => {
               (log.sec2_items || []).forEach(i => { sec2Map[i.item_name] = i; });
               const rawWater   = parseFloat(sec2Map['RAW Water']?.value_text)   || 0;
               const wasteWater = parseFloat(sec2Map['Waste Water']?.value_text) || 0;
-              const roWater    = parseFloat(sec2Map['RO Water']?.value_text)    || 0;
+              const roWater    = parseFloat(sec2Map['RO Water']?.value_text) || (rawWater - wasteWater);
               const wasteWaterPct = rawWater > 0 ? (wasteWater / rawWater * 100).toFixed(1) : null;
               const roWaterPct    = rawWater > 0 ? (roWater    / rawWater * 100).toFixed(1) : null;
 

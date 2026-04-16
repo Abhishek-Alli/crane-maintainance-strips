@@ -129,7 +129,7 @@ const SEC2_ITEMS = [
   { name: 'RO-3',       type: 'number', unit: 'm³' },
   { name: 'RAW Water',  type: 'computed', unit: 'm³' },
   { name: 'Waste Water',    type: 'number', unit: 'm³' },
-  { name: 'RO Water',   type: 'number', unit: 'm³' },
+  { name: 'RO Water',   type: 'computed', unit: 'm³' },
   { name: 'Earthing Water', type: 'number', unit: 'm³' },
   { name: 'Induction Heater DM Water Levels', type: 'text', placeholder: 'e.g. Top up' },
   { name: 'All HSM, TMT, PTM Earthing Points Water Supply', type: 'status' },
@@ -362,17 +362,24 @@ const PumpParamForm = () => {
     const ro1 = parseFloat(sec2Values['RO-1']?.value_text) || 0;
     const ro2 = parseFloat(sec2Values['RO-2']?.value_text) || 0;
     const ro3 = parseFloat(sec2Values['RO-3']?.value_text) || 0;
-    const rawWater = ro1 + ro2 + ro3;
+    const rawWater   = ro1 + ro2 + ro3;
+    const wasteWater = parseFloat(sec2Values['Waste Water']?.value_text) || 0;
+    const roWater    = rawWater - wasteWater;
+
+    const computedMap = {
+      'RAW Water': rawWater > 0 ? rawWater.toFixed(2) : null,
+      'RO Water':  rawWater > 0 ? roWater.toFixed(2)  : null,
+    };
 
     const sec2_items = SEC2_ITEMS
       .filter(item => {
-        if (item.type === 'computed') return rawWater > 0;
+        if (item.type === 'computed') return !!computedMap[item.name];
         return sec2Values[item.name]?.value_text || sec2Values[item.name]?.item_status;
       })
       .map(item => ({
         item_name:   item.name,
         value_text:  item.type === 'computed'
-          ? rawWater.toFixed(2)
+          ? computedMap[item.name]
           : (sec2Values[item.name]?.value_text || null),
         item_status: sec2Values[item.name]?.item_status || null,
       }));
@@ -505,7 +512,7 @@ const PumpParamForm = () => {
             const ro3 = parseFloat(sec2Values['RO-3']?.value_text) || 0;
             const rawWater   = ro1 + ro2 + ro3;
             const wasteWater = parseFloat(sec2Values['Waste Water']?.value_text) || 0;
-            const roWater    = parseFloat(sec2Values['RO Water']?.value_text)    || 0;
+            const roWater    = rawWater - wasteWater;
 
             const wasteWaterPct = rawWater > 0 ? (wasteWater / rawWater * 100).toFixed(1) : null;
             const roWaterPct    = rawWater > 0 ? (roWater    / rawWater * 100).toFixed(1) : null;
@@ -525,7 +532,13 @@ const PumpParamForm = () => {
                           <input
                             type="text"
                             readOnly
-                            value={rawWater > 0 ? rawWater.toFixed(2) : '—'}
+                            value={
+                              item.name === 'RAW Water'
+                                ? (rawWater > 0 ? rawWater.toFixed(2) : '—')
+                                : item.name === 'RO Water'
+                                  ? (rawWater > 0 ? roWater.toFixed(2) : '—')
+                                  : '—'
+                            }
                             className="w-32 px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-700 cursor-not-allowed" />
                         )}
                         {/* Regular number inputs */}

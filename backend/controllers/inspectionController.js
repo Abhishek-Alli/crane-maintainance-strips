@@ -282,15 +282,16 @@ class InspectionController {
         `
         SELECT
           i.inspection_date,
-          d.name AS department,
-          s.name AS shed,
+          i.has_alerts,
+          d.name  AS department,
+          s.name  AS shed,
           c.crane_number,
-          u.username AS recorded_by
+          u.name  AS recorded_by
         FROM inspections i
         JOIN departments d ON d.id = i.department_id
-        JOIN sheds s ON s.id = i.shed_id
-        JOIN cranes c ON c.id = i.crane_id
-        LEFT JOIN users u ON u.id = i.recorded_by
+        JOIN sheds       s ON s.id = i.shed_id
+        JOIN cranes      c ON c.id = i.crane_id
+        LEFT JOIN users  u ON u.id = i.recorded_by
         WHERE i.id = $1
         `,
         [inspectionId]
@@ -303,27 +304,58 @@ class InspectionController {
       const { rows } = await query(
         `
         SELECT
-          sec.name AS section,
-          itm.item_name AS item,
-          v.selected_value
+          sec.name       AS section,
+          sec.display_order AS sec_order,
+          itm.item_name  AS item,
+          itm.display_order AS item_order,
+          v.selected_value,
+          v.remarks,
+          v.action_taken
         FROM inspection_values v
         JOIN inspection_sections sec ON sec.id = v.section_id
-        JOIN inspection_items itm ON itm.id = v.item_id
+        JOIN inspection_items    itm ON itm.id = v.item_id
         WHERE v.inspection_id = $1
         ORDER BY sec.display_order, itm.display_order
         `,
         [inspectionId]
       );
 
-      let msg =
-        `📝 Inspection Submitted\n` +
-        `Crane: ${insp.crane_number}\n` +
-        `Shed: ${insp.shed}\n` +
-        `Department: ${insp.department}\n\n`;
+      const dateStr = new Date(insp.inspection_date)
+        .toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
+      const notOkCount = rows.filter(r => r.selected_value === 'NOT_OK').length;
+      const totalCount = rows.length;
+      const statusIcon = insp.has_alerts ? '🚨' : '✅';
+
+      let msg =
+        `${statusIcon} <b>Crane Inspection Submitted</b>\n` +
+        `━━━━━━━━━━━━━━━━━━━━\n` +
+        `🏗️ Crane: <b>${insp.crane_number}</b>\n` +
+        `🏭 Department: ${insp.department}\n` +
+        `📍 Shed: ${insp.shed}\n` +
+        `📅 Date: ${dateStr}\n` +
+        `👤 Recorded By: ${insp.recorded_by || '—'}\n` +
+        `📊 Result: ${totalCount - notOkCount}/${totalCount} OK` +
+        (notOkCount > 0 ? ` · <b>${notOkCount} Issue${notOkCount > 1 ? 's' : ''}</b>` : '') +
+        `\n━━━━━━━━━━━━━━━━━━━━\n`;
+
+      // Group items by section
+      const sections = {};
       rows.forEach(r => {
-        const icon = r.selected_value === 'NOT_OK' ? '❌' : '✅';
-        msg += `${icon} ${r.section} - ${r.item}: ${r.selected_value}\n`;
+        if (!sections[r.section]) sections[r.section] = [];
+        sections[r.section].push(r);
+      });
+
+      Object.entries(sections).forEach(([sectionName, items]) => {
+        msg += `\n<b>${sectionName}</b>\n`;
+        items.forEach(r => {
+          const icon = r.selected_value === 'NOT_OK' ? '❌' : '✅';
+          msg += `  ${icon} ${r.item}\n`;
+          if (r.selected_value === 'NOT_OK') {
+            if (r.remarks)      msg += `      📝 Remark: ${r.remarks}\n`;
+            if (r.action_taken) msg += `      🔧 Action: ${r.action_taken}\n`;
+          }
+        });
       });
 
       await sendTelegramMessage(msg);

@@ -3,7 +3,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { maintenanceDueAlert, dailyInspectionSummary } = require('../cron/cronJobs');
+const { maintenanceDueAlert, dailyInspectionSummary, hbmChecksheetDailySummary } = require('../cron/cronJobs');
 
 const CRON_SECRET = process.env.CRON_SECRET;
 
@@ -32,6 +32,17 @@ router.get('/daily-summary', verifyCron, async (req, res) => {
     res.json({ success: true, job: 'daily-summary', ran_at: new Date().toISOString() });
   } catch (error) {
     console.error('Cron daily-summary error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// GET /api/cron/hbm-checksheet-summary – triggered daily at 8 PM IST
+router.get('/hbm-checksheet-summary', verifyCron, async (req, res) => {
+  try {
+    await hbmChecksheetDailySummary();
+    res.json({ success: true, job: 'hbm-checksheet-summary', ran_at: new Date().toISOString() });
+  } catch (error) {
+    console.error('Cron hbm-checksheet-summary error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });

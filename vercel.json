@@ -16,6 +16,10 @@
     {
       "path": "/api/cron/daily-summary",
       "schedule": "30 12 * * *"
+    },
+    {
+      "path": "/api/cron/hbm-checksheet-summary",
+      "schedule": "30 14 * * *"
     }
   ]
 }

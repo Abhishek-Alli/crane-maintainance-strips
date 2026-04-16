@@ -121,7 +121,7 @@ const statusOf = (val, min, max) => {
 
 const fieldClass = (ok) => {
   if (ok === null) return 'border-gray-300 bg-white';
-  return ok ? 'border-green-400 bg-green-50' : 'border-red-400 bg-red-50';
+  return ok ? 'border-green-400 bg-green-50' : 'border-red-300 bg-red-100';
 };
 
 // ─── PARAM LABELS ─────────────────────────────────────────────────────────────
@@ -201,11 +201,6 @@ const SourceRow = ({ source, value, onChange }) => {
                   placeholder="—"
                   className={`w-full px-2 py-1.5 border-2 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 ${fieldClass(ok)}`}
                 />
-                {val !== '' && ok !== null && (
-                  <p className={`text-xs mt-0.5 font-semibold ${ok ? 'text-green-600' : 'text-red-600'}`}>
-                    {ok ? 'OK' : 'NOT OK'}
-                  </p>
-                )}
               </div>
             );
           })}
