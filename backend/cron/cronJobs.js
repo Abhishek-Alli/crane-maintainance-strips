@@ -236,7 +236,7 @@ async function hbmChecksheetDailySummary() {
         c.crane_number,
         s.name        AS shed,
         d.name        AS department,
-        u.name        AS recorded_by
+        u.username    AS recorded_by
       FROM inspections i
       JOIN cranes      c ON c.id = i.crane_id
       JOIN sheds       s ON s.id = i.shed_id

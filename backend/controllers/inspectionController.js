@@ -283,10 +283,10 @@ class InspectionController {
         SELECT
           i.inspection_date,
           i.has_alerts,
-          d.name  AS department,
-          s.name  AS shed,
+          d.name        AS department,
+          s.name        AS shed,
           c.crane_number,
-          u.name  AS recorded_by
+          u.username    AS recorded_by
         FROM inspections i
         JOIN departments d ON d.id = i.department_id
         JOIN sheds       s ON s.id = i.shed_id
