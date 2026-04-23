@@ -1,5 +1,5 @@
 const { pool, query } = require('../config/database');
-const { sendTelegramMessage } = require('../utils/telegram'); // adjust path if needed
+const { sendLongMessage } = require('../utils/telegram');
 const MaintenanceTracking = require('../models/MaintenanceTracking');
 
 
@@ -358,10 +358,11 @@ class InspectionController {
         });
       });
 
-      await sendTelegramMessage(msg);
+      await sendLongMessage(msg);
 
     } catch (err) {
       console.error('TELEGRAM ERROR:', err);
+      throw err;
     }
   }
 
