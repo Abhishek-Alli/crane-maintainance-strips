@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { toast } from 'react-toastify';
-import { useAuth } from '../../context/AuthContext';
 import { hbmAPI, inspectionAPI } from '../../services/api';
 
 /**
@@ -10,10 +9,12 @@ import { hbmAPI, inspectionAPI } from '../../services/api';
  *   id          – record ID
  */
 const ResendTelegramButton = ({ type, id }) => {
-  const { user } = useAuth();
   const [sending, setSending] = useState(false);
 
-  const isAdmin = user?.role === 'ADMIN' || user?.user_type === 'ADMIN';
+  const storedUser = (() => {
+    try { return JSON.parse(localStorage.getItem('user') || 'null'); } catch { return null; }
+  })();
+  const isAdmin = storedUser?.role === 'ADMIN' || storedUser?.user_type === 'ADMIN' || storedUser?.loginType === 'ADMIN';
   if (!isAdmin) return null;
 
   const handleResend = async () => {
