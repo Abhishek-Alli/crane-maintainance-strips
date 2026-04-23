@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
+import ResendTelegramButton from './ResendTelegramButton';
 
 // Same groups as the form — used to order display
 const GROUP_ORDER = [
@@ -147,6 +148,7 @@ const PumpParamView = () => {
               <p className="text-sm text-gray-500">Section 1 &amp; 2</p>
             </div>
           </div>
+          <ResendTelegramButton type="pump-param" id={log.id} />
         </div>
 
         {/* Summary Card */}

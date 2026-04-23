@@ -67,6 +67,7 @@ export const inspectionAPI = {
   create: (data) => api.post('/inspections', data),
   getAll: (params) => api.get('/inspections', { params }),
   getById: (id) => api.get(`/inspections/${id}`),
+  resendTelegram: (id) => api.post(`/inspections/${id}/resend-telegram`),
 };
 
 /* =============================
@@ -297,6 +298,9 @@ export const hbmAPI = {
   // PDF downloads
   downloadPDF: (type, id) =>
     api.get(`/hbm/pdf/${type}/${id}`, { responseType: 'blob' }),
+
+  // Resend Telegram notification
+  resendTelegram: (type, id) => api.post(`/hbm/${type}/${id}/resend-telegram`),
 };
 
 /* =============================

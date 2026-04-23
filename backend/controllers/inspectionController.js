@@ -365,6 +365,16 @@ class InspectionController {
     }
   }
 
+  static async resendTelegram(req, res) {
+    try {
+      const { id } = req.params;
+      await InspectionController.sendInspectionTelegram(id);
+      res.json({ success: true, message: `Telegram notification resent for inspection #${id}` });
+    } catch (error) {
+      console.error('Resend inspection telegram error:', error);
+      res.status(500).json({ success: false, message: 'Failed to resend notification' });
+    }
+  }
 }
 
 module.exports = InspectionController;

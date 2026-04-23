@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
+import ResendTelegramButton from './ResendTelegramButton';
 
 const STANDS = ['C-1','C-2','C-3','C-4','C-5','C-6','C-7','C-8','C-9','C-10','C-11','C-12','C-13','C-14'];
 
@@ -65,17 +66,20 @@ const RoughingGbTempView = () => {
       <div className="max-w-5xl mx-auto">
 
         {/* Page Header */}
-        <div className="flex items-center space-x-3 mb-6">
-          <button onClick={() => navigate('/hbm/roughing-gb-temp/history')}
-            className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">Roughing GB Temp Report #{log.id}</h1>
-            <p className="text-sm text-gray-500">Roughing Stand &amp; Gearbox Bearing Temperature</p>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-3">
+            <button onClick={() => navigate('/hbm/roughing-gb-temp/history')}
+              className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">Roughing GB Temp Report #{log.id}</h1>
+              <p className="text-sm text-gray-500">Roughing Stand &amp; Gearbox Bearing Temperature</p>
+            </div>
           </div>
+          <ResendTelegramButton type="roughing-gb-temp" id={log.id} />
         </div>
 
         {/* Summary Card */}

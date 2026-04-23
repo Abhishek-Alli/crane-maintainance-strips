@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
+import ResendTelegramButton from './ResendTelegramButton';
 
 const STAND_ORDER = [
   'C-1', 'C-2', 'CCS-1', 'C-3', 'C-4', 'CCS-2',
@@ -71,17 +72,20 @@ const DcMotorAirflowView = () => {
       <div className="max-w-7xl mx-auto">
 
         {/* Page Header */}
-        <div className="flex items-center space-x-3 mb-6">
-          <button onClick={() => navigate('/hbm/dc-motor-airflow/history')}
-            className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">DC Motor Airflow Report #{log.id}</h1>
-            <p className="text-sm text-gray-500">Air Flow, Temperature &amp; Vibration</p>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-3">
+            <button onClick={() => navigate('/hbm/dc-motor-airflow/history')}
+              className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">DC Motor Airflow Report #{log.id}</h1>
+              <p className="text-sm text-gray-500">Air Flow, Temperature &amp; Vibration</p>
+            </div>
           </div>
+          <ResendTelegramButton type="dc-motor-airflow" id={log.id} />
         </div>
 
         {/* Summary */}

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
+import ResendTelegramButton from './ResendTelegramButton';
 
 const PhMaintView = () => {
   const { id } = useParams();
@@ -48,6 +49,7 @@ const PhMaintView = () => {
             <h1 className="text-xl font-bold text-gray-900">Pump House Maintenance Work Sheet</h1>
             <p className="text-sm text-gray-500">{formatDate(log.log_date)}</p>
           </div>
+          <ResendTelegramButton type="ph-maint" id={log.id} />
         </div>
 
         {/* Log Info */}

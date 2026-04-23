@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
+import ResendTelegramButton from './ResendTelegramButton';
 
 const TANK_ORDER = [
   'Roughing Lub Tank',
@@ -54,17 +55,20 @@ const OilLevelView = () => {
       <div className="max-w-4xl mx-auto">
 
         {/* Page Header */}
-        <div className="flex items-center space-x-3 mb-6">
-          <button onClick={() => navigate('/hbm/oil-level/history')}
-            className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">Daily Oil Level Sheet #{log.id}</h1>
-            <p className="text-sm text-gray-500">Tank oil levels, pressure &amp; temperature</p>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-3">
+            <button onClick={() => navigate('/hbm/oil-level/history')}
+              className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">Daily Oil Level Sheet #{log.id}</h1>
+              <p className="text-sm text-gray-500">Tank oil levels, pressure &amp; temperature</p>
+            </div>
           </div>
+          <ResendTelegramButton type="oil-level" id={log.id} />
         </div>
 
         {/* Summary Card */}

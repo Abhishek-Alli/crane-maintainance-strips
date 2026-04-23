@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { configAPI, craneAPI, inspectionAPI } from '../services/api';
 import { toast } from 'react-toastify';
+import ResendTelegramButton from './hbm/ResendTelegramButton';
 import { format, startOfWeek, startOfMonth } from 'date-fns';
 
 const API_URL = process.env.REACT_APP_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5001/api' : '/api');
@@ -604,6 +605,9 @@ const Dashboard = () => {
                       {expandedInspectionId === insp.id && (
                         <tr>
                           <td colSpan="6" className="px-4 py-4 bg-blue-50 border-l-4 border-blue-500">
+                            <div className="flex justify-end mb-2">
+                              <ResendTelegramButton type="inspection" id={insp.id} />
+                            </div>
                             <InspectionDetailPanel details={inspectionDetails[insp.id]} />
                           </td>
                         </tr>
@@ -655,6 +659,9 @@ const Dashboard = () => {
                   </div>
                   {expandedInspectionId === insp.id && (
                     <div className="border-t bg-blue-50 p-4">
+                      <div className="flex justify-end mb-2">
+                        <ResendTelegramButton type="inspection" id={insp.id} />
+                      </div>
                       <InspectionDetailPanel details={inspectionDetails[insp.id]} />
                     </div>
                   )}

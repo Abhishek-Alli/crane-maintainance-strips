@@ -2990,6 +2990,76 @@ class HbmController {
       res.status(500).json({ success: false, message: 'Failed to submit Roughing GB Temp sheet' });
     }
   }
+
+  // ==========================================
+  // RESEND TELEGRAM NOTIFICATION
+  // POST /api/hbm/:type/:id/resend-telegram
+  // ==========================================
+  static async resendTelegramNotification(req, res) {
+    const TYPE_MAP = {
+      'dc-motor':        { table: 'hbm_dc_motor_logs',        items: 'hbm_dc_motor_items',         label: 'DC Motor',              orderBy: 'block_name, section_name, item_name' },
+      'cooling-bed':     { table: 'hbm_cooling_bed_logs',     items: 'hbm_cooling_bed_items',      label: 'Cooling Bed',           orderBy: 'block_name, section_name, item_name' },
+      'mill-mech':       { table: 'hbm_mill_mech_logs',       items: 'hbm_mill_mech_items',        label: 'Mill Mechanical',       orderBy: 'block_name, section_name, item_name' },
+      'rolling-stand':   { table: 'hbm_rolling_stand_logs',   items: 'hbm_rolling_stand_items',    label: 'Rolling Stand',         orderBy: 'section_name, item_name' },
+      'pumphouse':       { table: 'hbm_pumphouse_logs',       items: 'hbm_pumphouse_items',        label: 'Pumphouse',             orderBy: 'section_name, item_name' },
+      'bar-bundle':      { table: 'hbm_bar_bundle_logs',      items: 'hbm_bar_bundle_items',       label: 'Bar Bundle Area',       orderBy: 'section_name, item_name' },
+      'before-rolling':  { table: 'hbm_before_rolling_logs',  items: 'hbm_before_rolling_items',   label: 'Before Rolling',        orderBy: 'section_name, item_name' },
+      'oil-level':       { table: 'hbm_oil_level_logs',       items: 'hbm_oil_level_entries',      label: 'Oil Level',             orderBy: 'item_name' },
+      'dc-motor-airflow':{ table: 'hbm_dc_motor_airflow_logs',items: 'hbm_dc_motor_airflow_entries',label: 'DC Motor Airflow',     orderBy: 'item_name' },
+      'roughing-gb-temp':{ table: 'hbm_roughing_gb_temp_logs',items: null,                          label: 'Roughing GB Temp',     orderBy: null },
+      'transformer':     { table: 'hbm_transformer_logs',     items: null,                          label: 'Transformer',          orderBy: null },
+      'pump-param':      { table: 'hbm_pump_param_logs',      items: null,                          label: 'Pump Parameter',       orderBy: null },
+      'water-param':     { table: 'hbm_water_param_logs',     items: 'hbm_water_param_entries',    label: 'Water Parameter',       orderBy: 'water_source' },
+      'ph-maint':        { table: 'hbm_ph_maint_logs',        items: null,                          label: 'Pumphouse Maintenance',orderBy: null },
+    };
+
+    try {
+      const { type, id } = req.params;
+      const meta = TYPE_MAP[type];
+      if (!meta) return res.status(400).json({ success: false, message: `Unknown checksheet type: ${type}` });
+
+      const logRes = await query(
+        `SELECT l.*, u.username AS filled_by_name FROM ${meta.table} l
+         JOIN users u ON l.filled_by = u.id WHERE l.id = $1`,
+        [id]
+      );
+      if (!logRes.rows.length) return res.status(404).json({ success: false, message: 'Log not found' });
+
+      const log = logRes.rows[0];
+
+      let items = [];
+      if (meta.items) {
+        const itemsRes = await query(
+          `SELECT * FROM ${meta.items} WHERE log_id = $1 ORDER BY ${meta.orderBy}`,
+          [id]
+        );
+        items = itemsRes.rows.map(r => ({
+          section_name: r.section_name || r.water_source || '',
+          block_name:   r.block_name   || '',
+          item_name:    r.item_name    || r.water_source || '',
+          status:       r.status       || (r.tds_status === 'NOT_OK' || r.ph_status === 'NOT_OK' || r.hardness_status === 'NOT_OK' || r.temp_status === 'NOT_OK' ? 'NOT_OK' : 'OK'),
+          remark:       r.remark       || '',
+          action_taken: r.action_taken || '',
+        }));
+      }
+
+      await require('../utils/telegram').sendHbmChecksheetNotification({
+        checksheetType: meta.label,
+        date:        log.log_date,
+        time:        log.log_time  || null,
+        shift:       log.shift     || null,
+        filledBy:    log.filled_by_name,
+        submittedAt: new Date(log.created_at),
+        remarks:     log.remarks   || log.remark || null,
+        items,
+      });
+
+      res.json({ success: true, message: `Telegram notification resent for ${meta.label} #${id}` });
+    } catch (error) {
+      console.error('HBM resend telegram error:', error);
+      res.status(500).json({ success: false, message: 'Failed to resend notification' });
+    }
+  }
 }
 
 /* ── PDF helper: row height ── */

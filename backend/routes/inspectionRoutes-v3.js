@@ -13,4 +13,7 @@ router.get('/', authenticate, InspectionController.getAll);
 // GET inspection by ID
 router.get('/:id', authenticate, InspectionController.getById);
 
+// Resend Telegram notification for a submitted inspection
+router.post('/:id/resend-telegram', authenticate, InspectionController.resendTelegram);
+
 module.exports = router;

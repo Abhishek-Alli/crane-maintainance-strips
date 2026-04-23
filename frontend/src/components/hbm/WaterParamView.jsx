@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
+import ResendTelegramButton from './ResendTelegramButton';
 
 
 const StatusBadge = ({ status }) => {
@@ -102,6 +103,7 @@ const WaterParamView = () => {
             )}
             PDF
           </button>
+          <ResendTelegramButton type="water-param" id={log.id} />
         </div>
 
         {/* Log Info */}

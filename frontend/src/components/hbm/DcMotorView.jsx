@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
+import ResendTelegramButton from './ResendTelegramButton';
 
 const DcMotorView = () => {
   const { id } = useParams();
@@ -86,13 +87,16 @@ const DcMotorView = () => {
               <p className="text-sm text-gray-500">DC Motor Maintenance Checksheet</p>
             </div>
           </div>
-          <button onClick={handleDownloadPDF} disabled={downloading}
-            className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-            </svg>
-            {downloading ? 'Downloading…' : 'Download PDF'}
-          </button>
+          <div className="flex items-center gap-2">
+            <ResendTelegramButton type="dc-motor" id={log.id} />
+            <button onClick={handleDownloadPDF} disabled={downloading}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+              </svg>
+              {downloading ? 'Downloading…' : 'Download PDF'}
+            </button>
+          </div>
         </div>
 
         {/* Summary */}
