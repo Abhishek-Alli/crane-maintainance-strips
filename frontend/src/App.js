@@ -145,7 +145,6 @@ function App() {
 
   // Determine default redirect after login restore
   const getDefaultRoute = () => {
-    if (isAdminUser) return '/create-user';
     if (isHBMUser) return '/hbm/dashboard';
     return '/';
   };
@@ -505,7 +504,6 @@ function App() {
             path="/"
             element={
               !user ? <Navigate to="/login" replace />
-              : isAdminUser ? <Navigate to="/create-user" replace />
               : <Dashboard />
             }
           />
