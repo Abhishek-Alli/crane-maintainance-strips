@@ -55,6 +55,12 @@ const calcDiff = (a, b) => {
   return (na - nb).toFixed(2);
 };
 
+const calcPH = (diffKwh, diffKvah) => {
+  const a = parseFloat(diffKwh), b = parseFloat(diffKvah);
+  if (isNaN(a) || isNaN(b) || b === 0) return '';
+  return (a / b).toFixed(4);
+};
+
 // Good options → green active, bad → red active
 const btnColor = (option, active) => {
   if (!active) return 'bg-white border-gray-300 text-gray-500 hover:border-gray-400';
@@ -87,7 +93,7 @@ const StatusRow = ({ field, value, onChange }) => (
 const TransformerUnit = ({ unitName, value, onChange, isOpen, onToggle, color }) => {
   const notOkCount = SEC1_STATUS.filter(f => {
     const v = value[f.key];
-    return v === 'NOT_OK' || v === 'Not_Checked' || v === 'YES';
+    return v === 'NOT_OK' || v === 'YES';
   }).length;
 
   return (
@@ -384,6 +390,22 @@ const TransformerForm = () => {
                     </div>
                   </div>
                 </div>
+
+                {/* PH Value */}
+                {(() => {
+                  const dKwh  = calcDiff(sec3[unit].kwhT,  sec3[unit].kwhY);
+                  const dKvah = calcDiff(sec3[unit].kvahT, sec3[unit].kvahY);
+                  const ph    = calcPH(dKwh, dKvah);
+                  return (
+                    <div className="mt-4 flex items-center gap-3 p-3 rounded-lg border border-purple-200 bg-purple-50">
+                      <span className="text-xs font-bold text-purple-700 uppercase tracking-wide">PH Value</span>
+                      <span className="text-xs text-gray-500">(Diff KWH / Diff KVAH)</span>
+                      <span className={`ml-auto text-base font-bold ${ph ? 'text-purple-700' : 'text-gray-400'}`}>
+                        {ph || '—'}
+                      </span>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           ))}
