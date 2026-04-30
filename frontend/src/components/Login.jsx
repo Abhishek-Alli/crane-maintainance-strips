@@ -42,7 +42,9 @@ const Login = ({ onLoginSuccess }) => {
         if (onLoginSuccess) onLoginSuccess(userData);
         toast.success(`Welcome, ${formData.username}!`);
         const loginType = userData.loginType || userData.user_type;
-        navigate(loginType === 'HBM_CHECKSHEETS' ? '/hbm/dashboard' : '/');
+        if (loginType === 'HBM_CHECKSHEETS') navigate('/hbm/dashboard');
+        else if (loginType === 'ADMIN') navigate('/create-user');
+        else navigate('/');
       }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Login failed. Please check your credentials.');
