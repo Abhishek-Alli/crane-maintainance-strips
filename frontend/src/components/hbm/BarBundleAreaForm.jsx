@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
+import ChecksheetPreviewModal, { PreviewSection, PreviewGrid } from './ChecksheetPreviewModal';
 
 // ─── ITEM LISTS ───────────────────────────────────────────────────────────────
 
@@ -171,6 +172,7 @@ const BarBundleAreaForm = () => {
     Object.fromEntries(Object.keys(SHEET_CONFIG).map(k => [k, '']))
   );
   const [submitting, setSubmitting] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   const handleItemChange = (key, val) => setItemValues(prev => ({ ...prev, [key]: val }));
   const handleBlockRemark = (key, val) => setBlockRemarks(prev => ({ ...prev, [key]: val }));
@@ -185,50 +187,45 @@ const BarBundleAreaForm = () => {
     return { total: blockItems.length, filled, notOk };
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!header.log_date) { toast.error('Date is required'); return; }
-
+  const buildItems = () => {
     const items = [];
-    try {
-      for (const [secKey, secData] of Object.entries(SHEET_CONFIG)) {
-        for (const [block, blockItems] of Object.entries(secData.blocks)) {
-          const blockRemark = blockRemarks[`${secKey}__${block}`] || null;
-          for (const item of blockItems) {
-            const k = `${secKey}__${block}__${item}`;
-            const val = itemValues[k];
-            if (!val?.status) continue;
-            if (val.status === 'NOT_OK') {
-              if (!val.remark?.trim()) { toast.error(`Remark required: ${item} (${block})`); throw new Error('stop'); }
-              if (!val.action_taken?.trim()) { toast.error(`Action Taken required: ${item} (${block})`); throw new Error('stop'); }
-            }
-            items.push({
-              section_name: secKey,
-              block_name: block,
-              item_name: item,
-              status: val.status,
-              remark: val.remark || '',
-              action_taken: val.action_taken || '',
-              block_remark: blockRemark,
-            });
+    for (const [secKey, secData] of Object.entries(SHEET_CONFIG)) {
+      for (const [block, blockItems] of Object.entries(secData.blocks)) {
+        const blockRemark = blockRemarks[`${secKey}__${block}`] || null;
+        for (const item of blockItems) {
+          const k = `${secKey}__${block}__${item}`;
+          const val = itemValues[k];
+          if (!val?.status) continue;
+          if (val.status === 'NOT_OK') {
+            if (!val.remark?.trim()) { toast.error(`Remark required: ${item} (${block})`); throw new Error('stop'); }
+            if (!val.action_taken?.trim()) { toast.error(`Action Taken required: ${item} (${block})`); throw new Error('stop'); }
           }
+          items.push({ section_name: secKey, block_name: block, item_name: item, status: val.status, remark: val.remark || '', action_taken: val.action_taken || '', block_remark: blockRemark });
         }
       }
-    } catch (err) {
-      if (err.message === 'stop') return;
     }
+    return items;
+  };
 
-    if (items.length === 0) { toast.error('Please fill at least one check item'); return; }
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!header.log_date) { toast.error('Date is required'); return; }
+    try {
+      const items = buildItems();
+      if (items.length === 0) { toast.error('Please fill at least one check item'); return; }
+      setShowPreview(true);
+    } catch (err) { if (err.message !== 'stop') throw err; }
+  };
 
+  const handleConfirmSubmit = async () => {
+    let items;
+    try { items = buildItems(); } catch { return; }
     setSubmitting(true);
     try {
       await hbmAPI.createBarBundleLog({
-        log_date:    header.log_date,
-        checked_by:  header.checked_by || null,
-        sec1_result: sectionResults['SECTION-1'] || null,
-        sec2_result: sectionResults['SECTION-2'] || null,
-        sec3_result: sectionResults['SECTION-3'] || null,
-        sec4_result: sectionResults['SECTION-4'] || null,
+        log_date: header.log_date, checked_by: header.checked_by || null,
+        sec1_result: sectionResults['SECTION-1'] || null, sec2_result: sectionResults['SECTION-2'] || null,
+        sec3_result: sectionResults['SECTION-3'] || null, sec4_result: sectionResults['SECTION-4'] || null,
         items,
       });
       toast.success('Bar Bundle Area checksheet submitted!');
@@ -248,6 +245,7 @@ const BarBundleAreaForm = () => {
   };
 
   return (
+    <>
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
       <div className="max-w-5xl mx-auto">
 
@@ -359,23 +357,44 @@ const BarBundleAreaForm = () => {
 
           {/* Submit */}
           <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 mt-5 shadow-lg rounded-t-xl">
-            <button type="submit" disabled={submitting}
-              className="w-full py-3 bg-indigo-600 text-white rounded-lg font-bold text-base hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-              {submitting ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                  </svg>
-                  Submitting...
-                </span>
-              ) : 'Submit Bar Bundle Area Checksheet'}
+            <button type="submit"
+              className="w-full py-3 bg-indigo-600 text-white rounded-lg font-bold text-base hover:bg-indigo-700 transition-colors">
+              Preview & Submit
             </button>
           </div>
 
         </form>
       </div>
     </div>
+
+    <ChecksheetPreviewModal
+      isOpen={showPreview}
+      title="Bar Bundle Area Checksheet"
+      onEdit={() => setShowPreview(false)}
+      onConfirm={handleConfirmSubmit}
+      submitting={submitting}
+    >
+      <PreviewGrid rows={[['Date', header.log_date], ['Checked By', header.checked_by]]} />
+      {Object.entries(SHEET_CONFIG).map(([secKey, secData]) => (
+        <PreviewSection key={secKey} title={secData.label} color={secData.color}>
+          <div className="space-y-2">
+            {Object.entries(secData.blocks).map(([block, blockItems]) => {
+              const { filled, notOk } = getBlockCount(secKey, block, blockItems);
+              return (
+                <div key={block} className={`rounded-lg p-2 border ${notOk > 0 ? 'border-red-200 bg-red-50' : filled > 0 ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50'}`}>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-bold text-gray-700">{block}</span>
+                    <span className="text-xs text-gray-500">{filled}/{blockItems.length}{notOk > 0 ? ` · ${notOk} NOT OK` : ''}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-xs text-gray-600 mt-2"><span className="font-semibold">Section Result:</span> {sectionResults[secKey] || '—'}</p>
+        </PreviewSection>
+      ))}
+    </ChecksheetPreviewModal>
+    </>
   );
 };
 

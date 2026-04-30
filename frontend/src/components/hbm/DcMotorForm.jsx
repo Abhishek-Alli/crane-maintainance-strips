@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
+import ChecksheetPreviewModal, { PreviewSection, PreviewGrid } from './ChecksheetPreviewModal';
 
 // ─── BLOCK CONFIGURATION ───────────────────────────────────────────────────
 const blockConfig = {
@@ -138,6 +139,7 @@ const DcMotorForm = () => {
   const [openBlocks, setOpenBlocks] = useState({});
   const [itemValues, setItemValues] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   const toggleBlock = (block) => {
     setOpenBlocks(prev => ({ ...prev, [block]: !prev[block] }));
@@ -147,57 +149,36 @@ const DcMotorForm = () => {
     setItemValues(prev => ({ ...prev, [key]: val }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!header.log_date || !header.log_time || !header.shift) {
-      toast.error('Date, time and shift are required');
-      return;
-    }
-
-    // Collect all filled items
+  const buildItems = () => {
     const items = [];
     for (const [key, val] of Object.entries(itemValues)) {
       if (!val?.status) continue;
       const [block, section, item] = key.split('__');
-
       if (val.status === 'NOT_OK') {
-        if (!val.remark?.trim()) {
-          toast.error(`Remark is compulsory for: ${item} (${block} - ${section})`);
-          return;
-        }
-        if (!val.action_taken?.trim()) {
-          toast.error(`Action Taken is compulsory for: ${item} (${block} - ${section})`);
-          return;
-        }
+        if (!val.remark?.trim()) { toast.error(`Remark is compulsory for: ${item} (${block} - ${section})`); throw new Error('stop'); }
+        if (!val.action_taken?.trim()) { toast.error(`Action Taken is compulsory for: ${item} (${block} - ${section})`); throw new Error('stop'); }
       }
-
-      items.push({
-        block_name: block,
-        section_name: section,
-        item_name: item,
-        status: val.status,
-        remark: val.remark || '',
-        action_taken: val.action_taken || ''
-      });
+      items.push({ block_name: block, section_name: section, item_name: item, status: val.status, remark: val.remark || '', action_taken: val.action_taken || '' });
     }
+    return items;
+  };
 
-    if (items.length === 0) {
-      toast.error('Please fill at least one check item');
-      return;
-    }
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!header.log_date || !header.log_time || !header.shift) { toast.error('Date, time and shift are required'); return; }
+    try {
+      const items = buildItems();
+      if (items.length === 0) { toast.error('Please fill at least one check item'); return; }
+      setShowPreview(true);
+    } catch (err) { if (err.message !== 'stop') throw err; }
+  };
 
+  const handleConfirmSubmit = async () => {
+    let items;
+    try { items = buildItems(); } catch { return; }
     setSubmitting(true);
     try {
-      await hbmAPI.createDcMotorLog({
-        log_date: header.log_date,
-        log_time: header.log_time,
-        shift: header.shift,
-        heat_start: header.heat_start || null,
-        heat_end: header.heat_end || null,
-        remarks: header.remarks || null,
-        items
-      });
+      await hbmAPI.createDcMotorLog({ log_date: header.log_date, log_time: header.log_time, shift: header.shift, heat_start: header.heat_start || null, heat_end: header.heat_end || null, remarks: header.remarks || null, items });
       toast.success('DC Motor checksheet submitted successfully!');
       navigate('/hbm/dashboard');
     } catch (error) {
@@ -224,6 +205,7 @@ const DcMotorForm = () => {
   };
 
   return (
+    <>
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
       <div className="max-w-5xl mx-auto">
 
@@ -349,23 +331,39 @@ const DcMotorForm = () => {
 
           {/* Submit */}
           <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 mt-5 shadow-lg rounded-t-xl">
-            <button type="submit" disabled={submitting}
-              className="w-full py-3 bg-emerald-600 text-white rounded-lg font-bold text-base hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-              {submitting ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                  </svg>
-                  Submitting...
-                </span>
-              ) : 'Submit DC Motor Checksheet'}
+            <button type="submit"
+              className="w-full py-3 bg-emerald-600 text-white rounded-lg font-bold text-base hover:bg-emerald-700 transition-colors">
+              Preview & Submit
             </button>
           </div>
 
         </form>
       </div>
     </div>
+
+    <ChecksheetPreviewModal
+      isOpen={showPreview}
+      title="DC Motor Maintenance Checksheet"
+      onEdit={() => setShowPreview(false)}
+      onConfirm={handleConfirmSubmit}
+      submitting={submitting}
+    >
+      <PreviewGrid rows={[['Date', header.log_date], ['Time', header.log_time], ['Shift', header.shift], ['Heat Start', header.heat_start], ['Heat End', header.heat_end], ['Remarks', header.remarks]]} />
+      <PreviewSection title="Motor Blocks Summary" color="bg-emerald-600">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {blockNames.map(block => {
+            const { total, filled, notOk } = getBlockCount(block);
+            return (
+              <div key={block} className={`rounded-lg p-2 border text-xs ${notOk > 0 ? 'border-red-200 bg-red-50' : filled > 0 ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50'}`}>
+                <p className="font-bold text-gray-700 truncate">{block}</p>
+                <p className="text-gray-500">{filled}/{total}{notOk > 0 ? ` · ${notOk} NOT OK` : ''}</p>
+              </div>
+            );
+          })}
+        </div>
+      </PreviewSection>
+    </ChecksheetPreviewModal>
+    </>
   );
 };
 

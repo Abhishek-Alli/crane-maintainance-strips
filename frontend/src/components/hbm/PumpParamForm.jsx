@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
+import ChecksheetPreviewModal, { PreviewSection, PreviewGrid } from './ChecksheetPreviewModal';
 
 // ─── PUMP GROUPS CONFIGURATION ───────────────────────────────────────────────
 
@@ -302,6 +303,7 @@ const PumpParamForm = () => {
   const [sec2Values, setSec2Values]   = useState({});
   const [openGroups, setOpenGroups]   = useState({});
   const [submitting, setSubmitting]   = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   const handlePumpChange = (pumpName, val) =>
     setPumpValues(prev => ({ ...prev, [pumpName]: val }));
@@ -331,67 +333,49 @@ const PumpParamForm = () => {
     return { filled, total: group.pumps.length, highCount };
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!header.log_date) { toast.error('Date is required'); return; }
-
+  const buildPayload = () => {
     const entries = [];
     for (const group of PUMP_GROUPS) {
       for (const pump of group.pumps) {
         const v = pumpValues[pump.name];
         if (!v?.status) continue;
         entries.push({
-          pump_name:    pump.name,
-          drive_details: v.drive_details || null,
-          status:       v.status,
-          kw:           v.kw !== '' && v.kw != null ? v.kw : null,
-          amp:          v.amp !== '' && v.amp != null ? v.amp : null,
-          rpm:          v.rpm !== '' && v.rpm != null ? v.rpm : null,
-          pressure:     v.pressure !== '' && v.pressure != null ? v.pressure : null,
-          load_pct:     v.load_pct !== '' && v.load_pct != null ? v.load_pct : null,
-          kwh_diff:     v.kwh_diff !== '' && v.kwh_diff != null ? v.kwh_diff : null,
+          pump_name: pump.name, drive_details: v.drive_details || null, status: v.status,
+          kw: v.kw !== '' && v.kw != null ? v.kw : null,
+          amp: v.amp !== '' && v.amp != null ? v.amp : null,
+          rpm: v.rpm !== '' && v.rpm != null ? v.rpm : null,
+          pressure: v.pressure !== '' && v.pressure != null ? v.pressure : null,
+          load_pct: v.load_pct !== '' && v.load_pct != null ? v.load_pct : null,
+          kwh_diff: v.kwh_diff !== '' && v.kwh_diff != null ? v.kwh_diff : null,
         });
       }
     }
-
-    if (entries.length === 0) {
-      toast.error('Please fill at least one pump entry');
-      return;
-    }
-
     const ro1 = parseFloat(sec2Values['RO-1']?.value_text) || 0;
     const ro2 = parseFloat(sec2Values['RO-2']?.value_text) || 0;
     const ro3 = parseFloat(sec2Values['RO-3']?.value_text) || 0;
-    const rawWater   = ro1 + ro2 + ro3;
+    const rawWater = ro1 + ro2 + ro3;
     const wasteWater = parseFloat(sec2Values['Waste Water']?.value_text) || 0;
-    const roWater    = rawWater - wasteWater;
-
-    const computedMap = {
-      'RAW Water': rawWater > 0 ? rawWater.toFixed(2) : null,
-      'RO Water':  rawWater > 0 ? roWater.toFixed(2)  : null,
-    };
-
+    const roWater = rawWater - wasteWater;
+    const computedMap = { 'RAW Water': rawWater > 0 ? rawWater.toFixed(2) : null, 'RO Water': rawWater > 0 ? roWater.toFixed(2) : null };
     const sec2_items = SEC2_ITEMS
-      .filter(item => {
-        if (item.type === 'computed') return !!computedMap[item.name];
-        return sec2Values[item.name]?.value_text || sec2Values[item.name]?.item_status;
-      })
-      .map(item => ({
-        item_name:   item.name,
-        value_text:  item.type === 'computed'
-          ? computedMap[item.name]
-          : (sec2Values[item.name]?.value_text || null),
-        item_status: sec2Values[item.name]?.item_status || null,
-      }));
+      .filter(item => item.type === 'computed' ? !!computedMap[item.name] : (sec2Values[item.name]?.value_text || sec2Values[item.name]?.item_status))
+      .map(item => ({ item_name: item.name, value_text: item.type === 'computed' ? computedMap[item.name] : (sec2Values[item.name]?.value_text || null), item_status: sec2Values[item.name]?.item_status || null }));
+    return { entries, sec2_items };
+  };
 
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!header.log_date) { toast.error('Date is required'); return; }
+    const { entries } = buildPayload();
+    if (entries.length === 0) { toast.error('Please fill at least one pump entry'); return; }
+    setShowPreview(true);
+  };
+
+  const handleConfirmSubmit = async () => {
+    const { entries, sec2_items } = buildPayload();
     setSubmitting(true);
     try {
-      await hbmAPI.createPumpParamLog({
-        log_date:   header.log_date,
-        size_value: header.size_value || null,
-        entries,
-        sec2_items,
-      });
+      await hbmAPI.createPumpParamLog({ log_date: header.log_date, size_value: header.size_value || null, entries, sec2_items });
       toast.success('Pump Parameter Report submitted!');
       navigate('/hbm/pump-param/history');
     } catch (error) {
@@ -402,6 +386,7 @@ const PumpParamForm = () => {
   };
 
   return (
+    <>
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
       <div className="max-w-5xl mx-auto">
 
@@ -597,23 +582,51 @@ const PumpParamForm = () => {
 
           {/* Submit */}
           <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 mt-5 shadow-lg rounded-t-xl">
-            <button type="submit" disabled={submitting}
-              className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold text-base hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-              {submitting ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                  </svg>
-                  Submitting...
-                </span>
-              ) : 'Submit Pump Parameter Report'}
+            <button type="submit"
+              className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold text-base hover:bg-blue-700 transition-colors">
+              Preview & Submit
             </button>
           </div>
 
         </form>
       </div>
     </div>
+
+    <ChecksheetPreviewModal
+      isOpen={showPreview}
+      title="Pump Parameter Report"
+      onEdit={() => setShowPreview(false)}
+      onConfirm={handleConfirmSubmit}
+      submitting={submitting}
+    >
+      <PreviewGrid rows={[['Date', header.log_date], ['Size', header.size_value]]} />
+      <PreviewSection title="Section 1 — Pump Groups" color="bg-blue-700">
+        <div className="space-y-2">
+          {PUMP_GROUPS.map(group => {
+            const filledPumps = group.pumps.filter(p => pumpValues[p.name]?.status);
+            const offPumps    = group.pumps.filter(p => pumpValues[p.name]?.status === 'OFF');
+            return (
+              <div key={group.key} className="border border-gray-200 rounded-lg p-3">
+                <p className="text-xs font-bold text-gray-700 mb-1">{group.label}</p>
+                <div className="flex flex-wrap gap-1">
+                  {group.pumps.map(p => {
+                    const v = pumpValues[p.name];
+                    const s = v?.status;
+                    return (
+                      <span key={p.name} className={`text-xs px-2 py-0.5 rounded-full font-semibold ${s === 'ON' ? 'bg-green-100 text-green-700' : s === 'OFF' ? 'bg-gray-100 text-gray-600' : 'bg-yellow-100 text-yellow-700'}`}>
+                        {p.name.replace(group.label + ' ', '')}: {s || '—'}
+                      </span>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-gray-400 mt-1">{filledPumps.length}/{group.pumps.length} filled · {offPumps.length} OFF</p>
+              </div>
+            );
+          })}
+        </div>
+      </PreviewSection>
+    </ChecksheetPreviewModal>
+    </>
   );
 };
 

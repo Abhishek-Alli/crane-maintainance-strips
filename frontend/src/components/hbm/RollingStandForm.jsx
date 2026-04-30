@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
+import ChecksheetPreviewModal, { PreviewSection, PreviewGrid } from './ChecksheetPreviewModal';
 
 // ─── SHEET CONFIGURATION ─────────────────────────────────────────────────────
 
@@ -126,6 +127,7 @@ const RollingStandForm = () => {
   const [sec2Footer, setSec2Footer] = useState({ remark: '', result: '', checked_by: '' });
 
   const [submitting, setSubmitting] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   const handleItemChange = (key, val) => {
     setItemValues(prev => ({ ...prev, [key]: val }));
@@ -145,17 +147,8 @@ const RollingStandForm = () => {
     return { total: items.length, filled, notOk };
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!header.log_date || !header.log_time || !header.shift) {
-      toast.error('Date, time and shift are required');
-      return;
-    }
-
+  const buildItems = () => {
     const items = [];
-
-    // Collect Section-1 items
     SECTION_1_ITEMS.forEach(item => {
       const k = `${SECTION_1_BLOCK}__${item}`;
       const val = itemValues[k];
@@ -166,8 +159,6 @@ const RollingStandForm = () => {
       }
       items.push({ section_name: 'SECTION-1', block_name: SECTION_1_BLOCK, item_name: item, status: val.status, remark: val.remark || '', action_taken: val.action_taken || '' });
     });
-
-    // Collect Section-2 items
     SECTION_2_BLOCKS.forEach(block => {
       SECTION_2_ITEMS.forEach(item => {
         const k = `${block}__${item}`;
@@ -180,30 +171,33 @@ const RollingStandForm = () => {
         items.push({ section_name: 'SECTION-2', block_name: block, item_name: item, status: val.status, remark: val.remark || '', action_taken: val.action_taken || '' });
       });
     });
+    return items;
+  };
 
-    if (items.length === 0) {
-      toast.error('Please fill at least one check item');
-      return;
-    }
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!header.log_date || !header.log_time || !header.shift) { toast.error('Date, time and shift are required'); return; }
+    try {
+      const items = buildItems();
+      if (items.length === 0) { toast.error('Please fill at least one check item'); return; }
+      setShowPreview(true);
+    } catch (err) { if (err.message !== 'stop') throw err; }
+  };
 
+  const handleConfirmSubmit = async () => {
+    let items;
+    try { items = buildItems(); } catch { return; }
     setSubmitting(true);
     try {
       await hbmAPI.createRollingStandLog({
-        log_date: header.log_date,
-        log_time: header.log_time,
-        shift: header.shift,
-        sec1_remark: sec1Footer.remark || null,
-        sec1_result: sec1Footer.result || null,
-        sec1_checked_by: sec1Footer.checked_by || null,
-        sec2_remark: sec2Footer.remark || null,
-        sec2_result: sec2Footer.result || null,
-        sec2_checked_by: sec2Footer.checked_by || null,
+        log_date: header.log_date, log_time: header.log_time, shift: header.shift,
+        sec1_remark: sec1Footer.remark || null, sec1_result: sec1Footer.result || null, sec1_checked_by: sec1Footer.checked_by || null,
+        sec2_remark: sec2Footer.remark || null, sec2_result: sec2Footer.result || null, sec2_checked_by: sec2Footer.checked_by || null,
         items,
       });
       toast.success('Rolling Stand checksheet submitted!');
       navigate('/hbm/dashboard');
     } catch (error) {
-      if (error?.message === 'stop') return;
       toast.error(error?.response?.data?.message || 'Failed to submit');
     } finally {
       setSubmitting(false);
@@ -211,6 +205,7 @@ const RollingStandForm = () => {
   };
 
   return (
+    <>
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
       <div className="max-w-5xl mx-auto">
 
@@ -354,23 +349,67 @@ const RollingStandForm = () => {
 
           {/* Submit */}
           <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 mt-5 shadow-lg rounded-t-xl">
-            <button type="submit" disabled={submitting}
-              className="w-full py-3 bg-emerald-600 text-white rounded-lg font-bold text-base hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-              {submitting ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                  </svg>
-                  Submitting...
-                </span>
-              ) : 'Submit Rolling Stand Checksheet'}
+            <button type="submit"
+              className="w-full py-3 bg-emerald-600 text-white rounded-lg font-bold text-base hover:bg-emerald-700 transition-colors">
+              Preview & Submit
             </button>
           </div>
 
         </form>
       </div>
     </div>
+
+    <ChecksheetPreviewModal
+      isOpen={showPreview}
+      title="Rolling Stand Checksheet"
+      onEdit={() => setShowPreview(false)}
+      onConfirm={handleConfirmSubmit}
+      submitting={submitting}
+    >
+      <PreviewGrid rows={[['Date', header.log_date], ['Time', header.log_time], ['Shift', header.shift]]} />
+
+      <PreviewSection title="Section 1 — Roughing Stand" color="bg-emerald-600">
+        {(() => {
+          const filledItems = SECTION_1_ITEMS.filter(item => itemValues[`${SECTION_1_BLOCK}__${item}`]?.status);
+          return filledItems.length === 0 ? <p className="text-xs text-gray-400">No items filled</p> : (
+            <div className="space-y-1">
+              {filledItems.map(item => {
+                const v = itemValues[`${SECTION_1_BLOCK}__${item}`];
+                return (
+                  <div key={item} className="flex justify-between text-xs py-1 border-b border-gray-100 last:border-0">
+                    <span className="text-gray-700">{item}</span>
+                    <span className={`font-bold ${v.status === 'OK' ? 'text-green-600' : v.status === 'NOT_OK' ? 'text-red-600' : 'text-gray-500'}`}>{v.status === 'NOT_OK' ? 'NOT OK' : v.status}</span>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
+        <div className="mt-3 pt-3 border-t border-gray-200">
+          <PreviewGrid rows={[['Remark', sec1Footer.remark], ['Result', sec1Footer.result], ['Checked By', sec1Footer.checked_by]]} />
+        </div>
+      </PreviewSection>
+
+      <PreviewSection title="Section 2 — C1 to C14" color="bg-blue-600">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {SECTION_2_BLOCKS.map(block => {
+            const filled = SECTION_2_ITEMS.filter(item => itemValues[`${block}__${item}`]?.status).length;
+            const notOk  = SECTION_2_ITEMS.filter(item => itemValues[`${block}__${item}`]?.status === 'NOT_OK').length;
+            return (
+              <div key={block} className={`rounded-lg p-2 text-center border ${notOk > 0 ? 'border-red-200 bg-red-50' : filled > 0 ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50'}`}>
+                <p className="text-xs font-bold text-gray-700">{block}</p>
+                <p className="text-xs text-gray-500">{filled}/{SECTION_2_ITEMS.length}</p>
+                {notOk > 0 && <p className="text-xs font-bold text-red-600">{notOk} NOT OK</p>}
+              </div>
+            );
+          })}
+        </div>
+        <div className="mt-3 pt-3 border-t border-gray-200">
+          <PreviewGrid rows={[['Remark', sec2Footer.remark], ['Result', sec2Footer.result], ['Checked By', sec2Footer.checked_by]]} />
+        </div>
+      </PreviewSection>
+    </ChecksheetPreviewModal>
+    </>
   );
 };
 

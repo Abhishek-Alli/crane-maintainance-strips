@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
+import ChecksheetPreviewModal, { PreviewSection, PreviewGrid } from './ChecksheetPreviewModal';
 
 // ─── WATER SOURCES CONFIGURATION ─────────────────────────────────────────────
 
@@ -222,6 +223,7 @@ const WaterParamForm = () => {
   const [remark, setRemark]   = useState('');
   const [values, setValues]   = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   const handleChange = (key, val) =>
     setValues(prev => ({ ...prev, [key]: val }));
@@ -238,30 +240,33 @@ const WaterParamForm = () => {
     return count;
   };
 
-  const handleSubmit = async (e) => {
+  const buildEntries = () => WATER_SOURCES.map(src => {
+    const v = values[src.key] || {};
+    const isOff = src.canBeOff && v.source_status === 'OFF';
+    return {
+      water_source:    src.label,
+      source_status:   src.canBeOff ? (v.source_status || 'ON') : null,
+      tds:             isOff ? null : (v.tds !== '' && v.tds != null ? v.tds : null),
+      tds_status:      isOff ? null : (v.tds_status || null),
+      hardness:        isOff || !src.params.hardness ? null : (v.hardness !== '' && v.hardness != null ? v.hardness : null),
+      hardness_status: isOff || !src.params.hardness ? null : (v.hardness_status || null),
+      ph:              isOff ? null : (v.ph !== '' && v.ph != null ? v.ph : null),
+      ph_status:       isOff ? null : (v.ph_status || null),
+      temperature:     isOff ? null : (v.temperature !== '' && v.temperature != null ? v.temperature : null),
+      temp_status:     isOff ? null : (v.temp_status || null),
+    };
+  });
+
+  const handleSubmit = (e) => {
     e.preventDefault();
     if (!logDate) { toast.error('Date is required'); return; }
+    setShowPreview(true);
+  };
 
-    const entries = WATER_SOURCES.map(src => {
-      const v = values[src.key] || {};
-      const isOff = src.canBeOff && v.source_status === 'OFF';
-      return {
-        water_source:    src.label,
-        source_status:   src.canBeOff ? (v.source_status || 'ON') : null,
-        tds:             isOff ? null : (v.tds !== '' && v.tds != null ? v.tds : null),
-        tds_status:      isOff ? null : (v.tds_status || null),
-        hardness:        isOff || !src.params.hardness ? null : (v.hardness !== '' && v.hardness != null ? v.hardness : null),
-        hardness_status: isOff || !src.params.hardness ? null : (v.hardness_status || null),
-        ph:              isOff ? null : (v.ph !== '' && v.ph != null ? v.ph : null),
-        ph_status:       isOff ? null : (v.ph_status || null),
-        temperature:     isOff ? null : (v.temperature !== '' && v.temperature != null ? v.temperature : null),
-        temp_status:     isOff ? null : (v.temp_status || null),
-      };
-    });
-
+  const handleConfirmSubmit = async () => {
     setSubmitting(true);
     try {
-      await hbmAPI.createWaterParamLog({ log_date: logDate, remark: remark || null, entries });
+      await hbmAPI.createWaterParamLog({ log_date: logDate, remark: remark || null, entries: buildEntries() });
       toast.success('Water Parameter report submitted!');
       navigate('/hbm/water-param/history');
     } catch (error) {
@@ -274,6 +279,7 @@ const WaterParamForm = () => {
   const notOkCount = countNotOk();
 
   return (
+    <>
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
       <div className="max-w-4xl mx-auto">
 
@@ -342,23 +348,66 @@ const WaterParamForm = () => {
 
           {/* Submit */}
           <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 mt-5 shadow-lg rounded-t-xl">
-            <button type="submit" disabled={submitting}
-              className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold text-base hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-              {submitting ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                  </svg>
-                  Submitting...
-                </span>
-              ) : 'Submit Water Parameter Report'}
+            <button type="submit"
+              className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold text-base hover:bg-blue-700 transition-colors">
+              Preview & Submit
             </button>
           </div>
 
         </form>
       </div>
     </div>
+
+    <ChecksheetPreviewModal
+      isOpen={showPreview}
+      title="Pump House Water Parameters"
+      onEdit={() => setShowPreview(false)}
+      onConfirm={handleConfirmSubmit}
+      submitting={submitting}
+    >
+      <div className="bg-gray-50 rounded-lg p-3 text-sm">
+        <span className="font-semibold text-gray-600">Date: </span>
+        <span className="text-gray-900">{logDate}</span>
+      </div>
+
+      <PreviewSection title="Water Source Readings" color="bg-blue-700">
+        <div className="space-y-3">
+          {WATER_SOURCES.map(src => {
+            const v = values[src.key] || {};
+            const isOff = src.canBeOff && v.source_status === 'OFF';
+            return (
+              <div key={src.key} className="border border-gray-200 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-bold text-gray-700">{src.label}</p>
+                  {src.canBeOff && (
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${v.source_status === 'OFF' ? 'bg-gray-100 text-gray-600' : 'bg-green-100 text-green-700'}`}>
+                      {v.source_status || 'ON'}
+                    </span>
+                  )}
+                </div>
+                {isOff ? (
+                  <p className="text-xs text-gray-400 italic">Source is OFF</p>
+                ) : (
+                  <PreviewGrid rows={Object.entries(src.params).map(([param, range]) => {
+                    const meta = { tds: 'TDS (ppm)', hardness: 'Hardness (ppm)', ph: 'PH', temperature: 'Temp (°C)' };
+                    const status = v[`${param}_status`];
+                    return [`${meta[param] || param} [${range.min}–${range.max}]`, v[param] ? `${v[param]}${status ? ` · ${status}` : ''}` : ''];
+                  })} />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </PreviewSection>
+
+      {remark && (
+        <div className="bg-gray-50 rounded-lg p-3 text-sm">
+          <span className="font-semibold text-gray-600">Remark: </span>
+          <span className="text-gray-800">{remark}</span>
+        </div>
+      )}
+    </ChecksheetPreviewModal>
+    </>
   );
 };
 

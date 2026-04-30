@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
+import ChecksheetPreviewModal, { PreviewSection, PreviewGrid } from './ChecksheetPreviewModal';
 
 // ─── TANK CONFIGURATION ──────────────────────────────────────────────────────
 const TANKS = [
@@ -42,14 +43,18 @@ const OilLevelForm = () => {
   const [values, setValues]     = useState({});
   const [remark, setRemark]     = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   const handleChange = (key, field, val) =>
     setValues(prev => ({ ...prev, [key]: { ...(prev[key] || {}), [field]: val } }));
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     if (!header.log_date) { toast.error('Date is required'); return; }
+    setShowPreview(true);
+  };
 
+  const handleConfirmSubmit = async () => {
     const entries = TANKS.map(tank => {
       const v = values[tank.key] || {};
       const oil_level = v.oil_level !== '' && v.oil_level != null ? v.oil_level : null;
@@ -81,6 +86,7 @@ const OilLevelForm = () => {
   };
 
   return (
+    <>
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
       <div className="max-w-3xl mx-auto">
 
@@ -150,7 +156,6 @@ const OilLevelForm = () => {
                     </span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {/* Oil Level */}
                     <div>
                       <label className="block text-xs font-semibold text-gray-600 mb-1">
                         Today's Oil Level
@@ -167,11 +172,8 @@ const OilLevelForm = () => {
                           'border-gray-300 bg-white'
                         }`} />
                     </div>
-                    {/* Pressure */}
                     <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">
-                        Pressure (Kg/Cm²)
-                      </label>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">Pressure (Kg/Cm²)</label>
                       <input
                         type="number" step="0.01" min="0"
                         value={v.pressure ?? ''}
@@ -179,11 +181,8 @@ const OilLevelForm = () => {
                         placeholder="0.00"
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                     </div>
-                    {/* Temperature */}
                     <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">
-                        Temperature
-                      </label>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">Temperature</label>
                       <input
                         type="number" step="0.01"
                         value={v.temperature ?? ''}
@@ -210,23 +209,61 @@ const OilLevelForm = () => {
 
           {/* Submit */}
           <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 shadow-lg rounded-t-xl">
-            <button type="submit" disabled={submitting}
-              className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold text-base hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-              {submitting ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                  </svg>
-                  Submitting...
-                </span>
-              ) : 'Submit Daily Oil Level Sheet'}
+            <button type="submit"
+              className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold text-base hover:bg-blue-700 transition-colors">
+              Preview & Submit
             </button>
           </div>
 
         </form>
       </div>
     </div>
+
+    <ChecksheetPreviewModal
+      isOpen={showPreview}
+      title="Daily Oil Level Sheet"
+      onEdit={() => setShowPreview(false)}
+      onConfirm={handleConfirmSubmit}
+      submitting={submitting}
+    >
+      <PreviewGrid rows={[
+        ['Date', header.log_date],
+        ['Shift Eng', header.shift_eng],
+        ['Reading By', header.reading_by],
+      ]} />
+
+      <PreviewSection title="Tank Readings" color="bg-blue-700">
+        <div className="space-y-3">
+          {TANKS.map(tank => {
+            const v = values[tank.key] || {};
+            const status = getOilStatus(v.oil_level, tank.threshold);
+            return (
+              <div key={tank.key} className="border border-gray-200 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-bold text-gray-700">{tank.label}</p>
+                  {status && (
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${status === 'OK' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{status}</span>
+                  )}
+                </div>
+                <PreviewGrid rows={[
+                  ['Oil Level', v.oil_level],
+                  ['Pressure (Kg/Cm²)', v.pressure],
+                  ['Temperature', v.temperature],
+                ]} />
+              </div>
+            );
+          })}
+        </div>
+      </PreviewSection>
+
+      {remark && (
+        <div className="bg-gray-50 rounded-lg p-3 text-sm">
+          <span className="font-semibold text-gray-600">Remark: </span>
+          <span className="text-gray-800">{remark}</span>
+        </div>
+      )}
+    </ChecksheetPreviewModal>
+    </>
   );
 };
 

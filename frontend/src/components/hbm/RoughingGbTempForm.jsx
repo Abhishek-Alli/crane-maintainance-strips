@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
+import ChecksheetPreviewModal, { PreviewSection, PreviewGrid } from './ChecksheetPreviewModal';
 
 const STANDS = ['C-1','C-2','C-3','C-4','C-5','C-6','C-7','C-8','C-9','C-10','C-11','C-12','C-13','C-14'];
 
@@ -56,13 +57,11 @@ const RoughingGbTempForm = () => {
   const [sec2Remark, setSec2Remark] = useState('');
   const [sec3Remark, setSec3Remark] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   const n = (v) => (v !== '' && v != null ? v : null);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!header.log_date) { toast.error('Date is required'); return; }
-
+  const buildPayload = () => {
     const standsArr = STANDS.map(stand => {
       const sv = stands[stand] || {};
       return {
@@ -78,36 +77,29 @@ const RoughingGbTempForm = () => {
         s_nde_bot:     n(sv.s_nde_bot),
       };
     });
+    return {
+      log_date: header.log_date, shift_eng: n(header.shift_eng), temp_taken_by: n(header.temp_taken_by),
+      s1_flywheel_de: n(getS1('flywheel_de')), s1_flywheel_nde: n(getS1('flywheel_nde')),
+      s1_reduction_de: n(getS1('reduction_de')), s1_reduction_nde: n(getS1('reduction_nde')), s1_reduction_output: n(getS1('reduction_output')),
+      s1_pinion_de_top: n(getS1('pinion_de_top')), s1_pinion_de_mid: n(getS1('pinion_de_mid')), s1_pinion_de_bot: n(getS1('pinion_de_bot')),
+      s1_pinion_nde_top: n(getS1('pinion_nde_top')), s1_pinion_nde_mid: n(getS1('pinion_nde_mid')), s1_pinion_nde_bot: n(getS1('pinion_nde_bot')),
+      s1_stand_de_top: n(getS1('stand_de_top')), s1_stand_de_mid: n(getS1('stand_de_mid')), s1_stand_de_bot: n(getS1('stand_de_bot')),
+      s1_stand_nde_top: n(getS1('stand_nde_top')), s1_stand_nde_mid: n(getS1('stand_nde_mid')), s1_stand_nde_bot: n(getS1('stand_nde_bot')),
+      sec1_remark: n(sec1Remark), sec2_remark: n(sec2Remark), sec3_remark: n(sec3Remark),
+      stands: standsArr,
+    };
+  };
 
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!header.log_date) { toast.error('Date is required'); return; }
+    setShowPreview(true);
+  };
+
+  const handleConfirmSubmit = async () => {
     setSubmitting(true);
     try {
-      await hbmAPI.createRoughingGbTempLog({
-        log_date:      header.log_date,
-        shift_eng:     n(header.shift_eng),
-        temp_taken_by: n(header.temp_taken_by),
-        // Section-1
-        s1_flywheel_de:     n(getS1('flywheel_de')),
-        s1_flywheel_nde:    n(getS1('flywheel_nde')),
-        s1_reduction_de:    n(getS1('reduction_de')),
-        s1_reduction_nde:   n(getS1('reduction_nde')),
-        s1_reduction_output:n(getS1('reduction_output')),
-        s1_pinion_de_top:   n(getS1('pinion_de_top')),
-        s1_pinion_de_mid:   n(getS1('pinion_de_mid')),
-        s1_pinion_de_bot:   n(getS1('pinion_de_bot')),
-        s1_pinion_nde_top:  n(getS1('pinion_nde_top')),
-        s1_pinion_nde_mid:  n(getS1('pinion_nde_mid')),
-        s1_pinion_nde_bot:  n(getS1('pinion_nde_bot')),
-        s1_stand_de_top:    n(getS1('stand_de_top')),
-        s1_stand_de_mid:    n(getS1('stand_de_mid')),
-        s1_stand_de_bot:    n(getS1('stand_de_bot')),
-        s1_stand_nde_top:   n(getS1('stand_nde_top')),
-        s1_stand_nde_mid:   n(getS1('stand_nde_mid')),
-        s1_stand_nde_bot:   n(getS1('stand_nde_bot')),
-        sec1_remark:        n(sec1Remark),
-        sec2_remark:        n(sec2Remark),
-        sec3_remark:        n(sec3Remark),
-        stands:             standsArr,
-      });
+      await hbmAPI.createRoughingGbTempLog(buildPayload());
       toast.success('Roughing GB Temp sheet submitted!');
       navigate('/hbm/roughing-gb-temp/history');
     } catch (error) {
@@ -118,6 +110,7 @@ const RoughingGbTempForm = () => {
   };
 
   return (
+    <>
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
       <div className="max-w-4xl mx-auto">
 
@@ -359,23 +352,53 @@ const RoughingGbTempForm = () => {
 
           {/* Submit */}
           <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 shadow-lg rounded-t-xl">
-            <button type="submit" disabled={submitting}
-              className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold text-base hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-              {submitting ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                  </svg>
-                  Submitting...
-                </span>
-              ) : 'Submit Roughing GB Temp Report'}
+            <button type="submit"
+              className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold text-base hover:bg-blue-700 transition-colors">
+              Preview & Submit
             </button>
           </div>
 
         </form>
       </div>
     </div>
+
+    <ChecksheetPreviewModal
+      isOpen={showPreview}
+      title="Roughing Stand & Gearbox Bearing Temperature"
+      onEdit={() => setShowPreview(false)}
+      onConfirm={handleConfirmSubmit}
+      submitting={submitting}
+    >
+      <PreviewGrid rows={[['Date', header.log_date], ['Shift Eng', header.shift_eng], ['Temp Taken By', header.temp_taken_by]]} />
+      <PreviewSection title="Section 1 — Roughing Stand" color="bg-blue-700">
+        <PreviewGrid rows={[
+          ['Flywheel DE', getS1('flywheel_de')], ['Flywheel NDE', getS1('flywheel_nde')],
+          ['Reduction DE', getS1('reduction_de')], ['Reduction NDE', getS1('reduction_nde')], ['Reduction Output', getS1('reduction_output')],
+          ['Pinion DE Top', getS1('pinion_de_top')], ['Pinion DE Mid', getS1('pinion_de_mid')], ['Pinion DE Bot', getS1('pinion_de_bot')],
+          ['Pinion NDE Top', getS1('pinion_nde_top')], ['Pinion NDE Mid', getS1('pinion_nde_mid')], ['Pinion NDE Bot', getS1('pinion_nde_bot')],
+          ['Stand DE Top', getS1('stand_de_top')], ['Stand DE Mid', getS1('stand_de_mid')], ['Stand DE Bot', getS1('stand_de_bot')],
+          ['Stand NDE Top', getS1('stand_nde_top')], ['Stand NDE Mid', getS1('stand_nde_mid')], ['Stand NDE Bot', getS1('stand_nde_bot')],
+        ]} />
+        {sec1Remark && <p className="text-xs text-gray-600 mt-2"><span className="font-semibold">Remark:</span> {sec1Remark}</p>}
+      </PreviewSection>
+      <PreviewSection title="Section 2 & 3 — Gearbox & Stand Bearing (C1–C14)" color="bg-indigo-700">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {STANDS.map(stand => {
+            const sv = stands[stand] || {};
+            const filled = Object.values(sv).filter(v => v !== '' && v != null).length;
+            return (
+              <div key={stand} className={`rounded-lg p-2 text-center border text-xs ${filled > 0 ? 'border-blue-200 bg-blue-50' : 'border-gray-200 bg-gray-50'}`}>
+                <p className="font-bold text-gray-700">{stand}</p>
+                <p className="text-gray-500">{filled} fields</p>
+              </div>
+            );
+          })}
+        </div>
+        {sec2Remark && <p className="text-xs text-gray-600 mt-2"><span className="font-semibold">Sec2 Remark:</span> {sec2Remark}</p>}
+        {sec3Remark && <p className="text-xs text-gray-600 mt-1"><span className="font-semibold">Sec3 Remark:</span> {sec3Remark}</p>}
+      </PreviewSection>
+    </ChecksheetPreviewModal>
+    </>
   );
 };
 

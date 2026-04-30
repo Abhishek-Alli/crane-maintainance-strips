@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
+import ChecksheetPreviewModal, { PreviewSection, PreviewGrid } from './ChecksheetPreviewModal';
 
 // ─── STANDS ──────────────────────────────────────────────────────────────────
 const STANDS = [
@@ -67,6 +68,7 @@ const DcMotorAirflowForm = () => {
   const [remark, setRemark]     = useState('');
   const [openStands, setOpenStands] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   const set = (stand, field, val) =>
     setValues(prev => ({ ...prev, [stand]: { ...(prev[stand] || {}), [field]: val } }));
@@ -94,11 +96,7 @@ const DcMotorAirflowForm = () => {
     return { filled, notOk };
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!header.log_date) { toast.error('Date is required'); return; }
-
-    const entries = STANDS.map(stand => {
+  const buildEntries = () => STANDS.map(stand => {
       const v = values[stand] || {};
       const kpa = v.running_kpa !== '' && v.running_kpa != null ? v.running_kpa : null;
       return {
@@ -123,15 +121,22 @@ const DcMotorAirflowForm = () => {
         blower_vib:               v.blower_vib         !== '' ? v.blower_vib         : null,
         blower_vib_status:        v.blower_vib         !== '' && v.blower_vib != null ? getVibStatus(v.blower_vib) : null,
       };
-    });
+  });
 
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!header.log_date) { toast.error('Date is required'); return; }
+    const entries = buildEntries();
     const hasAny = entries.some(e =>
       [e.dc_motor_kw, e.blower_kw_rating, e.running_kpa, e.air_flow_condition,
        e.dc_motor_temp, e.de_bearing_temp, e.nde_bearing_temp, e.blower_motor_temp,
        e.motor_center_vib, e.encoder_side_vib, e.blower_vib].some(x => x != null)
     );
     if (!hasAny) { toast.error('Please fill at least one stand entry'); return; }
+    setShowPreview(true);
+  };
 
+  const handleConfirmSubmit = async () => {
     setSubmitting(true);
     try {
       await hbmAPI.createDcMotorAirflowLog({
@@ -139,7 +144,7 @@ const DcMotorAirflowForm = () => {
         shift_eng:  header.shift_eng  || null,
         reading_by: header.reading_by || null,
         remark:     remark || null,
-        entries,
+        entries:    buildEntries(),
       });
       toast.success('DC Motor Airflow sheet submitted!');
       navigate('/hbm/dc-motor-airflow/history');
@@ -151,6 +156,7 @@ const DcMotorAirflowForm = () => {
   };
 
   return (
+    <>
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
       <div className="max-w-4xl mx-auto">
 
@@ -346,23 +352,40 @@ const DcMotorAirflowForm = () => {
 
           {/* Submit */}
           <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 shadow-lg rounded-t-xl">
-            <button type="submit" disabled={submitting}
-              className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold text-base hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-              {submitting ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                  </svg>
-                  Submitting...
-                </span>
-              ) : 'Submit DC Motor Airflow Report'}
+            <button type="submit"
+              className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold text-base hover:bg-blue-700 transition-colors">
+              Preview & Submit
             </button>
           </div>
 
         </form>
       </div>
     </div>
+
+    <ChecksheetPreviewModal
+      isOpen={showPreview}
+      title="DC Motor Air Flow, Temperature & Vibration"
+      onEdit={() => setShowPreview(false)}
+      onConfirm={handleConfirmSubmit}
+      submitting={submitting}
+    >
+      <PreviewGrid rows={[['Date', header.log_date], ['Shift Eng', header.shift_eng], ['Reading By', header.reading_by]]} />
+      <PreviewSection title="Stand Summary" color="bg-blue-700">
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+          {STANDS.map(stand => {
+            const { filled, notOk } = standStatus(stand);
+            return (
+              <div key={stand} className={`rounded-lg p-2 text-center border text-xs ${notOk > 0 ? 'border-red-200 bg-red-50' : filled > 0 ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50'}`}>
+                <p className="font-bold text-gray-700">{stand}</p>
+                {filled > 0 && <p className="text-gray-500">{filled} fields{notOk > 0 ? ` · ${notOk} NOT OK` : ''}</p>}
+              </div>
+            );
+          })}
+        </div>
+      </PreviewSection>
+      {remark && <div className="bg-gray-50 rounded-lg p-3 text-sm"><span className="font-semibold text-gray-600">Remark: </span><span className="text-gray-800">{remark}</span></div>}
+    </ChecksheetPreviewModal>
+    </>
   );
 };
 

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
+import ChecksheetPreviewModal, { PreviewSection } from './ChecksheetPreviewModal';
 
 const PhMaintForm = () => {
   const navigate = useNavigate();
@@ -9,6 +10,7 @@ const PhMaintForm = () => {
   const [logDate, setLogDate] = useState(new Date().toLocaleDateString('en-CA'));
   const [items, setItems]     = useState(['', '', '']);
   const [submitting, setSubmitting] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   const handleItemChange = (idx, val) =>
     setItems(prev => prev.map((v, i) => (i === idx ? val : v)));
@@ -20,22 +22,20 @@ const PhMaintForm = () => {
     setItems(prev => prev.filter((_, i) => i !== idx));
   };
 
-  const handleSubmit = async (e) => {
+  const validItems = () =>
+    items.map((t, i) => ({ item_no: i + 1, item_text: t.trim() })).filter(i => i.item_text);
+
+  const handleSubmit = (e) => {
     e.preventDefault();
     if (!logDate) { toast.error('Date is required'); return; }
+    if (validItems().length === 0) { toast.error('Enter at least one maintenance work item'); return; }
+    setShowPreview(true);
+  };
 
-    const validItems = items
-      .map((t, i) => ({ item_no: i + 1, item_text: t.trim() }))
-      .filter(i => i.item_text);
-
-    if (validItems.length === 0) {
-      toast.error('Enter at least one maintenance work item');
-      return;
-    }
-
+  const handleConfirmSubmit = async () => {
     setSubmitting(true);
     try {
-      await hbmAPI.createPhMaintLog({ log_date: logDate, items: validItems });
+      await hbmAPI.createPhMaintLog({ log_date: logDate, items: validItems() });
       toast.success('Pump House Maintenance sheet submitted!');
       navigate('/hbm/ph-maint/history');
     } catch (error) {
@@ -46,6 +46,7 @@ const PhMaintForm = () => {
   };
 
   return (
+    <>
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
       <div className="max-w-2xl mx-auto">
 
@@ -90,11 +91,9 @@ const PhMaintForm = () => {
             <div className="space-y-3">
               {items.map((val, idx) => (
                 <div key={idx} className="flex items-start gap-3">
-                  {/* Number badge */}
                   <span className="flex-shrink-0 w-7 h-7 mt-1.5 flex items-center justify-center rounded-full bg-blue-100 text-blue-700 text-xs font-bold">
                     {idx + 1}
                   </span>
-                  {/* Text input */}
                   <input
                     type="text"
                     value={val}
@@ -102,7 +101,6 @@ const PhMaintForm = () => {
                     placeholder={`Maintenance work point ${idx + 1}...`}
                     className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
-                  {/* Remove button */}
                   {items.length > 1 && (
                     <button
                       type="button"
@@ -117,7 +115,6 @@ const PhMaintForm = () => {
               ))}
             </div>
 
-            {/* Add Point button */}
             <button
               type="button"
               onClick={addItem}
@@ -131,25 +128,39 @@ const PhMaintForm = () => {
 
           {/* Submit */}
           <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 shadow-lg rounded-t-xl">
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold text-base hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-              {submitting ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                  </svg>
-                  Submitting...
-                </span>
-              ) : 'Submit Maintenance Work Sheet'}
+            <button type="submit"
+              className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold text-base hover:bg-blue-700 transition-colors">
+              Preview & Submit
             </button>
           </div>
 
         </form>
       </div>
     </div>
+
+    <ChecksheetPreviewModal
+      isOpen={showPreview}
+      title="Pump House Maintenance Work Sheet"
+      onEdit={() => setShowPreview(false)}
+      onConfirm={handleConfirmSubmit}
+      submitting={submitting}
+    >
+      <div className="bg-gray-50 rounded-lg p-3 text-sm">
+        <span className="font-semibold text-gray-600">Date: </span>
+        <span className="text-gray-900">{logDate}</span>
+      </div>
+      <PreviewSection title="Maintenance Work Items" color="bg-blue-700">
+        <ol className="space-y-2">
+          {validItems().map(item => (
+            <li key={item.item_no} className="flex gap-2 text-sm">
+              <span className="w-6 h-6 flex-shrink-0 flex items-center justify-center rounded-full bg-blue-100 text-blue-700 text-xs font-bold">{item.item_no}</span>
+              <span className="text-gray-800">{item.item_text}</span>
+            </li>
+          ))}
+        </ol>
+      </PreviewSection>
+    </ChecksheetPreviewModal>
+    </>
   );
 };
 

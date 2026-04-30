@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
+import ChecksheetPreviewModal, { PreviewSection, PreviewGrid, PreviewStatusTable } from './ChecksheetPreviewModal';
 
 // ─── SECTION 1 FIELD CONFIG ───────────────────────────────────────────────────
 
@@ -168,6 +169,7 @@ const TransformerForm = () => {
   const [sec3Remark, setSec3Remark] = useState('');
   const [openUnits, setOpenUnits] = useState({ '8 MVA DC': true, '4 MVA DC': false });
   const [submitting, setSubmitting] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   const updateSec1 = (unit, key, val) =>
     setSec1(prev => ({ ...prev, [unit]: { ...prev[unit], [key]: val } }));
@@ -178,32 +180,36 @@ const TransformerForm = () => {
   const updateSec3 = (unit, field, val) =>
     setSec3(prev => ({ ...prev, [unit]: { ...prev[unit], [field]: val } }));
 
-  const handleSubmit = async (e) => {
+  const buildPayload = () => ({
+    log_date: logDate,
+    sec2_remark: sec2Remark || null,
+    sec3_remark: sec3Remark || null,
+    sec1: UNITS_SEC1.map(u => ({ unit_name: u, ...sec1[u] })),
+    sec2: UNITS_SEC23.map(u => ({
+      unit_name: u,
+      today_tap_count:     sec2[u].today     || null,
+      yesterday_tap_count: sec2[u].yesterday || null,
+      difference: calcDiff(sec2[u].today, sec2[u].yesterday) || null,
+    })),
+    sec3: UNITS_SEC23.map(u => ({
+      unit_name: u,
+      today_kwh:      sec3[u].kwhT  || null,
+      yesterday_kwh:  sec3[u].kwhY  || null,
+      diff_kwh:       calcDiff(sec3[u].kwhT,  sec3[u].kwhY)  || null,
+      today_kvah:     sec3[u].kvahT || null,
+      yesterday_kvah: sec3[u].kvahY || null,
+      diff_kvah:      calcDiff(sec3[u].kvahT, sec3[u].kvahY) || null,
+    })),
+  });
+
+  const handleSubmit = (e) => {
     e.preventDefault();
     if (!logDate) { toast.error('Date is required'); return; }
+    setShowPreview(true);
+  };
 
-    const payload = {
-      log_date: logDate,
-      sec2_remark: sec2Remark || null,
-      sec3_remark: sec3Remark || null,
-      sec1: UNITS_SEC1.map(u => ({ unit_name: u, ...sec1[u] })),
-      sec2: UNITS_SEC23.map(u => ({
-        unit_name: u,
-        today_tap_count:    sec2[u].today    || null,
-        yesterday_tap_count: sec2[u].yesterday || null,
-        difference: calcDiff(sec2[u].today, sec2[u].yesterday) || null,
-      })),
-      sec3: UNITS_SEC23.map(u => ({
-        unit_name: u,
-        today_kwh:      sec3[u].kwhT  || null,
-        yesterday_kwh:  sec3[u].kwhY  || null,
-        diff_kwh:       calcDiff(sec3[u].kwhT,  sec3[u].kwhY)  || null,
-        today_kvah:     sec3[u].kvahT || null,
-        yesterday_kvah: sec3[u].kvahY || null,
-        diff_kvah:      calcDiff(sec3[u].kvahT, sec3[u].kvahY) || null,
-      })),
-    };
-
+  const handleConfirmSubmit = async () => {
+    const payload = buildPayload();
     setSubmitting(true);
     try {
       await hbmAPI.createTransformerLog(payload);
@@ -219,6 +225,7 @@ const TransformerForm = () => {
   const UNIT_COLORS = { '8 MVA DC': 'bg-blue-700', '4 MVA DC': 'bg-indigo-700' };
 
   return (
+    <>
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
       <div className="max-w-4xl mx-auto">
 
@@ -420,23 +427,77 @@ const TransformerForm = () => {
 
           {/* Submit */}
           <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 shadow-lg rounded-t-xl">
-            <button type="submit" disabled={submitting}
-              className="w-full py-3 bg-blue-700 text-white rounded-lg font-bold text-base hover:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-              {submitting ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                  </svg>
-                  Submitting...
-                </span>
-              ) : 'Submit Transformer Checksheet'}
+            <button type="submit"
+              className="w-full py-3 bg-blue-700 text-white rounded-lg font-bold text-base hover:bg-blue-800 transition-colors">
+              Preview & Submit
             </button>
           </div>
 
         </form>
       </div>
     </div>
+
+    {/* Preview Modal */}
+    <ChecksheetPreviewModal
+      isOpen={showPreview}
+      title="Transformer Checksheet"
+      onEdit={() => setShowPreview(false)}
+      onConfirm={handleConfirmSubmit}
+      submitting={submitting}
+    >
+      <PreviewGrid rows={[['Date', logDate]]} />
+
+      {UNITS_SEC1.map(unit => (
+        <PreviewSection key={unit} title={`Section 1 — ${unit}`} color="bg-blue-700">
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Measurements</p>
+          <PreviewGrid rows={SEC1_NUMERIC.map(f => [f.label + (f.unit ? ` (${f.unit})` : ''), sec1[unit][f.key]])} />
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mt-4 mb-2">Status</p>
+          <PreviewStatusTable rows={SEC1_STATUS.map(f => [f.label, sec1[unit][f.key]])} />
+        </PreviewSection>
+      ))}
+
+      <PreviewSection title="Section 2 — OLTC Daily Report" color="bg-blue-700">
+        <div className="space-y-2">
+          {UNITS_SEC23.map(unit => (
+            <div key={unit} className="border border-gray-200 rounded-lg p-3">
+              <p className="text-xs font-bold text-gray-700 mb-2">{unit}</p>
+              <PreviewGrid rows={[
+                ['Today Tap Count', sec2[unit].today],
+                ['Yesterday Tap Count', sec2[unit].yesterday],
+                ['Difference', calcDiff(sec2[unit].today, sec2[unit].yesterday)],
+              ]} />
+            </div>
+          ))}
+          {sec2Remark && <p className="text-xs text-gray-600 mt-2"><span className="font-semibold">Remark:</span> {sec2Remark}</p>}
+        </div>
+      </PreviewSection>
+
+      <PreviewSection title="Section 3 — KWH & KVAH Daily Report" color="bg-indigo-700">
+        <div className="space-y-3">
+          {UNITS_SEC23.map(unit => {
+            const dKwh  = calcDiff(sec3[unit].kwhT,  sec3[unit].kwhY);
+            const dKvah = calcDiff(sec3[unit].kvahT, sec3[unit].kvahY);
+            const ph    = calcPH(dKwh, dKvah);
+            return (
+              <div key={unit} className="border border-gray-200 rounded-lg p-3">
+                <p className="text-xs font-bold text-gray-700 mb-2">{unit}</p>
+                <PreviewGrid rows={[
+                  ['Today KWH',      sec3[unit].kwhT],
+                  ['Yesterday KWH',  sec3[unit].kwhY],
+                  ['Diff KWH',       dKwh],
+                  ['Today KVAH',     sec3[unit].kvahT],
+                  ['Yesterday KVAH', sec3[unit].kvahY],
+                  ['Diff KVAH',      dKvah],
+                  ['PH Value',       ph],
+                ]} />
+              </div>
+            );
+          })}
+          {sec3Remark && <p className="text-xs text-gray-600 mt-2"><span className="font-semibold">Remark:</span> {sec3Remark}</p>}
+        </div>
+      </PreviewSection>
+    </ChecksheetPreviewModal>
+    </>
   );
 };
 
