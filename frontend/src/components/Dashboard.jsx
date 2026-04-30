@@ -21,31 +21,53 @@ const InspectionDetailPanel = ({ details }) => {
     return <p className="text-sm text-gray-500 py-2">No inspection items recorded.</p>;
   }
 
+  const allItems = details.sections.flatMap(s => s.items);
+  const notOkCount = allItems.filter(i => i.selected_value === 'NOT_OK').length;
+  const totalCount = allItems.length;
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-1">
+      {/* Summary bar */}
+      <div className="flex items-center gap-3 mb-3 text-xs font-semibold">
+        <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-lg">Total: {totalCount}</span>
+        <span className="bg-green-100 text-green-700 px-2 py-1 rounded-lg">✅ OK: {totalCount - notOkCount}</span>
+        {notOkCount > 0 && (
+          <span className="bg-red-100 text-red-700 px-2 py-1 rounded-lg">❌ Issues: {notOkCount}</span>
+        )}
+      </div>
+
       {details.sections.map((section) => (
-        <div key={section.section_id} className="bg-white rounded-lg p-3 shadow-sm">
-          <h4 className="font-semibold text-sm text-gray-800 mb-2 border-b pb-1">
-            {section.section_name}
-          </h4>
-          <div className="space-y-1">
+        <div key={section.section_id} className="bg-white rounded-lg border border-gray-200 overflow-hidden mb-2">
+          <div className="bg-gray-50 px-3 py-2 border-b border-gray-200">
+            <h4 className="font-semibold text-sm text-gray-800">{section.section_name}</h4>
+          </div>
+          <div className="divide-y divide-gray-100">
             {section.items.map((item, idx) => (
-              <div key={idx} className="flex items-start justify-between text-sm py-1">
-                <span className="text-gray-700 flex-1">{item.item_name}</span>
-                <div className="flex items-center ml-4 shrink-0">
-                  <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
+              <div key={idx} className={`px-3 py-2 ${item.selected_value === 'NOT_OK' ? 'bg-red-50' : ''}`}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm text-gray-800 flex-1">{item.item_name}</span>
+                  <span className={`shrink-0 px-2 py-0.5 text-xs font-bold rounded-full ${
                     item.selected_value === 'NOT_OK'
-                      ? 'bg-red-100 text-red-800'
-                      : 'bg-green-100 text-green-800'
+                      ? 'bg-red-100 text-red-700'
+                      : 'bg-green-100 text-green-700'
                   }`}>
-                    {item.selected_value || '-'}
+                    {item.selected_value === 'NOT_OK' ? '❌ NOT OK' : '✅ OK'}
                   </span>
-                  {item.remarks && (
-                    <span className="ml-2 text-xs text-gray-500 italic max-w-[150px] truncate" title={item.remarks}>
-                      ({item.remarks})
-                    </span>
-                  )}
                 </div>
+                {item.selected_value === 'NOT_OK' && (
+                  <div className="mt-1.5 space-y-0.5 pl-2 border-l-2 border-red-300">
+                    {item.remarks && (
+                      <p className="text-xs text-gray-600">
+                        <span className="font-semibold text-gray-700">📝 Remark:</span> {item.remarks}
+                      </p>
+                    )}
+                    {item.action_taken && (
+                      <p className="text-xs text-gray-600">
+                        <span className="font-semibold text-gray-700">🔧 Action:</span> {item.action_taken}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>

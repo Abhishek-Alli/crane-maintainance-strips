@@ -12,7 +12,7 @@ const WATER_SOURCES = [
       tds:         { min: 200, max: 2000 },
       hardness:    { min: 50,  max: 700  },
       ph:          { min: 6.5, max: 7.5  },
-      temperature: { min: 28,  max: 36   },
+      temperature: { min: 23,  max: 36   },
     },
   },
   {
@@ -21,7 +21,7 @@ const WATER_SOURCES = [
       tds:         { min: 10,  max: 200  },
       hardness:    { min: 0,   max: 100  },
       ph:          { min: 6.5, max: 7.5  },
-      temperature: { min: 28,  max: 38   },
+      temperature: { min: 23,  max: 38   },
     },
   },
   {
@@ -30,7 +30,7 @@ const WATER_SOURCES = [
       tds:         { min: 10,  max: 200  },
       hardness:    { min: 0,   max: 100  },
       ph:          { min: 6.5, max: 7.5  },
-      temperature: { min: 28,  max: 36   },
+      temperature: { min: 23,  max: 36   },
     },
   },
   {
@@ -39,7 +39,7 @@ const WATER_SOURCES = [
       tds:         { min: 10,  max: 200  },
       hardness:    { min: 0,   max: 100  },
       ph:          { min: 6.5, max: 7.5  },
-      temperature: { min: 28,  max: 36   },
+      temperature: { min: 23,  max: 36   },
     },
   },
   {
@@ -48,7 +48,7 @@ const WATER_SOURCES = [
       tds:         { min: 10,  max: 200  },
       hardness:    { min: 0,   max: 100  },
       ph:          { min: 6.5, max: 7.5  },
-      temperature: { min: 28,  max: 37   },
+      temperature: { min: 23,  max: 37   },
     },
   },
   {

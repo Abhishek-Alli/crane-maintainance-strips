@@ -59,7 +59,7 @@ const calcDiff = (a, b) => {
 const btnColor = (option, active) => {
   if (!active) return 'bg-white border-gray-300 text-gray-500 hover:border-gray-400';
   const good = new Set(['OK', 'Checked', 'NO']);
-  const bad  = new Set(['NOT_OK', 'Not_Checked', 'YES']);
+  const bad  = new Set(['NOT_OK',  'YES']);
   if (good.has(option)) return 'bg-green-500 border-green-500 text-white';
   if (bad.has(option))  return 'bg-red-500 border-red-500 text-white';
   return 'bg-blue-500 border-blue-500 text-white';

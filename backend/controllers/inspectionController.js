@@ -178,7 +178,8 @@ class InspectionController {
           i.id AS item_id,
           i.item_name AS item_name,
           v.selected_value,
-          v.remarks
+          v.remarks,
+          v.action_taken
         FROM inspection_values v
         JOIN inspection_sections s ON s.id = v.section_id
         JOIN inspection_items i ON i.id = v.item_id
@@ -203,7 +204,8 @@ class InspectionController {
           item_id: r.item_id,
           item_name: r.item_name,
           selected_value: r.selected_value,
-          remarks: r.remarks
+          remarks: r.remarks,
+          action_taken: r.action_taken
         });
       });
 
