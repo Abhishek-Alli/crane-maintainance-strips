@@ -145,6 +145,7 @@ function App() {
 
   // Determine default redirect after login restore
   const getDefaultRoute = () => {
+    if (isAdminUser) return '/create-user';
     if (isHBMUser) return '/hbm/dashboard';
     return '/';
   };
@@ -451,6 +452,16 @@ function App() {
                       {isAdminUser && (
                         <>
                           <div className="border-t border-blue-500 my-1" />
+                          <p className="px-3 pb-1 text-xs font-semibold text-blue-200 uppercase tracking-widest">Switch Module</p>
+                          <Link
+                            to="/hbm/dashboard"
+                            className="flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors bg-emerald-700 hover:bg-emerald-600 text-white"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                            </svg>
+                            <span className="font-medium">HBM Checksheets</span>
+                          </Link>
                           <Link
                             to="/create-user"
                             className="flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors bg-slate-700 hover:bg-slate-600 text-white"
