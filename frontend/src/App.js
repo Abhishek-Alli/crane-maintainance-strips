@@ -269,8 +269,8 @@ function App() {
                   </svg>
                 </button>
 
-                {/* Hamburger — Admin only (crane & HBM icons cover navigation) */}
-                {isOnAdminRoute && (
+                {/* Hamburger — Admin always, others on admin route */}
+                {(isOnAdminRoute || isAdminUser) && (
                   <button
                     onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                     className={`p-2 rounded-lg ${navHover} focus:outline-none focus:ring-2 focus:ring-white/30`}
