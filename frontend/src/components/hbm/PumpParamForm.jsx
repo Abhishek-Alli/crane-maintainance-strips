@@ -152,7 +152,7 @@ const numFieldClass = (ok) => {
 
 // ─── PUMP ENTRY COMPONENT ─────────────────────────────────────────────────────
 
-const PumpEntry = ({ pump, value, onChange }) => {
+const PumpEntry = ({ pump, value, onChange, showPressure = true }) => {
   const v = value || {};
   const isOff = v.status === 'OFF';
 
@@ -248,6 +248,7 @@ const PumpEntry = ({ pump, value, onChange }) => {
             )}
           </div>
           {/* Pressure */}
+          {showPressure && (
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1">
               Pressure
@@ -260,6 +261,7 @@ const PumpEntry = ({ pump, value, onChange }) => {
               placeholder="0.00"
               className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
           </div>
+          )}
           {/* Load % — auto-calculated from AMP / amp_max × 100 */}
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1">
@@ -476,6 +478,7 @@ const PumpParamForm = () => {
                         pump={pump}
                         value={pumpValues[pump.name]}
                         onChange={handlePumpChange}
+                        showPressure={group.key !== 'ICW_CT_FAN' && group.key !== 'DCW_CT_FAN'}
                       />
                     ))}
                   </div>
