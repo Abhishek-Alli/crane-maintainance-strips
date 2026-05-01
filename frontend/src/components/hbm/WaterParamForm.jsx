@@ -142,7 +142,13 @@ const SourceRow = ({ source, value, onChange }) => {
 
   const handleVal = (param, val) => {
     const range = source.params[param];
-    const status = statusOf(val, range.min, range.max);
+    let status;
+    if (param === 'ph') {
+      // PH can be a range like "6 - 7.5", treat as OK when filled
+      status = val !== '' && val != null ? 'OK' : null;
+    } else {
+      status = statusOf(val, range.min, range.max);
+    }
     onChange(source.key, {
       ...v,
       [param]: val,
@@ -194,13 +200,13 @@ const SourceRow = ({ source, value, onChange }) => {
                   </span>
                 </label>
                 <input
-                  type="number"
-                  step={meta.step}
-                  min="0"
+                  type={param === 'ph' ? 'text' : 'number'}
+                  step={param === 'ph' ? undefined : meta.step}
+                  min={param === 'ph' ? undefined : '0'}
                   value={val}
                   onChange={e => handleVal(param, e.target.value)}
-                  placeholder="—"
-                  className={`w-full px-2 py-1.5 border-2 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 ${fieldClass(ok)}`}
+                  placeholder={param === 'ph' ? 'e.g. 6 - 7.5' : '—'}
+                  className={`w-full px-2 py-1.5 border-2 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 ${param === 'ph' ? 'border-gray-300 bg-white' : fieldClass(ok)}`}
                 />
               </div>
             );
