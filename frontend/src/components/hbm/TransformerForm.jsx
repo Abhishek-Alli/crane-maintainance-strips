@@ -7,7 +7,7 @@ import ChecksheetPreviewModal, { PreviewSection, PreviewGrid, PreviewStatusTable
 // ─── SECTION 1 FIELD CONFIG ───────────────────────────────────────────────────
 
 const SEC1_NUMERIC = [
-  { key: 'rated_current',       label: 'Rated Current',         unit: 'A' },
+  { key: 'rated_current',       label: 'Rated Current',         unit: 'A', readOnly: true },
   { key: 'ct_ratio',            label: 'CT Ratio',              unit: '', type: 'text', placeholder: '200/1' },
   { key: 'bar_size',            label: 'Bar Size',              unit: '', type: 'text', placeholder: '10mm' },
   { key: 'ht_current',          label: 'HT Current',            unit: 'A' },
@@ -39,8 +39,10 @@ const UNITS_SEC23 = ['8 MVA', '4 MVA'];
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 
-const initSec1 = () => ({
-  rated_current: '', ct_ratio: '200/1', bar_size: '10mm',
+const RATED_CURRENT = { '8 MVA DC': '139.06', '4 MVA DC': '69.98' };
+
+const initSec1 = (unit = '8 MVA DC') => ({
+  rated_current: RATED_CURRENT[unit] ?? '', ct_ratio: '200/1', bar_size: '',
   ht_current: '', ht_volt: '', tap_count_diff: '', tap_position: '',
   wind_temperature: '', oil_temperature: '',
   main_tank_oil_level: '', oltc_oil_level: '',
@@ -131,8 +133,9 @@ const TransformerUnit = ({ unitName, value, onChange, isOpen, onToggle, color })
                   step="0.01"
                   value={value[f.key] ?? ''}
                   placeholder={f.placeholder || ''}
-                  onChange={e => onChange(f.key, e.target.value)}
-                  className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  readOnly={!!f.readOnly}
+                  onChange={f.readOnly ? undefined : e => onChange(f.key, e.target.value)}
+                  className={`w-full px-2 py-1.5 border rounded-lg text-sm ${f.readOnly ? 'bg-gray-100 border-gray-200 text-gray-600 cursor-not-allowed font-semibold' : 'border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent'}`}
                 />
               </div>
             ))}
@@ -162,7 +165,7 @@ const TransformerForm = () => {
   const navigate = useNavigate();
 
   const [logDate, setLogDate]     = useState(new Date().toLocaleDateString('en-CA'));
-  const [sec1, setSec1]           = useState({ '8 MVA DC': initSec1(), '4 MVA DC': initSec1() });
+  const [sec1, setSec1]           = useState({ '8 MVA DC': initSec1('8 MVA DC'), '4 MVA DC': initSec1('4 MVA DC') });
   const [sec2, setSec2]           = useState({ '8 MVA': { today: '', yesterday: '' }, '4 MVA': { today: '', yesterday: '' } });
   const [sec3, setSec3]           = useState({ '8 MVA': { kwhT: '', kwhY: '', kvahT: '', kvahY: '' }, '4 MVA': { kwhT: '', kwhY: '', kvahT: '', kvahY: '' } });
   const [sec2Remark, setSec2Remark] = useState('');

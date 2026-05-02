@@ -17,7 +17,7 @@ const WaterParamHistory = () => {
       if (filters.date_from) params.date_from = filters.date_from;
       if (filters.date_to)   params.date_to   = filters.date_to;
       const res = await hbmAPI.getWaterParamLogs(params);
-      setLogs(res.data);
+      setLogs(Array.isArray(res) ? res : (res?.data ?? []));
     } catch {
       toast.error('Failed to load Water Parameter logs');
     } finally {

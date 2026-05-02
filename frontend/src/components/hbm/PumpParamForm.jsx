@@ -478,7 +478,7 @@ const PumpParamForm = () => {
                         pump={pump}
                         value={pumpValues[pump.name]}
                         onChange={handlePumpChange}
-                        showPressure={group.key !== 'ICW_CT_FAN' && group.key !== 'DCW_CT_FAN'}
+                        showPressure={group.key !== 'ICW_CT_FAN' && group.key !== 'DCW_CT_FAN' && group.key !== 'LAMINAR_CT_FAN'}
                       />
                     ))}
                   </div>

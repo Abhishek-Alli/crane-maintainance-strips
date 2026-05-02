@@ -37,7 +37,7 @@ const WaterParamView = () => {
 
   useEffect(() => {
     hbmAPI.getWaterParamLogById(id)
-      .then(res => setLog(res.data))
+      .then(res => setLog(res))
       .catch(() => toast.error('Failed to load Water Parameter log'))
       .finally(() => setLoading(false));
   }, [id]);
