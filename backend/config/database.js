@@ -6,8 +6,8 @@ const poolConfig = process.env.DATABASE_URL
   ? {
       connectionString: process.env.DATABASE_URL,
       ssl: { rejectUnauthorized: false },
-      max: 5,
-      idleTimeoutMillis: 20000,
+      max: 1,                      // Serverless: 1 connection per function instance
+      idleTimeoutMillis: 10000,
       connectionTimeoutMillis: 10000,
     }
   : {
