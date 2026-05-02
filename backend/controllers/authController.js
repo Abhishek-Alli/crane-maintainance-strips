@@ -126,8 +126,7 @@ class AuthController {
       console.error('Login error:', error);
       res.status(500).json({
         success: false,
-        message: 'Internal Server Error',
-        ...(process.env.NODE_ENV !== 'production' && { detail: error.message }),
+        message: error.message || 'Internal Server Error',
       });
     }
   }
