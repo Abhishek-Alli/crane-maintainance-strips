@@ -30,7 +30,7 @@ pool.on('connect', () => {
 
 pool.on('error', (err) => {
   console.error('Unexpected error on idle client', err);
-  process.exit(-1);
+  // Do NOT call process.exit — it crashes the Vercel serverless function
 });
 
 // Query helper with error handling
