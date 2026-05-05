@@ -9,13 +9,41 @@ const STANDS = [
   'C-1', 'C-2', 'CCS-1', 'C-3', 'C-4', 'CCS-2',
   'C-5', 'C-6', 'C-7', 'C-8', 'C-9', 'C-10',
   'C-11', 'C-12', 'C-13', 'C-14',
-  'PRE PINCH', 'POST PINCH', 'CONST. SHEAR',
+  'PRE PINCH', 'POST PINCH', 'FLY. SHEAR', 'CONST. SHEAR',
   'TB-1', 'TB-2', 'RAKE-1', 'RAKE-2',
 ];
 
+// ─── DEFAULT KW VALUES PER STAND ─────────────────────────────────────────────
+const STAND_DEFAULTS = {
+  'C-1':        { dc_motor_kw: '400', blower_kw_rating: '7.5' },
+  'C-2':        { dc_motor_kw: '400', blower_kw_rating: '9.3' },
+  'CCS-1':      { dc_motor_kw: '250', blower_kw_rating: '5.5' },
+  'C-3':        { dc_motor_kw: '400', blower_kw_rating: '9.3' },
+  'C-4':        { dc_motor_kw: '400', blower_kw_rating: '9.3' },
+  'CCS-2':      { dc_motor_kw: '110', blower_kw_rating: '5.5' },
+  'C-5':        { dc_motor_kw: '400', blower_kw_rating: '9.3' },
+  'C-6':        { dc_motor_kw: '400', blower_kw_rating: '7.5' },
+  'C-7':        { dc_motor_kw: '400', blower_kw_rating: '7.5' },
+  'C-8':        { dc_motor_kw: '400', blower_kw_rating: '7.5' },
+  'C-9':        { dc_motor_kw: '400', blower_kw_rating: '7.5' },
+  'C-10':       { dc_motor_kw: '400', blower_kw_rating: '7.5' },
+  'C-11':       { dc_motor_kw: '300', blower_kw_rating: '7.5' },
+  'C-12':       { dc_motor_kw: '400', blower_kw_rating: '7.5' },
+  'C-13':       { dc_motor_kw: '400', blower_kw_rating: '7.5' },
+  'C-14':       { dc_motor_kw: '400', blower_kw_rating: '7.5' },
+  'PRE PINCH':  { dc_motor_kw: '60',  blower_kw_rating: '3.7' },
+  'POST PINCH': { dc_motor_kw: '60',  blower_kw_rating: '3.7' },
+  'FLY. SHEAR': { dc_motor_kw: '250', blower_kw_rating: '7.5' },
+  'CONST. SHEAR': { dc_motor_kw: '250', blower_kw_rating: '7.5' },
+  'TB-1':       { dc_motor_kw: '90',  blower_kw_rating: '3.7' },
+  'TB-2':       { dc_motor_kw: '90',  blower_kw_rating: '3.7' },
+  'RAKE-1':     { dc_motor_kw: '110', blower_kw_rating: '3.7' },
+  'RAKE-2':     { dc_motor_kw: '110', blower_kw_rating: '3.7' },
+};
+
 // ─── STATUS HELPERS ───────────────────────────────────────────────────────────
 // Stands where KPA OK condition is < 2.4 (instead of 2.5 – 2.7)
-const LOW_KPA_STANDS = new Set(['PRE PINCH', 'POST PINCH', 'CONST. SHEAR', 'TB-1', 'TB-2', 'RAKE-1', 'RAKE-2']);
+const LOW_KPA_STANDS = new Set(['PRE PINCH', 'POST PINCH', 'FLY. SHEAR', 'CONST. SHEAR', 'TB-1', 'TB-2', 'RAKE-1', 'RAKE-2']);
 
 const getKpaStatus  = (v, stand) => {
   const n = parseFloat(v);
@@ -64,7 +92,13 @@ const DcMotorAirflowForm = () => {
     shift_eng:  '',
     reading_by: '',
   });
-  const [values, setValues]     = useState({});   // keyed by stand name
+  const [values, setValues]     = useState(() => {
+    const init = {};
+    for (const stand of STANDS) {
+      if (STAND_DEFAULTS[stand]) init[stand] = { ...STAND_DEFAULTS[stand] };
+    }
+    return init;
+  });
   const [remark, setRemark]     = useState('');
   const [openStands, setOpenStands] = useState({});
   const [submitting, setSubmitting] = useState(false);
