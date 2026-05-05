@@ -142,7 +142,7 @@ const numOk = (val, max) => {
   if (val === '' || val == null) return null;
   const n = parseFloat(val);
   if (isNaN(n)) return null;
-  return n < max;
+  return n <= max;
 };
 
 const numFieldClass = (ok) => {

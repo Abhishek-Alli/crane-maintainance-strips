@@ -39,7 +39,7 @@ const UNITS_SEC23 = ['8 MVA', '4 MVA'];
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 
-const RATED_CURRENT = { '8 MVA DC': '139.06', '4 MVA DC': '69.98' };
+const RATED_CURRENT = { '8 MVA DC': '139.96', '4 MVA DC': '69.98' };
 
 const initSec1 = (unit = '8 MVA DC') => ({
   rated_current: RATED_CURRENT[unit] ?? '', ct_ratio: '200/1', bar_size: '',
@@ -58,7 +58,7 @@ const calcDiff = (a, b) => {
   return (na - nb).toFixed(2);
 };
 
-const calcPH = (diffKwh, diffKvah) => {
+const calcPF = (diffKwh, diffKvah) => {
   const a = parseFloat(diffKwh), b = parseFloat(diffKvah);
   if (isNaN(a) || isNaN(b) || b === 0) return '';
   return (a / b).toFixed(4);
@@ -405,13 +405,13 @@ const TransformerForm = () => {
                 {(() => {
                   const dKwh  = calcDiff(sec3[unit].kwhT,  sec3[unit].kwhY);
                   const dKvah = calcDiff(sec3[unit].kvahT, sec3[unit].kvahY);
-                  const ph    = calcPH(dKwh, dKvah);
+                  const pf    = calcPF(dKwh, dKvah);
                   return (
                     <div className="mt-4 flex items-center gap-3 p-3 rounded-lg border border-purple-200 bg-purple-50">
-                      <span className="text-xs font-bold text-purple-700 uppercase tracking-wide">PH Value</span>
+                      <span className="text-xs font-bold text-purple-700 uppercase tracking-wide">PF Value</span>
                       <span className="text-xs text-gray-500">(Diff KWH / Diff KVAH)</span>
-                      <span className={`ml-auto text-base font-bold ${ph ? 'text-purple-700' : 'text-gray-400'}`}>
-                        {ph || '—'}
+                      <span className={`ml-auto text-base font-bold ${pf ? 'text-purple-700' : 'text-gray-400'}`}>
+                        {pf || '—'}
                       </span>
                     </div>
                   );
@@ -480,7 +480,7 @@ const TransformerForm = () => {
           {UNITS_SEC23.map(unit => {
             const dKwh  = calcDiff(sec3[unit].kwhT,  sec3[unit].kwhY);
             const dKvah = calcDiff(sec3[unit].kvahT, sec3[unit].kvahY);
-            const ph    = calcPH(dKwh, dKvah);
+            const pf    = calcPF(dKwh, dKvah);
             return (
               <div key={unit} className="border border-gray-200 rounded-lg p-3">
                 <p className="text-xs font-bold text-gray-700 mb-2">{unit}</p>
@@ -491,7 +491,7 @@ const TransformerForm = () => {
                   ['Today KVAH',     sec3[unit].kvahT],
                   ['Yesterday KVAH', sec3[unit].kvahY],
                   ['Diff KVAH',      dKvah],
-                  ['PH Value',       ph],
+                  ['PF Value',       pf],
                 ]} />
               </div>
             );

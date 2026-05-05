@@ -208,10 +208,15 @@ const TransformerView = () => {
                   <th className="text-center px-3 py-3 font-semibold">KVAH Today</th>
                   <th className="text-center px-3 py-3 font-semibold">KVAH Yesterday</th>
                   <th className="text-center px-3 py-3 font-semibold">KVAH Diff</th>
+                  <th className="text-center px-3 py-3 font-semibold">PF Value</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {sec3.map(u => (
+                {sec3.map(u => {
+                  const dKwh  = parseFloat(u.diff_kwh);
+                  const dKvah = parseFloat(u.diff_kvah);
+                  const pf    = (!isNaN(dKwh) && !isNaN(dKvah) && dKvah !== 0) ? (dKwh / dKvah).toFixed(4) : null;
+                  return (
                   <tr key={u.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 font-bold text-gray-900">{u.unit_name}</td>
                     <td className="px-3 py-3 text-center text-gray-700">{v(u.today_kwh)}</td>
@@ -220,8 +225,10 @@ const TransformerView = () => {
                     <td className="px-3 py-3 text-center text-gray-700">{v(u.today_kvah)}</td>
                     <td className="px-3 py-3 text-center text-gray-700">{v(u.yesterday_kvah)}</td>
                     <td className="px-3 py-3 text-center font-bold text-indigo-700">{v(u.diff_kvah)}</td>
+                    <td className="px-3 py-3 text-center font-bold text-purple-700">{pf ?? '—'}</td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
