@@ -99,10 +99,25 @@ const DcMotorAirflowForm = () => {
     }
     return init;
   });
+  const [standStatus2, setStandStatus2] = useState(() => {
+    const init = {};
+    for (const stand of STANDS) init[stand] = 'ON';
+    return init;
+  });
   const [remark, setRemark]     = useState('');
   const [openStands, setOpenStands] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+
+  const toggleStandOnOff = (stand, status) => {
+    setStandStatus2(prev => ({ ...prev, [stand]: status }));
+    if (status === 'OFF') {
+      setValues(prev => ({
+        ...prev,
+        [stand]: STAND_DEFAULTS[stand] ? { ...STAND_DEFAULTS[stand] } : {},
+      }));
+    }
+  };
 
   const set = (stand, field, val) =>
     setValues(prev => ({ ...prev, [stand]: { ...(prev[stand] || {}), [field]: val } }));
@@ -132,41 +147,38 @@ const DcMotorAirflowForm = () => {
 
   const buildEntries = () => STANDS.map(stand => {
       const v = values[stand] || {};
-      const kpa = v.running_kpa !== '' && v.running_kpa != null ? v.running_kpa : null;
+      const isOff = standStatus2[stand] === 'OFF';
+      const kpa = !isOff && v.running_kpa !== '' && v.running_kpa != null ? v.running_kpa : null;
       return {
         stand_name:               stand,
-        dc_motor_kw:              v.dc_motor_kw       !== '' ? v.dc_motor_kw       : null,
-        blower_kw_rating:         v.blower_kw_rating  !== '' ? v.blower_kw_rating  : null,
+        stand_status:             standStatus2[stand] || 'ON',
+        dc_motor_kw:              !isOff && v.dc_motor_kw      !== '' ? v.dc_motor_kw      : null,
+        blower_kw_rating:         !isOff && v.blower_kw_rating !== '' ? v.blower_kw_rating : null,
         running_kpa:              kpa,
         kpa_status:               kpa != null ? getKpaStatus(kpa, stand) : null,
-        air_flow_condition:       v.air_flow_condition || null,
-        dc_motor_temp:            v.dc_motor_temp      !== '' ? v.dc_motor_temp      : null,
-        dc_motor_temp_status:     v.dc_motor_temp      !== '' && v.dc_motor_temp != null ? getTempStatus(v.dc_motor_temp) : null,
-        de_bearing_temp:          v.de_bearing_temp    !== '' ? v.de_bearing_temp    : null,
-        de_bearing_temp_status:   v.de_bearing_temp    !== '' && v.de_bearing_temp != null ? getTempStatus(v.de_bearing_temp) : null,
-        nde_bearing_temp:         v.nde_bearing_temp   !== '' ? v.nde_bearing_temp   : null,
-        nde_bearing_temp_status:  v.nde_bearing_temp   !== '' && v.nde_bearing_temp != null ? getTempStatus(v.nde_bearing_temp) : null,
-        blower_motor_temp:        v.blower_motor_temp  !== '' ? v.blower_motor_temp  : null,
-        blower_motor_temp_status: v.blower_motor_temp  !== '' && v.blower_motor_temp != null ? getTempStatus(v.blower_motor_temp) : null,
-        motor_center_vib:         v.motor_center_vib   !== '' ? v.motor_center_vib   : null,
-        motor_center_vib_status:  v.motor_center_vib   !== '' && v.motor_center_vib != null ? getVibStatus(v.motor_center_vib) : null,
-        encoder_side_vib:         v.encoder_side_vib   !== '' ? v.encoder_side_vib   : null,
-        encoder_side_vib_status:  v.encoder_side_vib   !== '' && v.encoder_side_vib != null ? getVibStatus(v.encoder_side_vib) : null,
-        blower_vib:               v.blower_vib         !== '' ? v.blower_vib         : null,
-        blower_vib_status:        v.blower_vib         !== '' && v.blower_vib != null ? getVibStatus(v.blower_vib) : null,
+        air_flow_condition:       !isOff ? (v.air_flow_condition || null) : null,
+        dc_motor_temp:            !isOff && v.dc_motor_temp     !== '' ? v.dc_motor_temp     : null,
+        dc_motor_temp_status:     !isOff && v.dc_motor_temp     !== '' && v.dc_motor_temp != null ? getTempStatus(v.dc_motor_temp) : null,
+        de_bearing_temp:          !isOff && v.de_bearing_temp   !== '' ? v.de_bearing_temp   : null,
+        de_bearing_temp_status:   !isOff && v.de_bearing_temp   !== '' && v.de_bearing_temp != null ? getTempStatus(v.de_bearing_temp) : null,
+        nde_bearing_temp:         !isOff && v.nde_bearing_temp  !== '' ? v.nde_bearing_temp  : null,
+        nde_bearing_temp_status:  !isOff && v.nde_bearing_temp  !== '' && v.nde_bearing_temp != null ? getTempStatus(v.nde_bearing_temp) : null,
+        blower_motor_temp:        !isOff && v.blower_motor_temp !== '' ? v.blower_motor_temp : null,
+        blower_motor_temp_status: !isOff && v.blower_motor_temp !== '' && v.blower_motor_temp != null ? getTempStatus(v.blower_motor_temp) : null,
+        motor_center_vib:         !isOff && v.motor_center_vib  !== '' ? v.motor_center_vib  : null,
+        motor_center_vib_status:  !isOff && v.motor_center_vib  !== '' && v.motor_center_vib != null ? getVibStatus(v.motor_center_vib) : null,
+        encoder_side_vib:         !isOff && v.encoder_side_vib  !== '' ? v.encoder_side_vib  : null,
+        encoder_side_vib_status:  !isOff && v.encoder_side_vib  !== '' && v.encoder_side_vib != null ? getVibStatus(v.encoder_side_vib) : null,
+        blower_vib:               !isOff && v.blower_vib        !== '' ? v.blower_vib        : null,
+        blower_vib_status:        !isOff && v.blower_vib        !== '' && v.blower_vib != null ? getVibStatus(v.blower_vib) : null,
       };
   });
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!header.log_date) { toast.error('Date is required'); return; }
-    const entries = buildEntries();
-    const hasAny = entries.some(e =>
-      [e.dc_motor_kw, e.blower_kw_rating, e.running_kpa, e.air_flow_condition,
-       e.dc_motor_temp, e.de_bearing_temp, e.nde_bearing_temp, e.blower_motor_temp,
-       e.motor_center_vib, e.encoder_side_vib, e.blower_vib].some(x => x != null)
-    );
-    if (!hasAny) { toast.error('Please fill at least one stand entry'); return; }
+    const hasAnyOn = STANDS.some(s => standStatus2[s] === 'ON');
+    if (!hasAnyOn) { toast.error('At least one stand must be ON'); return; }
     setShowPreview(true);
   };
 
@@ -250,17 +262,18 @@ const DcMotorAirflowForm = () => {
           <div className="space-y-3 mb-5">
             {STANDS.map(stand => {
               const isOpen = openStands[stand];
+              const isOff = standStatus2[stand] === 'OFF';
               const { filled, notOk } = standStatus(stand);
               return (
-                <div key={stand} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <div key={stand} className={`bg-white rounded-xl border overflow-hidden ${isOff ? 'border-gray-200 opacity-70' : 'border-gray-200'}`}>
                   {/* Accordion Header */}
-                  <button type="button" onClick={() => toggleStand(stand)}
-                    className={`w-full flex items-center justify-between px-5 py-4 transition-colors ${
-                      isOpen ? 'bg-blue-600 text-white' : 'bg-gray-50 hover:bg-gray-100 text-gray-900'
-                    }`}>
-                    <div className="flex items-center gap-3">
-                      <span className="font-bold text-base">{stand}</span>
-                      {filled > 0 && (
+                  <div className={`flex items-center justify-between px-5 py-3 transition-colors ${
+                    isOff ? 'bg-gray-100' : isOpen ? 'bg-blue-600 text-white' : 'bg-gray-50 hover:bg-gray-100 text-gray-900'
+                  }`}>
+                    <button type="button" onClick={() => !isOff && toggleStand(stand)}
+                      className="flex items-center gap-3 flex-1 text-left">
+                      <span className={`font-bold text-base ${isOff ? 'text-gray-400' : ''}`}>{stand}</span>
+                      {!isOff && filled > 0 && (
                         <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
                           notOk > 0
                             ? 'bg-red-100 text-red-700'
@@ -269,14 +282,32 @@ const DcMotorAirflowForm = () => {
                           {notOk > 0 ? `${notOk} NOT OK` : 'OK'}
                         </span>
                       )}
+                      {isOff && <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-gray-200 text-gray-500">OFF</span>}
+                    </button>
+                    {/* ON / OFF toggle */}
+                    <div className="flex gap-1.5 ml-3">
+                      <button type="button"
+                        onClick={() => toggleStandOnOff(stand, 'ON')}
+                        className={`px-3 py-1 rounded-lg text-xs font-bold border-2 transition-all ${
+                          !isOff ? 'bg-green-500 border-green-500 text-white' : 'bg-white border-gray-300 text-gray-500 hover:border-green-400'
+                        }`}>ON</button>
+                      <button type="button"
+                        onClick={() => toggleStandOnOff(stand, 'OFF')}
+                        className={`px-3 py-1 rounded-lg text-xs font-bold border-2 transition-all ${
+                          isOff ? 'bg-gray-500 border-gray-500 text-white' : 'bg-white border-gray-300 text-gray-500 hover:border-gray-400'
+                        }`}>OFF</button>
                     </div>
-                    <svg className={`w-5 h-5 transition-transform ${isOpen ? 'rotate-180' : ''}`}
-                      fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
+                    {!isOff && (
+                      <button type="button" onClick={() => toggleStand(stand)} className="ml-3">
+                        <svg className={`w-5 h-5 transition-transform ${isOpen ? 'rotate-180' : ''} ${isOpen ? 'text-white' : 'text-gray-500'}`}
+                          fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
 
-                  {isOpen && (
+                  {isOpen && !isOff && (
                     <div className="p-5 space-y-5">
 
                       {/* KW & KPA */}
@@ -407,11 +438,19 @@ const DcMotorAirflowForm = () => {
       <PreviewSection title="Stand Summary" color="bg-blue-700">
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
           {STANDS.map(stand => {
+            const isOff = standStatus2[stand] === 'OFF';
             const { filled, notOk } = standStatus(stand);
             return (
-              <div key={stand} className={`rounded-lg p-2 text-center border text-xs ${notOk > 0 ? 'border-red-200 bg-red-50' : filled > 0 ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50'}`}>
-                <p className="font-bold text-gray-700">{stand}</p>
-                {filled > 0 && <p className="text-gray-500">{filled} fields{notOk > 0 ? ` · ${notOk} NOT OK` : ''}</p>}
+              <div key={stand} className={`rounded-lg p-2 text-center border text-xs ${
+                isOff ? 'border-gray-200 bg-gray-50' :
+                notOk > 0 ? 'border-red-200 bg-red-50' :
+                filled > 0 ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50'
+              }`}>
+                <p className={`font-bold ${isOff ? 'text-gray-400' : 'text-gray-700'}`}>{stand}</p>
+                {isOff
+                  ? <p className="text-gray-400">OFF</p>
+                  : filled > 0 && <p className="text-gray-500">{filled} fields{notOk > 0 ? ` · ${notOk} NOT OK` : ''}</p>
+                }
               </div>
             );
           })}
