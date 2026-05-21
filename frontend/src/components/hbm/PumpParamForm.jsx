@@ -235,7 +235,7 @@ const PumpEntry = ({ pump, value, onChange, showPressure = true }) => {
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1">
               RPM
-              <span className="font-normal text-gray-400 ml-1">(&lt;{pump.rpm_max})</span>
+              <span className="font-normal text-gray-400 ml-1">(&le;{pump.rpm_max})</span>
             </label>
             <input
               type="number" step="0.1" min="0"
@@ -358,7 +358,7 @@ const PumpParamForm = () => {
     const rawWater = ro1 + ro2 + ro3;
     const wasteWater = parseFloat(sec2Values['Waste Water']?.value_text) || 0;
     const roWater = rawWater - wasteWater;
-    const computedMap = { 'RAW Water': rawWater > 0 ? rawWater.toFixed(2) : null, 'RO Water': rawWater > 0 ? roWater.toFixed(2) : null };
+    const computedMap = { 'RAW Water': rawWater > 0 ? String(Math.round(rawWater)) : null, 'RO Water': rawWater > 0 ? String(Math.round(roWater)) : null };
     const sec2_items = SEC2_ITEMS
       .filter(item => item.type === 'computed' ? !!computedMap[item.name] : (sec2Values[item.name]?.value_text || sec2Values[item.name]?.item_status))
       .map(item => ({ item_name: item.name, value_text: item.type === 'computed' ? computedMap[item.name] : (sec2Values[item.name]?.value_text || null), item_status: sec2Values[item.name]?.item_status || null }));
@@ -370,6 +370,18 @@ const PumpParamForm = () => {
     if (!header.log_date) { toast.error('Date is required'); return; }
     const { entries } = buildPayload();
     if (entries.length === 0) { toast.error('Please fill at least one pump entry'); return; }
+
+    // Block submission if any ON pump has RPM exceeding its rated value
+    for (const group of PUMP_GROUPS) {
+      for (const pump of group.pumps) {
+        const v = pumpValues[pump.name];
+        if (v?.status === 'ON' && numOk(v.rpm, pump.rpm_max) === false) {
+          toast.error(`${pump.name}: RPM must be ≤ ${pump.rpm_max} (rated value)`);
+          return;
+        }
+      }
+    }
+
     setShowPreview(true);
   };
 
@@ -522,9 +534,9 @@ const PumpParamForm = () => {
                             readOnly
                             value={
                               item.name === 'RAW Water'
-                                ? (rawWater > 0 ? rawWater.toFixed(2) : '—')
+                                ? (rawWater > 0 ? String(Math.round(rawWater)) : '—')
                                 : item.name === 'RO Water'
-                                  ? (rawWater > 0 ? roWater.toFixed(2) : '—')
+                                  ? (rawWater > 0 ? String(Math.round(roWater)) : '—')
                                   : '—'
                             }
                             className="w-32 px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-700 cursor-not-allowed" />

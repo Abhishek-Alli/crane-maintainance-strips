@@ -42,15 +42,34 @@ const STAND_DEFAULTS = {
 };
 
 // ─── STATUS HELPERS ───────────────────────────────────────────────────────────
-// Stands where KPA OK condition is < 2.4 (instead of 2.5 – 2.7)
-const LOW_KPA_STANDS = new Set(['PRE PINCH', 'POST PINCH', 'FLY. SHEAR', 'CONST. SHEAR', 'TB-1', 'TB-2', 'RAKE-1', 'RAKE-2']);
+// Per-stand KPA thresholds: ok = lower bound for OK, notOk = upper bound for NOT_OK
+// When ok === notOk it's a simple threshold; when ok > notOk there is a gap zone (no badge).
+const KPA_THRESHOLDS = {
+  'CCS-1':        { ok: 2.3, notOk: 2.1 },
+  'CCS-2':        { ok: 2.3, notOk: 2.1 },
+  'PRE PINCH':    { ok: 2.1, notOk: 2.1 },
+  'POST PINCH':   { ok: 2.1, notOk: 2.1 },
+  'TB-1':         { ok: 2.1, notOk: 2.1 },
+  'TB-2':         { ok: 2.1, notOk: 2.1 },
+  'RAKE-1':       { ok: 2.1, notOk: 2.1 },
+  'RAKE-2':       { ok: 2.1, notOk: 2.1 },
+};
+const DEFAULT_KPA = { ok: 2.3, notOk: 2.3 };
 
-const getKpaStatus  = (v, stand) => {
+const getKpaStatus = (v, stand) => {
   const n = parseFloat(v);
   if (isNaN(n)) return null;
-  return LOW_KPA_STANDS.has(stand) ? (n < 2.4 ? 'OK' : 'NOT_OK') : (n >= 2.5 && n <= 2.7 ? 'OK' : 'NOT_OK');
+  const { ok, notOk } = KPA_THRESHOLDS[stand] || DEFAULT_KPA;
+  if (n >= ok) return 'OK';
+  if (n < notOk) return 'NOT_OK';
+  return null;
 };
-const getKpaHint    = (stand) => LOW_KPA_STANDS.has(stand) ? 'OK if < 2.4 KPA' : 'OK if 2.5 – 2.7 KPA';
+const getKpaHint = (stand) => {
+  const { ok, notOk } = KPA_THRESHOLDS[stand] || DEFAULT_KPA;
+  return ok === notOk
+    ? `OK if ≥ ${ok} KPA`
+    : `OK if ≥ ${ok} KPA, NOT OK if < ${notOk} KPA`;
+};
 const getTempStatus = (v) => { const n = parseFloat(v); return isNaN(n) ? null : (n < 70  ? 'OK' : 'NOT_OK'); };
 const getVibStatus  = (v) => { const n = parseFloat(v); return isNaN(n) ? null : (n < 4   ? 'OK' : 'NOT_OK'); };
 
