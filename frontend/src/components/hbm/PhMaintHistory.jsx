@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
+import { AuthContext } from '../../context/AuthContext';
 
 const PhMaintHistory = () => {
+  const { isAdmin } = useContext(AuthContext);
   const [logs, setLogs]       = useState([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({ date_from: '', date_to: '' });
@@ -23,6 +25,15 @@ const PhMaintHistory = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this entry? This cannot be undone.')) return;
+    try {
+      await hbmAPI.deleteLog('ph-maint', id);
+      toast.success('Entry deleted');
+      setLogs(prev => prev.filter(l => l.id !== id));
+    } catch { toast.error('Failed to delete entry'); }
   };
 
   const formatDate = (d) =>
@@ -108,9 +119,13 @@ const PhMaintHistory = () => {
                     <td className="px-5 py-3 font-semibold text-gray-900">{formatDate(log.log_date)}</td>
                     <td className="px-5 py-3 text-gray-600">{log.filled_by_name}</td>
                     <td className="px-5 py-3 text-gray-600">{log.total_items} item{log.total_items !== '1' ? 's' : ''}</td>
-                    <td className="px-5 py-3">
+                    <td className="px-5 py-3 flex items-center gap-3">
                       <Link to={`/hbm/ph-maint/${log.id}`}
                         className="text-blue-600 font-semibold text-xs hover:underline">View</Link>
+                      {isAdmin() && (
+                        <button onClick={() => handleDelete(log.id)}
+                          className="text-red-500 hover:text-red-700 text-xs font-semibold">Delete</button>
+                      )}
                     </td>
                   </tr>
                 ))}

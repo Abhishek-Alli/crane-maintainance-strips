@@ -2992,6 +2992,43 @@ class HbmController {
   }
 
   // ==========================================
+  // DELETE HBM LOG (Admin only)
+  // DELETE /api/hbm/:type/:id
+  // ==========================================
+  static async deleteHbmLog(req, res) {
+    const TYPE_TABLE_MAP = {
+      'dc-motor':         'hbm_dc_motor_logs',
+      'cooling-bed':      'hbm_cooling_bed_logs',
+      'mill-mech':        'hbm_mill_mech_logs',
+      'rolling-stand':    'hbm_rolling_stand_logs',
+      'pumphouse':        'hbm_pumphouse_logs',
+      'bar-bundle':       'hbm_bar_bundle_logs',
+      'before-rolling':   'hbm_before_rolling_logs',
+      'pump-param':       'hbm_pump_param_logs',
+      'transformer':      'hbm_transformer_logs',
+      'ph-maint':         'hbm_ph_maint_logs',
+      'water-param':      'hbm_water_param_logs',
+      'oil-level':        'hbm_oil_level_logs',
+      'dc-motor-airflow': 'hbm_dc_motor_airflow_logs',
+      'roughing-gb-temp': 'hbm_roughing_gb_temp_logs',
+    };
+    try {
+      if (req.user.user_type !== 'ADMIN') {
+        return res.status(403).json({ success: false, message: 'Admin access required' });
+      }
+      const { type, id } = req.params;
+      const table = TYPE_TABLE_MAP[type];
+      if (!table) return res.status(400).json({ success: false, message: 'Invalid log type' });
+      const result = await query(`DELETE FROM ${table} WHERE id = $1 RETURNING id`, [id]);
+      if (result.rows.length === 0) return res.status(404).json({ success: false, message: 'Log not found' });
+      res.json({ success: true, message: 'Entry deleted successfully' });
+    } catch (error) {
+      console.error('Delete HBM log error:', error);
+      res.status(500).json({ success: false, message: 'Failed to delete entry', error: error.message });
+    }
+  }
+
+  // ==========================================
   // RESEND TELEGRAM NOTIFICATION
   // POST /api/hbm/:type/:id/resend-telegram
   // ==========================================

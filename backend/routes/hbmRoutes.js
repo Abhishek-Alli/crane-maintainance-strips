@@ -107,6 +107,9 @@ router.post('/roughing-gb-temp', HbmController.createRoughingGbTempLog);
 // type: dc-motor | cooling-bed | mill-mech | rolling-stand | pumphouse | bar-bundle
 router.get('/pdf/:type/:id', HbmController.downloadHbmPDF);
 
+// Delete a log entry (admin only)
+router.delete('/:type/:id', HbmController.deleteHbmLog);
+
 // Resend Telegram notification for any HBM checksheet
 router.post('/:type/:id/resend-telegram', HbmController.resendTelegramNotification);
 

@@ -299,6 +299,9 @@ export const hbmAPI = {
   downloadPDF: (type, id) =>
     api.get(`/hbm/pdf/${type}/${id}`, { responseType: 'blob' }),
 
+  // Delete a log entry (admin only)
+  deleteLog: (type, id) => api.delete(`/hbm/${type}/${id}`),
+
   // Resend Telegram notification
   resendTelegram: (type, id) => api.post(`/hbm/${type}/${id}/resend-telegram`),
 };

@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
+import { AuthContext } from '../../context/AuthContext';
 
 const BeforeRollingHistory = () => {
+  const { isAdmin } = useContext(AuthContext);
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({ date_from: '', date_to: '' });
@@ -23,6 +25,15 @@ const BeforeRollingHistory = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this entry? This cannot be undone.')) return;
+    try {
+      await hbmAPI.deleteLog('before-rolling', id);
+      toast.success('Entry deleted');
+      setLogs(prev => prev.filter(l => l.id !== id));
+    } catch { toast.error('Failed to delete entry'); }
   };
 
   const formatDate = (d) =>
@@ -120,9 +131,13 @@ const BeforeRollingHistory = () => {
                         <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">All OK</span>
                       )}
                     </td>
-                    <td className="px-5 py-3">
+                    <td className="px-5 py-3 flex items-center gap-3">
                       <Link to={`/hbm/before-rolling/${log.id}`}
                         className="text-blue-700 font-semibold text-xs hover:underline">View</Link>
+                      {isAdmin() && (
+                        <button onClick={() => handleDelete(log.id)}
+                          className="text-red-500 hover:text-red-700 text-xs font-semibold">Delete</button>
+                      )}
                     </td>
                   </tr>
                 ))}
