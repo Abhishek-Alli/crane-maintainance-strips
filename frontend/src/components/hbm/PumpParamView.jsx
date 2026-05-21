@@ -73,7 +73,7 @@ const THRESHOLDS = {
 const valBadge = (val, max) => {
   if (val == null) return <span className="text-gray-400 text-sm">—</span>;
   const n = parseFloat(val);
-  const ok = !isNaN(n) && n < max;
+  const ok = !isNaN(n) && n <= max;
   return (
     <span className={`text-sm font-semibold ${ok ? 'text-green-700' : 'text-red-700'}`}>
       {val}
@@ -125,8 +125,8 @@ const PumpParamView = () => {
     const t = THRESHOLDS[e.pump_name];
     if (!t) return false;
     return (
-      (e.amp != null && parseFloat(e.amp) >= t.amp) ||
-      (e.rpm != null && parseFloat(e.rpm) >= t.rpm)
+      (e.amp != null && parseFloat(e.amp) > t.amp) ||
+      (e.rpm != null && parseFloat(e.rpm) > t.rpm)
     );
   });
 
@@ -195,8 +195,8 @@ const PumpParamView = () => {
               {highEntries.map(e => {
                 const t = THRESHOLDS[e.pump_name];
                 const highs = [];
-                if (e.amp != null && parseFloat(e.amp) >= t.amp) highs.push(`AMP: ${e.amp} (max ${t.amp})`);
-                if (e.rpm != null && parseFloat(e.rpm) >= t.rpm) highs.push(`RPM: ${e.rpm} (max ${t.rpm})`);
+                if (e.amp != null && parseFloat(e.amp) > t.amp) highs.push(`AMP: ${e.amp} (max ${t.amp})`);
+                if (e.rpm != null && parseFloat(e.rpm) > t.rpm) highs.push(`RPM: ${e.rpm} (max ${t.rpm})`);
                 return (
                   <div key={e.id} className="bg-white rounded-lg border border-red-200 px-4 py-3 flex items-start justify-between">
                     <p className="font-semibold text-gray-900 text-sm">{e.pump_name}</p>
