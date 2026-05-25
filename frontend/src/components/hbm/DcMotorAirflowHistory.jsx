@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
-import AuthContext from '../../context/AuthContext';
+
 
 const DcMotorAirflowHistory = () => {
-  const { isAdmin } = useContext(AuthContext);
+  const isAdmin = (() => { try { const u = JSON.parse(localStorage.getItem('user')); return u?.role === 'ADMIN' || u?.user_type === 'ADMIN'; } catch { return false; } })();
   const [logs, setLogs]       = useState([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({ date_from: '', date_to: '' });
