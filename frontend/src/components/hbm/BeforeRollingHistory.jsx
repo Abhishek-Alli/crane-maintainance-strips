@@ -134,7 +134,7 @@ const BeforeRollingHistory = () => {
                     <td className="px-5 py-3 flex items-center gap-3">
                       <Link to={`/hbm/before-rolling/${log.id}`}
                         className="text-blue-700 font-semibold text-xs hover:underline">View</Link>
-                      {isAdmin() && (
+                      {isAdmin && (
                         <button onClick={() => handleDelete(log.id)}
                           className="text-red-500 hover:text-red-700 text-xs font-semibold">Delete</button>
                       )}
