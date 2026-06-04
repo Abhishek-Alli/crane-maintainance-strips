@@ -213,7 +213,7 @@ const PumpEntry = ({ pump, value, onChange, showPressure = true }) => {
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1">
               AMP
-              <span className="font-normal text-gray-400 ml-1">(&lt;{pump.amp_max})</span>
+              <span className="font-normal text-gray-400 ml-1">(&lt;={pump.amp_max})</span>
             </label>
             <input
               type="number" step="0.01" min="0"

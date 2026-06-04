@@ -1,5 +1,20 @@
 const { query, transaction } = require('../config/database');
-const { sendHbmChecksheetNotification } = require('../utils/telegram');
+const {
+  sendHbmChecksheetNotification,
+  sendCoolingBedNotification,
+  sendMillMechNotification,
+  sendRollingStandNotification,
+  sendBarBundleNotification,
+  sendBeforeRollingNotification,
+  sendOilLevelNotification,
+  sendDcMotorAirflowNotification,
+  sendPumpParamNotification,
+  sendWaterParamNotification,
+  sendPhMaintNotification,
+  sendTransformerNotification,
+  sendRoughingGbTempNotification,
+  sendBreakdownNotification,
+} = require('../utils/telegram');
 const PDFDocument = require('pdfkit');
 const path = require('path');
 const fs = require('fs');
@@ -694,8 +709,7 @@ class HbmController {
 
       res.status(201).json({ success: true, message: 'Cooling Bed log submitted successfully', data: log });
 
-      sendHbmChecksheetNotification({
-        checksheetType: 'Cooling Bed',
+      sendCoolingBedNotification({
         date: log_date, time: log_time, shift,
         filledBy: req.user.username,
         submittedAt: new Date(),
@@ -841,8 +855,7 @@ class HbmController {
 
       res.status(201).json({ success: true, message: 'Mill Mechanical log submitted successfully', data: log });
 
-      sendHbmChecksheetNotification({
-        checksheetType: 'Mill Mechanical',
+      sendMillMechNotification({
         date: log_date, time: log_time, shift,
         filledBy: req.user.username,
         submittedAt: new Date(),
@@ -979,8 +992,7 @@ class HbmController {
 
       res.status(201).json({ success: true, message: 'Rolling Stand log submitted successfully', data: log });
 
-      sendHbmChecksheetNotification({
-        checksheetType: 'Rolling Stand',
+      sendRollingStandNotification({
         date: log_date, time: log_time, shift,
         filledBy: req.user.username,
         submittedAt: new Date(),
@@ -1252,8 +1264,7 @@ class HbmController {
 
       res.status(201).json({ success: true, message: 'Bar Bundle log submitted successfully', data: log });
 
-      sendHbmChecksheetNotification({
-        checksheetType: 'Bar Bundle Area',
+      sendBarBundleNotification({
         date: log_date,
         filledBy: req.user.username,
         submittedAt: new Date(),
@@ -1390,11 +1401,13 @@ class HbmController {
 
       res.status(201).json({ success: true, message: 'Before Rolling log submitted successfully', data: log });
 
-      sendHbmChecksheetNotification({
-        checksheetType: 'Before Rolling',
+      sendBeforeRollingNotification({
         date: log_date,
         filledBy: req.user.username,
         submittedAt: new Date(),
+        checkedBy: checked_by,
+        millShiftIncharge: mill_shift_incharge,
+        mechEngineer: mechanical_engineer,
         items
       }).catch((e) => console.error('Telegram Before Rolling notify error:', e));
     } catch (error) {
@@ -1536,12 +1549,13 @@ class HbmController {
 
       res.status(201).json({ success: true, message: 'Pump Parameter report submitted successfully', data: log });
 
-      sendHbmChecksheetNotification({
-        checksheetType: 'Pump Parameter Report',
+      sendPumpParamNotification({
         date: log_date,
+        sizeValue: size_value,
+        entries,
+        sec2Items: sec2_items || [],
         filledBy: req.user.username,
         submittedAt: new Date(),
-        items: entries.map(e => ({ item_name: e.pump_name, status: e.status || 'ON' }))
       }).catch((e) => console.error('Telegram Pump Param notify error:', e));
     } catch (error) {
       console.error('Pump Param create log error:', error);
@@ -1666,12 +1680,15 @@ class HbmController {
 
       res.status(201).json({ success: true, id: log.id });
 
-      sendTelegramNotification({
-        checksheetType: 'Visual Inspection & HBM Transformer',
+      sendTransformerNotification({
         date: log_date,
+        sec1: sec1 || [],
+        sec2: sec2 || [],
+        sec3: sec3 || [],
+        sec2Remark: sec2_remark,
+        sec3Remark: sec3_remark,
         filledBy: req.user.username,
         submittedAt: new Date(),
-        items: (sec1 || []).map(u => ({ item_name: u.unit_name, status: 'OK' }))
       }).catch((e) => console.error('Transformer notify error:', e));
     } catch (error) {
       console.error('Transformer create log error:', error);
@@ -1961,12 +1978,11 @@ class HbmController {
 
       res.status(201).json({ success: true, id: log.id });
 
-      sendTelegramNotification({
-        checksheetType: 'Pump House Maintenance Work Sheet',
+      sendPhMaintNotification({
         date: log_date,
+        items: validItems.map(i => i.item_text),
         filledBy: req.user.username,
         submittedAt: new Date(),
-        items: validItems.map((i, idx) => ({ item_name: `${idx + 1}. ${i.item_text}`, status: 'OK' }))
       }).catch((e) => console.error('PH Maint notify error:', e));
     } catch (error) {
       console.error('PH Maint create log error:', error);
@@ -2171,12 +2187,12 @@ class HbmController {
 
       res.status(201).json({ success: true, id: log.id });
 
-      sendTelegramNotification({
-        checksheetType: 'Pump House Water Parameters',
+      sendWaterParamNotification({
         date: log_date,
+        remark,
+        entries,
         filledBy: req.user.username,
         submittedAt: new Date(),
-        items: entries.map(e => ({ item_name: e.water_source, status: e.source_status || 'ON' }))
       }).catch((e) => console.error('Water Param notify error:', e));
     } catch (error) {
       console.error('Water Param create log error:', error);
@@ -2676,12 +2692,14 @@ class HbmController {
 
       res.status(201).json({ success: true, message: 'Daily Oil Level Sheet submitted successfully', data: log });
 
-      sendHbmChecksheetNotification({
-        checksheetType: 'Daily Oil Level Sheet',
+      sendOilLevelNotification({
         date: log_date,
+        shiftEng: shift_eng,
+        readingBy: reading_by,
+        remark,
+        entries: entries || [],
         filledBy: req.user.username,
         submittedAt: new Date(),
-        items: (entries || []).map(e => ({ item_name: e.tank_name, status: e.oil_status || 'OK' }))
       }).catch((e) => console.error('Telegram Oil Level notify error:', e));
     } catch (error) {
       console.error('Oil Level create log error:', error);
@@ -2825,12 +2843,14 @@ class HbmController {
 
       res.status(201).json({ success: true, message: 'DC Motor Airflow sheet submitted successfully', data: log });
 
-      sendHbmChecksheetNotification({
-        checksheetType: 'DC Motor Airflow, Temperature & Vibration',
+      sendDcMotorAirflowNotification({
         date: log_date,
+        shiftEng: shift_eng,
+        readingBy: reading_by,
+        remark,
+        entries: entries || [],
         filledBy: req.user.username,
         submittedAt: new Date(),
-        items: (entries || []).map(e => ({ item_name: e.stand_name, status: e.kpa_status || 'OK' }))
       }).catch((err) => console.error('Telegram DC Motor Airflow notify error:', err));
     } catch (error) {
       console.error('DC Motor Airflow create log error:', error);
@@ -2978,17 +2998,490 @@ class HbmController {
 
       res.status(201).json({ success: true, message: 'Roughing GB Temp sheet submitted successfully', data: log });
 
-      sendHbmChecksheetNotification({
-        checksheetType: 'Roughing Stand & Gearbox Bearing Temperature',
+      sendRoughingGbTempNotification({
         date: log_date,
+        shiftEng: shift_eng,
+        tempTakenBy: temp_taken_by,
+        s1: {
+          flywheel_de: s1_flywheel_de, flywheel_nde: s1_flywheel_nde,
+          reduction_de: s1_reduction_de, reduction_nde: s1_reduction_nde, reduction_output: s1_reduction_output,
+          pinion_de_top: s1_pinion_de_top, pinion_de_mid: s1_pinion_de_mid, pinion_de_bot: s1_pinion_de_bot,
+          pinion_nde_top: s1_pinion_nde_top, pinion_nde_mid: s1_pinion_nde_mid, pinion_nde_bot: s1_pinion_nde_bot,
+          stand_de_top: s1_stand_de_top, stand_de_mid: s1_stand_de_mid, stand_de_bot: s1_stand_de_bot,
+          stand_nde_top: s1_stand_nde_top, stand_nde_mid: s1_stand_nde_mid, stand_nde_bot: s1_stand_nde_bot,
+        },
+        stands: stands || [],
+        sec1Remark: sec1_remark,
+        sec2Remark: sec2_remark,
+        sec3Remark: sec3_remark,
         filledBy: req.user.username,
         submittedAt: new Date(),
-        items: []
       }).catch((err) => console.error('Telegram Roughing GB Temp notify error:', err));
     } catch (error) {
       console.error('Roughing GB Temp create log error:', error);
       res.status(500).json({ success: false, message: 'Failed to submit Roughing GB Temp sheet' });
     }
+  }
+
+  // ==========================================
+  // HBM BREAKDOWN REPORT
+  // GET  /api/hbm/breakdown
+  // GET  /api/hbm/breakdown/:id
+  // POST /api/hbm/breakdown
+  // ==========================================
+  static async getBreakdownLogs(req, res) {
+    try {
+      const { date_from, date_to, limit = 20 } = req.query;
+      let conditions = [];
+      let params = [];
+      if (date_from) { params.push(date_from); conditions.push(`l.log_date >= $${params.length}`); }
+      if (date_to)   { params.push(date_to);   conditions.push(`l.log_date <= $${params.length}`); }
+      const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+      params.push(parseInt(limit));
+      const result = await query(
+        `SELECT l.*, u.username AS filled_by_name
+         FROM hbm_breakdown_logs l
+         JOIN users u ON l.filled_by = u.id
+         ${where}
+         ORDER BY l.log_date DESC, l.created_at DESC
+         LIMIT $${params.length}`,
+        params
+      );
+      res.json(result.rows);
+    } catch (error) {
+      console.error('Get breakdown logs error:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch breakdown logs' });
+    }
+  }
+
+  static async getBreakdownLogById(req, res) {
+    try {
+      const { id } = req.params;
+      const logRes = await query(
+        `SELECT l.*, u.username AS filled_by_name
+         FROM hbm_breakdown_logs l
+         JOIN users u ON l.filled_by = u.id
+         WHERE l.id = $1`,
+        [id]
+      );
+      if (!logRes.rows.length) return res.status(404).json({ success: false, message: 'Log not found' });
+      const log = logRes.rows[0];
+
+      const slotsRes = await query(
+        `SELECT * FROM hbm_breakdown_slots WHERE log_id = $1 ORDER BY slot_order`,
+        [id]
+      );
+
+      const slots = await Promise.all(slotsRes.rows.map(async (slot) => {
+        const entriesRes = await query(
+          `SELECT * FROM hbm_breakdown_entries WHERE slot_id = $1 ORDER BY id`,
+          [slot.id]
+        );
+        return { ...slot, entries: entriesRes.rows };
+      }));
+
+      res.json({ ...log, slots });
+    } catch (error) {
+      console.error('Get breakdown log by id error:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch breakdown log' });
+    }
+  }
+
+  static async createBreakdownLog(req, res) {
+    try {
+      const { log_date, size, slots } = req.body;
+      if (!log_date || !size) {
+        return res.status(400).json({ success: false, message: 'Date and size are required' });
+      }
+
+      let log;
+      await transaction(async (client) => {
+        const logResult = await client.query(
+          `INSERT INTO hbm_breakdown_logs (log_date, size, filled_by)
+           VALUES ($1, $2, $3) RETURNING *`,
+          [log_date, size, req.user.id]
+        );
+        log = logResult.rows[0];
+
+        if (slots && Array.isArray(slots)) {
+          for (const slot of slots) {
+            const slotResult = await client.query(
+              `INSERT INTO hbm_breakdown_slots (log_id, slot_label, slot_order, miss_roll, miss_roll_18)
+               VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+              [log.id, slot.slot_label, slot.slot_order,
+               slot.miss_roll != null && slot.miss_roll !== '' ? parseInt(slot.miss_roll) : null,
+               slot.miss_roll_18 != null && slot.miss_roll_18 !== '' ? parseInt(slot.miss_roll_18) : null]
+            );
+            const slotId = slotResult.rows[0].id;
+
+            if (slot.entries && Array.isArray(slot.entries)) {
+              for (const entry of slot.entries) {
+                if (!entry.breakdown_type) continue;
+                await client.query(
+                  `INSERT INTO hbm_breakdown_entries (slot_id, breakdown_type, breakdown_minutes, breakdown_reason)
+                   VALUES ($1, $2, $3, $4)`,
+                  [slotId, entry.breakdown_type,
+                   entry.breakdown_minutes != null && entry.breakdown_minutes !== '' ? parseInt(entry.breakdown_minutes) : null,
+                   entry.breakdown_reason || null]
+                );
+              }
+            }
+          }
+        }
+      });
+
+      res.status(201).json({ success: true, message: 'Breakdown report submitted successfully', data: log });
+
+      sendBreakdownNotification({
+        date:        log_date,
+        size:        size,
+        filledBy:    req.user.username,
+        submittedAt: new Date(),
+        slots:       slots || [],
+      }).catch((err) => console.error('Telegram breakdown notify error:', err));
+    } catch (error) {
+      console.error('Create breakdown log error:', error);
+      res.status(500).json({ success: false, message: 'Failed to submit breakdown report' });
+    }
+  }
+
+  // ==========================================
+  // SHEET VIEWER — flat rows for any sheet type
+  // GET /api/hbm/sheet-view/:type?date_from=&date_to=
+  // ==========================================
+  static async getSheetView(req, res) {
+    const { type } = req.params;
+    const { date_from, date_to } = req.query;
+
+    const buildWhere = (alias = 'l') => {
+      const conds = []; const params = [];
+      if (date_from) { conds.push(`${alias}.log_date >= $${params.length + 1}`); params.push(date_from); }
+      if (date_to)   { conds.push(`${alias}.log_date <= $${params.length + 1}`); params.push(date_to); }
+      return { where: conds.length ? 'WHERE ' + conds.join(' AND ') : '', params };
+    };
+
+    try {
+      // OK/NOT_OK item sheets — expand into one row per item
+      const ITEM_SHEETS = {
+        'dc-motor':       { log: 'hbm_dc_motor_logs',       items: 'hbm_dc_motor_items',        shift: true },
+        'cooling-bed':    { log: 'hbm_cooling_bed_logs',     items: 'hbm_cooling_bed_items',     shift: true },
+        'mill-mech':      { log: 'hbm_mill_mech_logs',       items: 'hbm_mill_mech_items',       shift: true },
+        'rolling-stand':  { log: 'hbm_rolling_stand_logs',   items: 'hbm_rolling_stand_items',   shift: true },
+        'pumphouse':      { log: 'hbm_pumphouse_logs',       items: 'hbm_pumphouse_items',       shift: false },
+        'bar-bundle':     { log: 'hbm_bar_bundle_logs',      items: 'hbm_bar_bundle_items',      shift: false },
+        'before-rolling': { log: 'hbm_before_rolling_logs',  items: 'hbm_before_rolling_items',  shift: false },
+      };
+
+      if (ITEM_SHEETS[type]) {
+        const { log: logT, items: itemT, shift } = ITEM_SHEETS[type];
+        const { where, params } = buildWhere('l');
+        const { rows } = await query(
+          `SELECT l.log_date, ${shift ? 'l.shift,' : ''} u.username as filled_by,
+                  i.section_name, i.block_name, i.item_name, i.status, i.remark, i.action_taken
+           FROM ${logT} l
+           JOIN users u ON l.filled_by = u.id
+           JOIN ${itemT} i ON i.log_id = l.id
+           ${where}
+           ORDER BY l.log_date DESC, l.id DESC, i.section_name, i.block_name, i.item_name`,
+          params
+        );
+        return res.json({ success: true, type, columns: ['Date', ...(shift ? ['Shift'] : []), 'Filled By', 'Section', 'Block', 'Item', 'Status', 'Remark', 'Action Taken'], rows });
+      }
+
+      if (type === 'oil-level') {
+        const { where, params } = buildWhere('l');
+        const { rows } = await query(
+          `SELECT l.log_date, u.username as filled_by,
+                  e.tank_name, e.oil_level, e.pressure, e.temperature, e.oil_status as status
+           FROM hbm_oil_level_logs l JOIN users u ON l.filled_by = u.id
+           JOIN hbm_oil_level_entries e ON e.log_id = l.id
+           ${where} ORDER BY l.log_date DESC, l.id DESC, e.tank_name`, params
+        );
+        return res.json({ success: true, type, columns: ['Date', 'Filled By', 'Tank Name', 'Oil Level', 'Pressure', 'Temperature', 'Status'], rows });
+      }
+
+      if (type === 'dc-motor-airflow') {
+        const { where, params } = buildWhere('l');
+        const { rows } = await query(
+          `SELECT l.log_date, u.username as filled_by,
+                  e.stand_name, e.running_kpa, e.kpa_status,
+                  e.dc_motor_temp, e.dc_motor_temp_status,
+                  e.de_bearing_temp, e.de_bearing_temp_status,
+                  e.nde_bearing_temp, e.nde_bearing_temp_status,
+                  e.motor_center_vib, e.motor_center_vib_status
+           FROM hbm_dc_motor_airflow_logs l JOIN users u ON l.filled_by = u.id
+           JOIN hbm_dc_motor_airflow_entries e ON e.log_id = l.id
+           ${where} ORDER BY l.log_date DESC, l.id DESC, e.stand_name`, params
+        );
+        return res.json({ success: true, type, columns: ['Date', 'Filled By', 'Stand', 'KPa', 'KPa Sts', 'Motor °C', 'Mtr Sts', 'DE °C', 'DE Sts', 'NDE °C', 'NDE Sts', 'Ctr Vib', 'Vib Sts'], rows });
+      }
+
+      if (type === 'water-param') {
+        const { where, params } = buildWhere('l');
+        const { rows } = await query(
+          `SELECT l.log_date, u.username as filled_by,
+                  e.water_source, e.tds, e.hardness, e.ph, e.temperature,
+                  e.tds_status, e.hardness_status, e.ph_status, e.temp_status
+           FROM hbm_water_param_logs l JOIN users u ON l.filled_by = u.id
+           JOIN hbm_water_param_entries e ON e.log_id = l.id
+           ${where} ORDER BY l.log_date DESC, l.id DESC, e.water_source`, params
+        );
+        return res.json({ success: true, type, columns: ['Date', 'Water Source', 'TDS', 'Hardness', 'pH', 'Temperature', 'TDS Sts', 'Hard Sts', 'pH Sts', 'Temp Sts'], rows });
+      }
+
+      if (type === 'pump-param') {
+        const { where, params } = buildWhere('l');
+        const { rows } = await query(
+          `SELECT l.log_date, u.username as filled_by,
+                  e.pump_name, e.status, e.kw, e.amp, e.rpm, e.pressure, e.load_pct
+           FROM hbm_pump_param_logs l JOIN users u ON l.filled_by = u.id
+           JOIN hbm_pump_param_entries e ON e.log_id = l.id
+           ${where} ORDER BY l.log_date DESC, l.id DESC, e.pump_name`, params
+        );
+        return res.json({ success: true, type, columns: ['Date', 'Filled By', 'Pump', 'Status', 'KW', 'Amp', 'RPM', 'Pressure', 'Load %'], rows });
+      }
+
+      if (type === 'ph-maint') {
+        const { where, params } = buildWhere('l');
+        const { rows } = await query(
+          `SELECT l.log_date, u.username as filled_by, i.item_text as work_description
+           FROM hbm_ph_maint_logs l JOIN users u ON l.filled_by = u.id
+           JOIN hbm_ph_maint_items i ON i.log_id = l.id
+           ${where} ORDER BY l.log_date DESC, l.id DESC, i.id`, params
+        );
+        return res.json({ success: true, type, columns: ['Date', 'Filled By', 'Work Description'], rows });
+      }
+
+      if (type === 'transformer') {
+        const { where, params } = buildWhere('l');
+        const { rows } = await query(
+          `SELECT l.log_date, u.username as filled_by,
+                  s.unit_name, s.ht_current, s.ht_volt, s.wind_temperature, s.oil_temperature,
+                  s.main_tank_oil_level, s.oltc_oil_level, s.silica_gel_color, s.tap_position,
+                  s.cleaning, s.oil_leakage, s.relay_condition
+           FROM hbm_transformer_logs l JOIN users u ON l.filled_by = u.id
+           JOIN hbm_transformer_sec1 s ON s.log_id = l.id
+           ${where} ORDER BY l.log_date DESC, l.id DESC, s.unit_name`, params
+        );
+        return res.json({ success: true, type, columns: ['Date', 'Unit', 'HT Current', 'HT Volt', 'Wind °C', 'Oil °C', 'Tank Level', 'OLTC Level', 'Silica Gel', 'Tap Pos', 'Clean', 'Leakage', 'Relay'], rows });
+      }
+
+      if (type === 'roughing-gb-temp') {
+        const { where, params } = buildWhere('l');
+        const { rows } = await query(
+          `SELECT l.log_date, u.username as filled_by,
+                  s.stand_name, s.gb_de, s.gb_inter, s.gb_output_top, s.gb_output_bot, s.gb_gearbox,
+                  s.s_de_top, s.s_de_bot, s.s_nde_top, s.s_nde_bot
+           FROM hbm_roughing_gb_temp_logs l JOIN users u ON l.filled_by = u.id
+           JOIN hbm_roughing_gb_temp_stands s ON s.log_id = l.id
+           ${where} ORDER BY l.log_date DESC, l.id DESC, s.stand_name`, params
+        );
+        return res.json({ success: true, type, columns: ['Date', 'Stand', 'GB DE', 'GB Inter', 'GB Out-T', 'GB Out-B', 'GB Gearbox', 'Std DE-T', 'Std DE-B', 'Std NDE-T', 'Std NDE-B'], rows });
+      }
+
+      if (type === 'breakdown') {
+        const { where, params } = buildWhere('l');
+        const { rows } = await query(
+          `SELECT l.log_date, l.size, u.username as filled_by,
+                  sl.slot_label, e.breakdown_type, e.breakdown_minutes, e.breakdown_reason
+           FROM hbm_breakdown_logs l JOIN users u ON l.filled_by = u.id
+           JOIN hbm_breakdown_slots sl ON sl.log_id = l.id
+           JOIN hbm_breakdown_entries e ON e.slot_id = sl.id
+           ${where} ORDER BY l.log_date DESC, l.id DESC, sl.slot_order`, params
+        );
+        return res.json({ success: true, type, columns: ['Date', 'Size', 'Slot', 'Breakdown Type', 'Minutes', 'Reason'], rows });
+      }
+
+      return res.status(400).json({ success: false, message: `Unknown sheet type: ${type}` });
+    } catch (error) {
+      console.error('Sheet view error:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch sheet data' });
+    }
+  }
+
+  // ==========================================
+  // SEND TODAY'S NOTIFICATIONS
+  // POST /api/hbm/send-daily-notifications
+  // ==========================================
+  static async sendDailyNotifications(req, res) {
+    const today = req.body.date || new Date().toISOString().split('T')[0];
+    const tg = require('../utils/telegram');
+
+    const results = { sent: [], skipped: [], failed: [] };
+
+    // Helper: fetch today's log for a simple ok/not-ok sheet
+    async function sendChecksheet(type, table, items, label, orderBy) {
+      try {
+        const logRes = await query(
+          `SELECT l.*, u.username AS filled_by_name FROM ${table} l
+           JOIN users u ON l.filled_by = u.id
+           WHERE l.log_date = $1 ORDER BY l.created_at DESC LIMIT 1`,
+          [today]
+        );
+        if (!logRes.rows.length) { results.skipped.push(label); return; }
+        const log = logRes.rows[0];
+        const itemsRes = await query(`SELECT * FROM ${items} WHERE log_id = $1 ORDER BY ${orderBy}`, [log.id]);
+        await tg.sendHbmChecksheetNotification({
+          checksheetType: label,
+          date: log.log_date, time: log.log_time || null, shift: log.shift || null,
+          filledBy: log.filled_by_name, submittedAt: new Date(log.created_at),
+          remarks: log.remarks || log.remark || null,
+          items: itemsRes.rows.map(r => ({
+            section_name: r.section_name || '', block_name: r.block_name || '',
+            item_name: r.item_name || '', status: r.status || 'OK',
+            remark: r.remark || '', action_taken: r.action_taken || '',
+          })),
+        });
+        results.sent.push(label);
+      } catch (e) { console.error(`Daily notif error [${label}]:`, e.message); results.failed.push(label); }
+    }
+
+    // DC Motor & Pumphouse — still use generic template
+    await sendChecksheet('dc-motor',  'hbm_dc_motor_logs',  'hbm_dc_motor_items',  'DC Motor',   'block_name, section_name, item_name');
+    await sendChecksheet('pumphouse', 'hbm_pumphouse_logs', 'hbm_pumphouse_items', 'Pumphouse',  'section_name, item_name');
+
+    // Helper to fetch items for sectioned sheets
+    async function sendSectioned(table, itemsTable, label, notifFn, extraFields = {}) {
+      try {
+        const r = await query(
+          `SELECT l.*, u.username AS filled_by_name FROM ${table} l
+           JOIN users u ON l.filled_by = u.id WHERE l.log_date = $1 ORDER BY l.created_at DESC LIMIT 1`,
+          [today]
+        );
+        if (!r.rows.length) { results.skipped.push(label); return; }
+        const log = r.rows[0];
+        const itemsRes = await query(`SELECT * FROM ${itemsTable} WHERE log_id = $1 ORDER BY section_name, block_name, item_name`, [log.id]);
+        await notifFn({
+          date: log.log_date, time: log.log_time || null, shift: log.shift || null,
+          filledBy: log.filled_by_name, submittedAt: new Date(log.created_at),
+          remarks: log.remarks || log.remark || null,
+          items: itemsRes.rows,
+          ...extraFields(log),
+        });
+        results.sent.push(label);
+      } catch (e) { console.error(`Daily notif error [${label}]:`, e.message); results.failed.push(label); }
+    }
+
+    await sendSectioned('hbm_cooling_bed_logs',    'hbm_cooling_bed_items',    'Cooling Bed',    tg.sendCoolingBedNotification,    () => ({}));
+    await sendSectioned('hbm_mill_mech_logs',      'hbm_mill_mech_items',      'Mill Mechanical', tg.sendMillMechNotification,      () => ({}));
+    await sendSectioned('hbm_rolling_stand_logs',  'hbm_rolling_stand_items',  'Rolling Stand',   tg.sendRollingStandNotification,  () => ({}));
+    await sendSectioned('hbm_bar_bundle_logs',     'hbm_bar_bundle_items',     'Bar Bundle Area', tg.sendBarBundleNotification,     () => ({}));
+    await sendSectioned('hbm_before_rolling_logs', 'hbm_before_rolling_items', 'Before Rolling',  tg.sendBeforeRollingNotification,
+      (log) => ({ checkedBy: log.checked_by, millShiftIncharge: log.mill_shift_incharge, mechEngineer: log.mechanical_engineer }));
+
+    // Oil Level
+    try {
+      const r = await query(`SELECT l.*, u.username AS filled_by_name FROM hbm_oil_level_logs l JOIN users u ON l.filled_by = u.id WHERE l.log_date = $1 ORDER BY l.created_at DESC LIMIT 1`, [today]);
+      if (!r.rows.length) { results.skipped.push('Daily Oil Level'); }
+      else {
+        const log = r.rows[0];
+        const entries = await query(`SELECT * FROM hbm_oil_level_entries WHERE log_id = $1 ORDER BY item_name`, [log.id]);
+        await tg.sendOilLevelNotification({ date: log.log_date, shift: log.shift, remark: log.remark, entries: entries.rows, filledBy: log.filled_by_name, submittedAt: new Date(log.created_at) });
+        results.sent.push('Daily Oil Level');
+      }
+    } catch (e) { console.error('Daily notif error [Oil Level]:', e.message); results.failed.push('Daily Oil Level'); }
+
+    // DC Motor Airflow
+    try {
+      const r = await query(`SELECT l.*, u.username AS filled_by_name FROM hbm_dc_motor_airflow_logs l JOIN users u ON l.filled_by = u.id WHERE l.log_date = $1 ORDER BY l.created_at DESC LIMIT 1`, [today]);
+      if (!r.rows.length) { results.skipped.push('DC Motor Airflow'); }
+      else {
+        const log = r.rows[0];
+        const entries = await query(`SELECT * FROM hbm_dc_motor_airflow_entries WHERE log_id = $1 ORDER BY item_name`, [log.id]);
+        await tg.sendDcMotorAirflowNotification({ date: log.log_date, shift: log.shift, remark: log.remark, entries: entries.rows, filledBy: log.filled_by_name, submittedAt: new Date(log.created_at) });
+        results.sent.push('DC Motor Airflow');
+      }
+    } catch (e) { console.error('Daily notif error [DC Motor Airflow]:', e.message); results.failed.push('DC Motor Airflow'); }
+
+    // Pump Parameter
+    try {
+      const r = await query(`SELECT l.*, u.username AS filled_by_name FROM hbm_pump_param_logs l JOIN users u ON l.filled_by = u.id WHERE l.log_date = $1 ORDER BY l.created_at DESC LIMIT 1`, [today]);
+      if (!r.rows.length) { results.skipped.push('Pump Parameter'); }
+      else {
+        const log = r.rows[0];
+        const pumps = await query(`SELECT * FROM hbm_pump_param_entries WHERE log_id = $1 ORDER BY pump_name`, [log.id]);
+        const kwh   = await query(`SELECT * FROM hbm_pump_kwh_entries   WHERE log_id = $1 ORDER BY pump_name`, [log.id]);
+        const sec2  = await query(`SELECT * FROM hbm_pump_param_sec2    WHERE log_id = $1 ORDER BY section_name, item_name`, [log.id]);
+        await tg.sendPumpParamNotification({ date: log.log_date, shift: log.shift, remark: log.remark, pumps: pumps.rows, kwhEntries: kwh.rows, sec2Items: sec2.rows, filledBy: log.filled_by_name, submittedAt: new Date(log.created_at) });
+        results.sent.push('Pump Parameter');
+      }
+    } catch (e) { console.error('Daily notif error [Pump Param]:', e.message); results.failed.push('Pump Parameter'); }
+
+    // Water Parameter
+    try {
+      const r = await query(`SELECT l.*, u.username AS filled_by_name FROM hbm_water_param_logs l JOIN users u ON l.filled_by = u.id WHERE l.log_date = $1 ORDER BY l.created_at DESC LIMIT 1`, [today]);
+      if (!r.rows.length) { results.skipped.push('Water Parameters'); }
+      else {
+        const log = r.rows[0];
+        const entries = await query(`SELECT * FROM hbm_water_param_entries WHERE log_id = $1 ORDER BY water_source`, [log.id]);
+        await tg.sendWaterParamNotification({ date: log.log_date, remark: log.remark, entries: entries.rows, filledBy: log.filled_by_name, submittedAt: new Date(log.created_at) });
+        results.sent.push('Water Parameters');
+      }
+    } catch (e) { console.error('Daily notif error [Water Param]:', e.message); results.failed.push('Water Parameters'); }
+
+    // PH Maintenance
+    try {
+      const r = await query(`SELECT l.*, u.username AS filled_by_name FROM hbm_ph_maint_logs l JOIN users u ON l.filled_by = u.id WHERE l.log_date = $1 ORDER BY l.created_at DESC LIMIT 1`, [today]);
+      if (!r.rows.length) { results.skipped.push('PH Maintenance'); }
+      else {
+        const log = r.rows[0];
+        const items = await query(`SELECT * FROM hbm_ph_maint_items WHERE log_id = $1 ORDER BY id`, [log.id]);
+        await tg.sendPhMaintNotification({ date: log.log_date, items: items.rows, filledBy: log.filled_by_name, submittedAt: new Date(log.created_at) });
+        results.sent.push('PH Maintenance');
+      }
+    } catch (e) { console.error('Daily notif error [PH Maint]:', e.message); results.failed.push('PH Maintenance'); }
+
+    // Transformer
+    try {
+      const r = await query(`SELECT l.*, u.username AS filled_by_name FROM hbm_transformer_logs l JOIN users u ON l.filled_by = u.id WHERE l.log_date = $1 ORDER BY l.created_at DESC LIMIT 1`, [today]);
+      if (!r.rows.length) { results.skipped.push('Transformer'); }
+      else {
+        const log = r.rows[0];
+        const sec1 = await query(`SELECT * FROM hbm_transformer_sec1 WHERE log_id = $1 ORDER BY unit_name`, [log.id]);
+        const sec2 = await query(`SELECT * FROM hbm_transformer_sec2 WHERE log_id = $1 ORDER BY unit_name`, [log.id]);
+        const sec3 = await query(`SELECT * FROM hbm_transformer_sec3 WHERE log_id = $1 ORDER BY unit_name`, [log.id]);
+        await tg.sendTransformerNotification({ date: log.log_date, sec1: sec1.rows, sec2: sec2.rows, sec3: sec3.rows, sec2Remark: log.sec2_remark, sec3Remark: log.sec3_remark, filledBy: log.filled_by_name, submittedAt: new Date(log.created_at) });
+        results.sent.push('Transformer');
+      }
+    } catch (e) { console.error('Daily notif error [Transformer]:', e.message); results.failed.push('Transformer'); }
+
+    // Roughing GB Temp — Section 1 data is columns on the log row itself
+    try {
+      const r = await query(`SELECT l.*, u.username AS filled_by_name FROM hbm_roughing_gb_temp_logs l JOIN users u ON l.filled_by = u.id WHERE l.log_date = $1 ORDER BY l.created_at DESC LIMIT 1`, [today]);
+      if (!r.rows.length) { results.skipped.push('Roughing GB Temp'); }
+      else {
+        const log = r.rows[0];
+        const stands = await query(`SELECT * FROM hbm_roughing_gb_temp_stands WHERE log_id = $1 ORDER BY stand_name`, [log.id]);
+        const s1 = {
+          flywheel_de:    log.s1_flywheel_de,   flywheel_nde:    log.s1_flywheel_nde,
+          reduction_de:   log.s1_reduction_de,  reduction_nde:   log.s1_reduction_nde,
+          pinion_de_top:  log.s1_pinion_de_top, pinion_de_mid:   log.s1_pinion_de_mid, pinion_de_bot:  log.s1_pinion_de_bot,
+          pinion_nde_top: log.s1_pinion_nde_top,pinion_nde_mid:  log.s1_pinion_nde_mid,pinion_nde_bot: log.s1_pinion_nde_bot,
+          stand_de_top:   log.s1_stand_de_top,  stand_de_mid:    log.s1_stand_de_mid,  stand_de_bot:   log.s1_stand_de_bot,
+          stand_nde_top:  log.s1_stand_nde_top, stand_nde_mid:   log.s1_stand_nde_mid, stand_nde_bot:  log.s1_stand_nde_bot,
+        };
+        await tg.sendRoughingGbTempNotification({ date: log.log_date, shiftEng: log.shift_eng, tempTakenBy: log.temp_taken_by, s1, stands: stands.rows, sec1Remark: log.sec1_remark, sec2Remark: log.sec2_remark, sec3Remark: log.sec3_remark, filledBy: log.filled_by_name, submittedAt: new Date(log.created_at) });
+        results.sent.push('Roughing GB Temp');
+      }
+    } catch (e) { console.error('Daily notif error [Roughing GB Temp]:', e.message); results.failed.push('Roughing GB Temp'); }
+
+    // Breakdown
+    try {
+      const r = await query(`SELECT l.*, u.username AS filled_by_name FROM hbm_breakdown_logs l JOIN users u ON l.filled_by = u.id WHERE l.log_date = $1 ORDER BY l.created_at DESC LIMIT 1`, [today]);
+      if (!r.rows.length) { results.skipped.push('HBM Breakdown'); }
+      else {
+        const log = r.rows[0];
+        const slotsRes = await query(`SELECT * FROM hbm_breakdown_slots WHERE log_id = $1 ORDER BY slot_order`, [log.id]);
+        const slots = await Promise.all(slotsRes.rows.map(async (s) => {
+          const entries = await query(`SELECT * FROM hbm_breakdown_entries WHERE slot_id = $1`, [s.id]);
+          return { ...s, entries: entries.rows };
+        }));
+        await tg.sendBreakdownNotification({ date: log.log_date, size: log.size, filledBy: log.filled_by_name, submittedAt: new Date(log.created_at), slots });
+        results.sent.push('HBM Breakdown');
+      }
+    } catch (e) { console.error('Daily notif error [Breakdown]:', e.message); results.failed.push('HBM Breakdown'); }
+
+    res.json({ success: true, results });
   }
 
   // ==========================================
@@ -3011,6 +3504,7 @@ class HbmController {
       'oil-level':        'hbm_oil_level_logs',
       'dc-motor-airflow': 'hbm_dc_motor_airflow_logs',
       'roughing-gb-temp': 'hbm_roughing_gb_temp_logs',
+      'breakdown':        'hbm_breakdown_logs',
     };
     try {
       if (req.user.user_type !== 'ADMIN') {
@@ -3048,6 +3542,7 @@ class HbmController {
       'pump-param':      { table: 'hbm_pump_param_logs',      items: null,                          label: 'Pump Parameter',       orderBy: null },
       'water-param':     { table: 'hbm_water_param_logs',     items: 'hbm_water_param_entries',    label: 'Water Parameter',       orderBy: 'water_source' },
       'ph-maint':        { table: 'hbm_ph_maint_logs',        items: null,                          label: 'Pumphouse Maintenance',orderBy: null },
+      'breakdown':       { table: 'hbm_breakdown_logs',       items: null,                          label: 'HBM Breakdown Report', orderBy: null },
     };
 
     try {
@@ -3080,16 +3575,47 @@ class HbmController {
         }));
       }
 
-      await require('../utils/telegram').sendHbmChecksheetNotification({
-        checksheetType: meta.label,
-        date:        log.log_date,
-        time:        log.log_time  || null,
-        shift:       log.shift     || null,
-        filledBy:    log.filled_by_name,
-        submittedAt: new Date(log.created_at),
-        remarks:     log.remarks   || log.remark || null,
-        items,
-      });
+      const tgLib = require('../utils/telegram');
+
+      // Special handlers for sheets that need extra DB queries
+      if (type === 'roughing-gb-temp') {
+        const stands = await query(`SELECT * FROM hbm_roughing_gb_temp_stands WHERE log_id = $1 ORDER BY stand_name`, [id]);
+        const s1 = {
+          flywheel_de: log.s1_flywheel_de, flywheel_nde: log.s1_flywheel_nde,
+          reduction_de: log.s1_reduction_de, reduction_nde: log.s1_reduction_nde,
+          pinion_de_top: log.s1_pinion_de_top, pinion_de_mid: log.s1_pinion_de_mid, pinion_de_bot: log.s1_pinion_de_bot,
+          pinion_nde_top: log.s1_pinion_nde_top, pinion_nde_mid: log.s1_pinion_nde_mid, pinion_nde_bot: log.s1_pinion_nde_bot,
+          stand_de_top: log.s1_stand_de_top, stand_de_mid: log.s1_stand_de_mid, stand_de_bot: log.s1_stand_de_bot,
+          stand_nde_top: log.s1_stand_nde_top, stand_nde_mid: log.s1_stand_nde_mid, stand_nde_bot: log.s1_stand_nde_bot,
+        };
+        await tgLib.sendRoughingGbTempNotification({ date: log.log_date, shiftEng: log.shift_eng, tempTakenBy: log.temp_taken_by, s1, stands: stands.rows, sec1Remark: log.sec1_remark, sec2Remark: log.sec2_remark, sec3Remark: log.sec3_remark, filledBy: log.filled_by_name, submittedAt: new Date(log.created_at) });
+      } else {
+        const specificFn = {
+          'cooling-bed':    tgLib.sendCoolingBedNotification,
+          'mill-mech':      tgLib.sendMillMechNotification,
+          'rolling-stand':  tgLib.sendRollingStandNotification,
+          'bar-bundle':     tgLib.sendBarBundleNotification,
+          'before-rolling': tgLib.sendBeforeRollingNotification,
+        }[type];
+
+        if (specificFn) {
+          await specificFn({
+            date: log.log_date, time: log.log_time || null, shift: log.shift || null,
+            filledBy: log.filled_by_name, submittedAt: new Date(log.created_at),
+            remarks: log.remarks || log.remark || null,
+            checkedBy: log.checked_by, millShiftIncharge: log.mill_shift_incharge, mechEngineer: log.mechanical_engineer,
+            items,
+          });
+        } else {
+          await tgLib.sendHbmChecksheetNotification({
+            checksheetType: meta.label,
+            date: log.log_date, time: log.log_time || null, shift: log.shift || null,
+            filledBy: log.filled_by_name, submittedAt: new Date(log.created_at),
+            remarks: log.remarks || log.remark || null,
+            items,
+          });
+        }
+      }
 
       res.json({ success: true, message: `Telegram notification resent for ${meta.label} #${id}` });
     } catch (error) {

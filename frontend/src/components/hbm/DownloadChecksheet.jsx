@@ -16,6 +16,7 @@ const CHECKSHEET_TYPES = [
   { value: 'oil-level',         label: 'Daily Oil Level',                    fetchLogs: (p) => hbmAPI.getOilLevelLogs(p) },
   { value: 'dc-motor-airflow',  label: 'DC Motor Airflow, Temp & Vibration', fetchLogs: (p) => hbmAPI.getDcMotorAirflowLogs(p) },
   { value: 'roughing-gb-temp', label: 'Roughing Stand & GB Bearing Temp',    fetchLogs: (p) => hbmAPI.getRoughingGbTempLogs(p) },
+  { value: 'breakdown',        label: 'HBM Breakdown Report',               fetchLogs: (p) => hbmAPI.getBreakdownLogs(p) },
 ];
 
 function getDatesInRange(from, to) {

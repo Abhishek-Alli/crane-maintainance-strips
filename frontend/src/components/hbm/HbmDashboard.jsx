@@ -19,6 +19,7 @@ const HbmDashboard = ({ allowedSheets }) => {
   const [recentOilLevel, setRecentOilLevel]             = useState([]);
   const [recentDcMotorAirflow, setRecentDcMotorAirflow] = useState([]);
   const [recentRoughingGbTemp, setRecentRoughingGbTemp] = useState([]);
+  const [recentBreakdown, setRecentBreakdown] = useState([]);
   const [loading, setLoading] = useState(true);
 
 
@@ -28,7 +29,7 @@ const HbmDashboard = ({ allowedSheets }) => {
     try {
       const toArr = (v) => Array.isArray(v) ? v : (v?.data ?? []);
 
-      const [dcRes, rsRes, mmRes, cbRes, phRes, bbRes, brRes, ppRes, wpRes, pmRes, trRes, olRes, afRes, rgRes] = await Promise.allSettled([
+      const [dcRes, rsRes, mmRes, cbRes, phRes, bbRes, brRes, ppRes, wpRes, pmRes, trRes, olRes, afRes, rgRes, bdRes] = await Promise.allSettled([
         hbmAPI.getDcMotorLogs({ limit: 5 }),
         hbmAPI.getRollingStandLogs({ limit: 5 }),
         hbmAPI.getMillMechLogs({ limit: 5 }),
@@ -43,6 +44,7 @@ const HbmDashboard = ({ allowedSheets }) => {
         hbmAPI.getOilLevelLogs({ limit: 5 }),
         hbmAPI.getDcMotorAirflowLogs({ limit: 5 }),
         hbmAPI.getRoughingGbTempLogs({ limit: 5 }),
+        hbmAPI.getBreakdownLogs({ limit: 5 }),
       ]);
 
       if (dcRes.status === 'fulfilled')  setRecentDcMotor(toArr(dcRes.value));
@@ -59,6 +61,7 @@ const HbmDashboard = ({ allowedSheets }) => {
       if (olRes.status === 'fulfilled')  setRecentOilLevel(toArr(olRes.value));
       if (afRes.status === 'fulfilled')  setRecentDcMotorAirflow(toArr(afRes.value));
       if (rgRes.status === 'fulfilled')  setRecentRoughingGbTemp(toArr(rgRes.value));
+      if (bdRes.status === 'fulfilled')  setRecentBreakdown(toArr(bdRes.value));
     } catch (error) {
       toast.error('Failed to load dashboard data');
     } finally {
@@ -117,7 +120,9 @@ const HbmDashboard = ({ allowedSheets }) => {
               { key: 'oil-level',        to: '/hbm/oil-level/new',        label: 'Daily Oil Level',             sub: 'Tank levels & readings',    color: 'yellow',  icon: '🛢' },
               { key: 'dc-motor-airflow',   to: '/hbm/dc-motor-airflow/new',   label: 'DC Motor Airflow Report',     sub: 'Temp & vibration readings',   color: 'violet', icon: '🌡' },
               { key: 'roughing-gb-temp',   to: '/hbm/roughing-gb-temp/new',   label: 'Roughing GB Temp',            sub: 'Bearing temp analysis',       color: 'pink',   icon: '🌡' },
-            ].filter(action => canAccess(action.key)).map((action, i) => {
+              { key: 'breakdown',          to: '/hbm/breakdown/new',          label: 'HBM Breakdown Report',        sub: '24-hour breakdown sheet',     color: 'red',    icon: '🔴' },
+              { key: null, adminOnly: true, to: '/hbm/sheet-viewer',           label: 'Sheet Viewer',                sub: 'View any sheet as table',     color: 'emerald', icon: '📊' },
+            ].filter(action => (!action.adminOnly && (action.key === null || canAccess(action.key))) || (action.adminOnly && !allowedSheets)).map((action, i) => {
               const borderMap = {
                 indigo: 'hover:border-indigo-300 hover:bg-indigo-50',
                 teal: 'hover:border-teal-300 hover:bg-teal-50',
@@ -133,6 +138,7 @@ const HbmDashboard = ({ allowedSheets }) => {
                 yellow: 'hover:border-yellow-300 hover:bg-yellow-50',
                 violet: 'hover:border-violet-300 hover:bg-violet-50',
                 pink:   'hover:border-pink-300 hover:bg-pink-50',
+                red:    'hover:border-red-300 hover:bg-red-50',
               };
               return (
                 <Link key={i} to={action.to}
@@ -560,6 +566,34 @@ const HbmDashboard = ({ allowedSheets }) => {
                       <p className="font-semibold text-gray-900 text-sm">Roughing GB Temp Report</p>
                       <p className="text-xs text-gray-500 mt-0.5">
                         {formatDate(log.log_date)}
+                        {log.filled_by_name && ` · ${log.filled_by_name}`}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+          )}
+
+          {canAccess('breakdown') && (
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="font-bold text-gray-900">HBM Breakdown Reports</h2>
+              <Link to="/hbm/breakdown/new" className="text-xs text-red-600 font-medium hover:underline">+ New</Link>
+            </div>
+            {recentBreakdown.length === 0 ? (
+              <div className="p-8 text-center text-gray-400 text-sm">No breakdown reports yet</div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {recentBreakdown.map(log => (
+                  <Link key={log.id} to={`/hbm/breakdown/${log.id}`}
+                    className="flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-gray-900 text-sm">Breakdown Report</p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {formatDate(log.log_date)}
+                        {log.size && ` · ${log.size}`}
                         {log.filled_by_name && ` · ${log.filled_by_name}`}
                       </p>
                     </div>

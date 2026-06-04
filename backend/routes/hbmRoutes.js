@@ -103,9 +103,20 @@ router.get('/roughing-gb-temp', HbmController.getRoughingGbTempLogs);
 router.get('/roughing-gb-temp/:id', HbmController.getRoughingGbTempLogById);
 router.post('/roughing-gb-temp', HbmController.createRoughingGbTempLog);
 
+// HBM Breakdown Report
+router.get('/breakdown', HbmController.getBreakdownLogs);
+router.get('/breakdown/:id', HbmController.getBreakdownLogById);
+router.post('/breakdown', HbmController.createBreakdownLog);
+
 // PDF download  –  GET /api/hbm/pdf/:type/:id
 // type: dc-motor | cooling-bed | mill-mech | rolling-stand | pumphouse | bar-bundle
 router.get('/pdf/:type/:id', HbmController.downloadHbmPDF);
+
+// Sheet Viewer — flat rows for any sheet type
+router.get('/sheet-view/:type', HbmController.getSheetView);
+
+// Send today's notifications for all filled sheets
+router.post('/send-daily-notifications', HbmController.sendDailyNotifications);
 
 // Delete a log entry (admin only)
 router.delete('/:type/:id', HbmController.deleteHbmLog);

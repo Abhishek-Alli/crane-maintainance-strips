@@ -62,6 +62,10 @@ import DcMotorAirflowView from './components/hbm/DcMotorAirflowView';
 import RoughingGbTempForm from './components/hbm/RoughingGbTempForm';
 import RoughingGbTempHistory from './components/hbm/RoughingGbTempHistory';
 import RoughingGbTempView from './components/hbm/RoughingGbTempView';
+import BreakdownReportForm from './components/hbm/BreakdownReportForm';
+import BreakdownReportHistory from './components/hbm/BreakdownReportHistory';
+import BreakdownReportView from './components/hbm/BreakdownReportView';
+import SheetViewer from './components/hbm/SheetViewer';
 // import FabricationReport from "./components/fabrication/FabricationReport";
 // import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import FabricationReport from "./components/fabrication/FabricationReport";
@@ -196,6 +200,18 @@ function App() {
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                  </Link>
+                )}
+
+                {isOnHBMRoute && isAdminUser && (
+                  <Link
+                    to="/hbm/sheet-viewer"
+                    title="Sheet Viewer"
+                    className={`p-2 rounded-lg ${navHover} ${location.pathname === '/hbm/sheet-viewer' ? navActive : ''}`}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 6h18M3 14h18M3 18h18" />
                     </svg>
                   </Link>
                 )}
@@ -670,6 +686,11 @@ function App() {
           <Route path="/hbm/roughing-gb-temp/new" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('roughing-gb-temp') ? <RoughingGbTempForm /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
           <Route path="/hbm/roughing-gb-temp/history" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('roughing-gb-temp') ? <RoughingGbTempHistory /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
           <Route path="/hbm/roughing-gb-temp/:id" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('roughing-gb-temp') ? <RoughingGbTempView /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+
+          <Route path="/hbm/breakdown/new" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('breakdown') ? <BreakdownReportForm /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hbm/breakdown/history" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('breakdown') ? <BreakdownReportHistory /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hbm/breakdown/:id" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('breakdown') ? <BreakdownReportView /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hbm/sheet-viewer" element={user ? isAdminUser ? <SheetViewer /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
 
           <Route
             path="/fabrication"

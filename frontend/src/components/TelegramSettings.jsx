@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-toastify';
-import { telegramAPI } from '../services/api';
+import { telegramAPI, hbmAPI } from '../services/api';
 
 const ALL_CHECKSHEET_TYPES = [
   { key: 'dc-motor',       label: 'DC Motor' },
@@ -140,7 +140,10 @@ function TelegramSettings() {
   const [loading, setLoading]       = useState(false);
   const [adding, setAdding]         = useState(false);
   const [testingId, setTestingId]   = useState(null);
-  const [editingId, setEditingId]   = useState(null); // recipient id whose sheet editor is open
+  const [editingId, setEditingId]   = useState(null);
+  const [sending, setSending]       = useState(false);
+  const [sendResult, setSendResult] = useState(null);
+  const [notifDate, setNotifDate]   = useState(new Date().toLocaleDateString('en-CA'));
 
   const fetchRecipients = useCallback(async () => {
     setLoading(true);
@@ -194,6 +197,22 @@ function TelegramSettings() {
     }
   };
 
+  const handleSendDailyNotifications = async () => {
+    setSending(true);
+    setSendResult(null);
+    try {
+      const res = await hbmAPI.sendDailyNotifications(notifDate);
+      setSendResult(res.data.results);
+      const { sent, skipped, failed } = res.data.results;
+      if (failed.length === 0) toast.success(`Sent ${sent.length} notifications, ${skipped.length} not filled today`);
+      else toast.warn(`Sent ${sent.length}, skipped ${skipped.length}, failed ${failed.length}`);
+    } catch {
+      toast.error('Failed to send notifications');
+    } finally {
+      setSending(false);
+    }
+  };
+
   const handleTest = async (targetChatId) => {
     setTestingId(targetChatId);
     try {
@@ -212,6 +231,87 @@ function TelegramSettings() {
       <p className="text-sm text-gray-500 mb-5">
         Manage recipients and control which checksheet notifications each person receives.
       </p>
+
+      {/* ── Send Notifications by Date ── */}
+      <div className="bg-white rounded-xl shadow-sm border border-blue-200 p-4 mb-6">
+        <h2 className="text-sm font-semibold text-gray-600 mb-1 uppercase tracking-wide">Send Notifications by Date</h2>
+        <p className="text-xs text-gray-500 mb-3">
+          Pick a date and send Telegram notifications for all HBM sheets filled on that day. Only the latest submission per sheet is sent.
+        </p>
+        <div className="flex gap-2 mb-3">
+          <input
+            type="date"
+            value={notifDate}
+            max={new Date().toLocaleDateString('en-CA')}
+            onChange={e => { setNotifDate(e.target.value); setSendResult(null); }}
+            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          />
+          <button
+            onClick={() => { setNotifDate(new Date().toLocaleDateString('en-CA')); setSendResult(null); }}
+            className="px-3 py-2 text-xs border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 font-medium"
+          >Today</button>
+        </div>
+        <button
+          onClick={handleSendDailyNotifications}
+          disabled={sending || !notifDate}
+          className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
+        >
+          {sending ? (
+            <>
+              <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+              </svg>
+              Sending…
+            </>
+          ) : (
+            <>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              </svg>
+              Send Notifications for {new Date(notifDate + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+            </>
+          )}
+        </button>
+
+        {sendResult && (
+          <div className="mt-3 space-y-2 text-xs">
+            <p className="font-semibold text-gray-600">
+              Results for {new Date(notifDate + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}
+            </p>
+            {sendResult.sent.length > 0 && (
+              <div>
+                <p className="font-semibold text-green-700 mb-1">✅ Sent ({sendResult.sent.length})</p>
+                <div className="flex flex-wrap gap-1">
+                  {sendResult.sent.map(s => (
+                    <span key={s} className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full">{s}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {sendResult.skipped.length > 0 && (
+              <div>
+                <p className="font-semibold text-gray-500 mb-1">⏭ Not filled today ({sendResult.skipped.length})</p>
+                <div className="flex flex-wrap gap-1">
+                  {sendResult.skipped.map(s => (
+                    <span key={s} className="bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{s}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {sendResult.failed.length > 0 && (
+              <div>
+                <p className="font-semibold text-red-600 mb-1">❌ Failed ({sendResult.failed.length})</p>
+                <div className="flex flex-wrap gap-1">
+                  {sendResult.failed.map(s => (
+                    <span key={s} className="bg-red-100 text-red-600 px-2 py-0.5 rounded-full">{s}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* ── Add Recipient Form ── */}
       <form onSubmit={handleAdd} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">

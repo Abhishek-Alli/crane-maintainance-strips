@@ -295,6 +295,11 @@ export const hbmAPI = {
   getRoughingGbTempLogById: (id) => api.get(`/hbm/roughing-gb-temp/${id}`),
   createRoughingGbTempLog: (data) => api.post('/hbm/roughing-gb-temp', data),
 
+  // HBM Breakdown Report
+  getBreakdownLogs: (params) => api.get('/hbm/breakdown', { params }),
+  getBreakdownLogById: (id) => api.get(`/hbm/breakdown/${id}`),
+  createBreakdownLog: (data) => api.post('/hbm/breakdown', data),
+
   // PDF downloads
   downloadPDF: (type, id) =>
     api.get(`/hbm/pdf/${type}/${id}`, { responseType: 'blob' }),
@@ -304,6 +309,12 @@ export const hbmAPI = {
 
   // Resend Telegram notification
   resendTelegram: (type, id) => api.post(`/hbm/${type}/${id}/resend-telegram`),
+
+  // Send notifications for all filled sheets on a given date
+  sendDailyNotifications: (date) => api.post('/hbm/send-daily-notifications', { date }),
+
+  // Sheet Viewer — flat rows for any sheet type
+  getSheetView: (type, params) => api.get(`/hbm/sheet-view/${type}`, { params }),
 };
 
 /* =============================
