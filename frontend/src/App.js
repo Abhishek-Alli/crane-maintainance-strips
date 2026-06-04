@@ -204,17 +204,6 @@ function App() {
                   </Link>
                 )}
 
-                {isOnHBMRoute && isAdminUser && (
-                  <Link
-                    to="/hbm/sheet-viewer"
-                    title="Sheet Viewer"
-                    className={`p-2 rounded-lg ${navHover} ${location.pathname === '/hbm/sheet-viewer' ? navActive : ''}`}
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 6h18M3 14h18M3 18h18" />
-                    </svg>
-                  </Link>
-                )}
 
                 {/* Maintenance Calendar icon — Crane route only */}
                 {!isOnHBMRoute && !isOnAdminRoute && (

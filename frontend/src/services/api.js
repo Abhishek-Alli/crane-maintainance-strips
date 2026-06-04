@@ -313,6 +313,9 @@ export const hbmAPI = {
   // Send notifications for all filled sheets on a given date
   sendDailyNotifications: (date) => api.post('/hbm/send-daily-notifications', { date }),
 
+  // Send daily status summary (filled / prev date / not filled)
+  sendStatusSummary: (date) => api.post('/hbm/send-status-summary', { date }),
+
   // Sheet Viewer — flat rows for any sheet type
   getSheetView: (type, params) => api.get(`/hbm/sheet-view/${type}`, { params }),
 };

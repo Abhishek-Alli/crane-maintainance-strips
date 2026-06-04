@@ -141,9 +141,10 @@ function TelegramSettings() {
   const [adding, setAdding]         = useState(false);
   const [testingId, setTestingId]   = useState(null);
   const [editingId, setEditingId]   = useState(null);
-  const [sending, setSending]       = useState(false);
-  const [sendResult, setSendResult] = useState(null);
-  const [notifDate, setNotifDate]   = useState(new Date().toLocaleDateString('en-CA'));
+  const [sending, setSending]           = useState(false);
+  const [sendResult, setSendResult]     = useState(null);
+  const [notifDate, setNotifDate]       = useState(new Date().toLocaleDateString('en-CA'));
+  const [sendingSummary, setSendingSummary] = useState(false);
 
   const fetchRecipients = useCallback(async () => {
     setLoading(true);
@@ -202,14 +203,26 @@ function TelegramSettings() {
     setSendResult(null);
     try {
       const res = await hbmAPI.sendDailyNotifications(notifDate);
-      setSendResult(res.data.results);
-      const { sent, skipped, failed } = res.data.results;
+      setSendResult(res.results);
+      const { sent, skipped, failed } = res.results;
       if (failed.length === 0) toast.success(`Sent ${sent.length} notifications, ${skipped.length} not filled today`);
       else toast.warn(`Sent ${sent.length}, skipped ${skipped.length}, failed ${failed.length}`);
     } catch {
       toast.error('Failed to send notifications');
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleSendStatusSummary = async () => {
+    setSendingSummary(true);
+    try {
+      await hbmAPI.sendStatusSummary(notifDate);
+      toast.success(`Daily status summary sent for ${new Date(notifDate + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`);
+    } catch {
+      toast.error('Failed to send status summary');
+    } finally {
+      setSendingSummary(false);
     }
   };
 
@@ -251,10 +264,11 @@ function TelegramSettings() {
             className="px-3 py-2 text-xs border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 font-medium"
           >Today</button>
         </div>
+        <div className="flex gap-2">
         <button
           onClick={handleSendDailyNotifications}
           disabled={sending || !notifDate}
-          className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
+          className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
         >
           {sending ? (
             <>
@@ -273,6 +287,30 @@ function TelegramSettings() {
             </>
           )}
         </button>
+        <button
+          onClick={handleSendStatusSummary}
+          disabled={sendingSummary || !notifDate}
+          title="Send sheet-wise filled/not-filled status summary"
+          className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
+        >
+          {sendingSummary ? (
+            <>
+              <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+              </svg>
+              Sending…
+            </>
+          ) : (
+            <>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+              Send Status Summary
+            </>
+          )}
+        </button>
+        </div>
 
         {sendResult && (
           <div className="mt-3 space-y-2 text-xs">

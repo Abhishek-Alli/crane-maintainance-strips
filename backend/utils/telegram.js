@@ -834,6 +834,107 @@ async function sendBreakdownNotification({ date, size, filledBy, submittedAt, sl
   return sendLongMessageToIds(chatIds, msg);
 }
 
+// ─── Daily Status Summary ─────────────────────────────────────────────────────
+
+const SHEET_TABLES = [
+  { key: 'dc-motor',         label: 'DC Motor',                          table: 'hbm_dc_motor_logs' },
+  { key: 'rolling-stand',    label: 'Rolling Stand',                     table: 'hbm_rolling_stand_logs' },
+  { key: 'mill-mech',        label: 'Mill Mechanical',                   table: 'hbm_mill_mech_logs' },
+  { key: 'cooling-bed',      label: 'Cooling Bed',                       table: 'hbm_cooling_bed_logs' },
+  { key: 'pumphouse',        label: 'Pumphouse',                         table: 'hbm_pumphouse_logs' },
+  { key: 'bar-bundle',       label: 'Bar Bundle Area',                   table: 'hbm_bar_bundle_logs' },
+  { key: 'before-rolling',   label: 'Before Rolling',                    table: 'hbm_before_rolling_logs' },
+  { key: 'pump-param',       label: 'Pump Parameter Report',             table: 'hbm_pump_param_logs' },
+  { key: 'water-param',      label: 'Water Parameters',                  table: 'hbm_water_param_logs' },
+  { key: 'ph-maint',         label: 'PH Maintenance',                    table: 'hbm_ph_maint_logs' },
+  { key: 'transformer',      label: 'HBM Transformer',                   table: 'hbm_transformer_logs' },
+  { key: 'oil-level',        label: 'Daily Oil Level',                   table: 'hbm_oil_level_logs' },
+  { key: 'dc-motor-airflow', label: 'DC Motor Airflow',                  table: 'hbm_dc_motor_airflow_logs' },
+  { key: 'roughing-gb-temp', label: 'Roughing Stand & GB Temp',          table: 'hbm_roughing_gb_temp_logs' },
+  { key: 'breakdown',        label: 'HBM Breakdown Report',              table: 'hbm_breakdown_logs' },
+];
+
+function fmtDateShort(d) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+}
+
+async function sendDailyStatusSummary(date) {
+  const chatIds = await getAllChatIds();
+  if (!chatIds.length) return;
+
+  // Collect status for every sheet
+  const rows = [];
+  for (const sheet of SHEET_TABLES) {
+    try {
+      const todayRes = await query(
+        `SELECT l.log_date, u.username as filled_by
+         FROM ${sheet.table} l JOIN users u ON l.filled_by = u.id
+         WHERE l.log_date = $1 ORDER BY l.created_at DESC LIMIT 1`,
+        [date]
+      );
+      if (todayRes.rows.length) {
+        rows.push({ label: sheet.label, status: 'today', dateStr: '', filledBy: todayRes.rows[0].filled_by });
+        continue;
+      }
+      const recentRes = await query(
+        `SELECT l.log_date, u.username as filled_by
+         FROM ${sheet.table} l JOIN users u ON l.filled_by = u.id
+         ORDER BY l.log_date DESC LIMIT 1`
+      );
+      if (recentRes.rows.length) {
+        rows.push({ label: sheet.label, status: 'prev', dateStr: fmtDateShort(recentRes.rows[0].log_date), filledBy: recentRes.rows[0].filled_by });
+      } else {
+        rows.push({ label: sheet.label, status: 'none', dateStr: '', filledBy: '—' });
+      }
+    } catch (e) {
+      rows.push({ label: sheet.label, status: 'none', dateStr: '', filledBy: '—' });
+    }
+  }
+
+  const total    = rows.length;
+  const todayCnt = rows.filter(r => r.status === 'today').length;
+  const prevCnt  = rows.filter(r => r.status === 'prev').length;
+  const noneCnt  = rows.filter(r => r.status === 'none').length;
+
+  // Column widths
+  const C1 = 2;   // #
+  const C2 = 22;  // Sheet Name
+  const C3 = 12;  // Status
+  const C4 = 12;  // Filled By
+
+  const rpad = (s, n) => String(s).substring(0, n).padEnd(n);
+  const lpad = (s, n) => String(s).substring(0, n).padStart(n);
+  const sep  = `${'─'.repeat(C1)}─${'─'.repeat(C2)}─${'─'.repeat(C3)}─${'─'.repeat(C4)}`;
+
+  let table = '';
+  table += `${rpad('#', C1)} ${rpad('Sheet', C2)} ${rpad('Status', C3)} ${rpad('Filled By', C4)}\n`;
+  table += sep + '\n';
+
+  rows.forEach((r, i) => {
+    const num   = lpad(i + 1, C1);
+    const label = rpad(r.label, C2);
+    const name  = rpad(r.filledBy || '—', C4);
+    let   sts;
+    if (r.status === 'today')     sts = rpad('✅ Filled',      C3);
+    else if (r.status === 'prev') sts = rpad(`⚠ ${r.dateStr}`, C3);
+    else                          sts = rpad('❌ Not Filled',   C3);
+    table += `${num} ${label} ${sts} ${name}\n`;
+  });
+
+  table += sep + '\n';
+  table += `${rpad('', C1)} ${rpad(`Total: ${total}  ✅${todayCnt}  ⚠${prevCnt}  ❌${noneCnt}`, C2 + C3 + C4 + 2)}`;
+
+  const displayDate = fmtDateShort(date);
+  const genTime = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' });
+
+  let msg  = `<b>📋 HBM Daily Sheet Status</b>\n`;
+  msg     += `📅 <b>${displayDate}</b>  ⏰ ${genTime}\n`;
+  msg     += `<pre>${table}</pre>`;
+
+  await sendToIds(chatIds, msg);
+}
+
 // ─── Exports ──────────────────────────────────────────────────────────────────
 
 module.exports = {
@@ -855,4 +956,5 @@ module.exports = {
   sendTransformerNotification,
   sendRoughingGbTempNotification,
   sendBreakdownNotification,
+  sendDailyStatusSummary,
 };

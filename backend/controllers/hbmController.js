@@ -3481,6 +3481,11 @@ class HbmController {
       }
     } catch (e) { console.error('Daily notif error [Breakdown]:', e.message); results.failed.push('HBM Breakdown'); }
 
+    // Send daily status summary after all individual notifications
+    try {
+      await tg.sendDailyStatusSummary(today);
+    } catch (e) { console.error('Daily status summary error:', e.message); }
+
     res.json({ success: true, results });
   }
 
@@ -3664,4 +3669,21 @@ function hbmDrawRow(doc, x, y, c1, c2, c3, c4, h, t1, t2, t3, t4, isHeader) {
 
   doc.fillColor('#000000');
 }
+  // ==========================================
+  // SEND DAILY STATUS SUMMARY
+  // POST /api/hbm/send-status-summary
+  // ==========================================
+  static async sendStatusSummary(req, res) {
+    const date = req.body.date || new Date().toISOString().split('T')[0];
+    const { sendDailyStatusSummary } = require('../utils/telegram');
+    try {
+      await sendDailyStatusSummary(date);
+      res.json({ success: true, message: `Daily status summary sent for ${date}` });
+    } catch (error) {
+      console.error('Status summary error:', error);
+      res.status(500).json({ success: false, message: 'Failed to send status summary' });
+    }
+  }
+}
+
 module.exports = HbmController;

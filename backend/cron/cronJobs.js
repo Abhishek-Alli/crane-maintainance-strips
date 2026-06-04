@@ -318,9 +318,11 @@ function startCronJobs() {
     dailyInspectionSummary();
   }, { timezone: 'Asia/Kolkata' });
 
-  cron.schedule('0 20 * * *', () => {
-    console.log('[CRON] Running 8 PM HBM checksheet daily summary...');
-    hbmChecksheetDailySummary();
+  cron.schedule('0 19 * * *', () => {
+    console.log('[CRON] Running 7 PM HBM daily status summary...');
+    const { sendDailyStatusSummary } = require('../utils/telegram');
+    const today = require('dayjs')().format('YYYY-MM-DD');
+    sendDailyStatusSummary(today).catch(e => console.error('[CRON 7PM] Status summary error:', e.message));
   }, { timezone: 'Asia/Kolkata' });
 
   // HBM 1-year data retention — runs daily at 2:30 AM IST
@@ -333,7 +335,7 @@ function startCronJobs() {
   console.log('  Cron Jobs:');
   console.log('    - Maintenance Due Alert      → 09:00 AM IST');
   console.log('    - Daily Inspection Summary   → 06:00 PM IST');
-  console.log('    - HBM Checksheet Summary     → 08:00 PM IST');
+  console.log('    - HBM Daily Status Summary   → 07:00 PM IST');
   console.log('    - HBM Data Cleanup (1yr)     → 02:30 AM IST');
 }
 

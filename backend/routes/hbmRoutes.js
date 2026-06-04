@@ -118,6 +118,9 @@ router.get('/sheet-view/:type', HbmController.getSheetView);
 // Send today's notifications for all filled sheets
 router.post('/send-daily-notifications', HbmController.sendDailyNotifications);
 
+// Send daily status summary (filled / prev date / not filled)
+router.post('/send-status-summary', HbmController.sendStatusSummary);
+
 // Delete a log entry (admin only)
 router.delete('/:type/:id', HbmController.deleteHbmLog);
 
