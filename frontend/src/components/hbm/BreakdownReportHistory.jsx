@@ -10,7 +10,7 @@ const BreakdownReportHistory = () => {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo]     = useState('');
 
-  useEffect(() => { fetchLogs(); }, []);
+  useEffect(() => { fetchLogs(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchLogs = async () => {
     setLoading(true);

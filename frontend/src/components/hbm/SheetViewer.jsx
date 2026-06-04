@@ -212,6 +212,7 @@ export default function SheetViewer() {
                 {grouped.map(({ date, rows: dateRows }) => {
                   const isOpen   = !collapsed[date];
                   const dateNok  = dateRows.filter(r => r.some(v => NOK_VALS.includes(v))).length;
+                  // eslint-disable-next-line no-unused-vars
                   const dateOk   = dateRows.length - dateNok;
 
                   return (
