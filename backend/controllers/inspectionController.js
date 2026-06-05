@@ -329,18 +329,6 @@ class InspectionController {
       const totalCount = rows.length;
       const statusIcon = insp.has_alerts ? '🚨' : '✅';
 
-      let msg =
-        `${statusIcon} <b>Crane Inspection Submitted</b>\n` +
-        `━━━━━━━━━━━━━━━━━━━━\n` +
-        `🏗️ Crane: <b>${insp.crane_number}</b>\n` +
-        `🏭 Department: ${insp.department}\n` +
-        `📍 Shed: ${insp.shed}\n` +
-        `📅 Date: ${dateStr}\n` +
-        `👤 Recorded By: ${insp.recorded_by || '—'}\n` +
-        `📊 Result: ${totalCount - notOkCount}/${totalCount} OK` +
-        (notOkCount > 0 ? ` · <b>${notOkCount} Issue${notOkCount > 1 ? 's' : ''}</b>` : '') +
-        `\n━━━━━━━━━━━━━━━━━━━━\n`;
-
       // Group items by section
       const sections = {};
       rows.forEach(r => {
@@ -348,17 +336,42 @@ class InspectionController {
         sections[r.section].push(r);
       });
 
+      // Calculate column widths for table
+      const pad = (str, len) => String(str).padEnd(len, ' ');
+      const maxItem = Math.min(
+        Math.max(10, ...rows.map(r => r.item.length)),
+        28
+      );
+
+      const divider = `${'─'.repeat(12)}┼${'─'.repeat(maxItem + 2)}┼────────`;
+      const header  = `${ pad('Section', 12) }│ ${ pad('Item', maxItem) }│ Status `;
+
+      let tableLines = [header, divider];
+
       Object.entries(sections).forEach(([sectionName, items]) => {
-        msg += `\n<b>${sectionName}</b>\n`;
-        items.forEach(r => {
-          const icon = r.selected_value === 'NOT_OK' ? '❌' : '✅';
-          msg += `  ${icon} ${r.item}\n`;
+        items.forEach((r, idx) => {
+          const secCol  = idx === 0 ? pad(sectionName.slice(0, 12), 12) : pad('', 12);
+          const itemCol = pad(r.item.slice(0, maxItem), maxItem);
+          const result  = r.selected_value === 'NOT_OK' ? 'FAIL' : 'OK  ';
+          tableLines.push(`${secCol}│ ${itemCol}│ ${result}`);
           if (r.selected_value === 'NOT_OK') {
-            if (r.remarks)      msg += `      📝 Remark: ${r.remarks}\n`;
-            if (r.action_taken) msg += `      🔧 Action: ${r.action_taken}\n`;
+            if (r.remarks)      tableLines.push(`${ pad('', 12) }│  📝 ${r.remarks.slice(0, maxItem + 20)}`);
+            if (r.action_taken) tableLines.push(`${ pad('', 12) }│  🔧 ${r.action_taken.slice(0, maxItem + 20)}`);
           }
         });
+        tableLines.push(divider);
       });
+
+      const summary = notOkCount > 0
+        ? `${totalCount - notOkCount}/${totalCount} OK  |  ${notOkCount} ISSUE${notOkCount > 1 ? 'S' : ''}`
+        : `${totalCount}/${totalCount} OK  |  ALL CLEAR`;
+
+      let msg =
+        `${statusIcon} <b>Crane Inspection Submitted</b>\n` +
+        `🏗️ <b>${insp.crane_number}</b>  |  ${insp.department}  |  ${insp.shed}\n` +
+        `📅 ${dateStr}  |  👤 ${insp.recorded_by || '—'}\n` +
+        `📊 ${summary}\n\n` +
+        `<pre>${tableLines.join('\n')}</pre>`;
 
       await sendLongMessage(msg);
 

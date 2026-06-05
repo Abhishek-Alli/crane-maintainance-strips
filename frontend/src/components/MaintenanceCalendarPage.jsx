@@ -125,6 +125,21 @@ const MaintenanceCalendarPage = () => {
     console.log('Crane clicked:', crane);
   }, []);
 
+  // Manually mark a crane's status
+  const handleMarkStatus = useCallback(async (crane, status, notes) => {
+    try {
+      const year = selectedDate.getFullYear();
+      const month = selectedDate.getMonth() + 1;
+      await maintenanceScheduleAPI.markStatus(crane.crane_id, year, month, status, notes);
+      toast.success(`${crane.crane_number} marked as ${status}`);
+      loadDepartmentCranes(selectedDepartment);
+      loadCalendarData();
+    } catch (error) {
+      console.error('Error marking status:', error);
+      toast.error('Failed to update status');
+    }
+  }, [selectedDate, selectedDepartment, loadDepartmentCranes, loadCalendarData]);
+
   // Refresh data
   const handleRefresh = useCallback(() => {
     loadCalendarData();
@@ -238,6 +253,7 @@ const MaintenanceCalendarPage = () => {
           department={selectedDepartment}
           window={calendarData?.departmentWindows?.[selectedDepartment]}
           onCraneClick={handleCraneClick}
+          onMarkStatus={handleMarkStatus}
         />
       )}
 

@@ -863,7 +863,12 @@ async function sendDailyStatusSummary(date) {
   const chatIds = await getAllChatIds();
   if (!chatIds.length) return;
 
-  // Collect status for every sheet
+  const rpad = (s, n) => String(s).substring(0, n).padEnd(n);
+  const lpad = (s, n) => String(s).substring(0, n).padStart(n);
+  const displayDate = fmtDateShort(date);
+  const genTime = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' });
+
+  // ── Part 1: HBM Checksheets ───────────────────────────────────────────────
   const rows = [];
   for (const sheet of SHEET_TABLES) {
     try {
@@ -897,42 +902,99 @@ async function sendDailyStatusSummary(date) {
   const prevCnt  = rows.filter(r => r.status === 'prev').length;
   const noneCnt  = rows.filter(r => r.status === 'none').length;
 
-  // Column widths
-  const C1 = 2;   // #
-  const C2 = 22;  // Sheet Name
-  const C3 = 12;  // Status
-  const C4 = 12;  // Filled By
+  const C1 = 2; const C2 = 22; const C3 = 12; const C4 = 12;
+  const sep = `${'─'.repeat(C1)}─${'─'.repeat(C2)}─${'─'.repeat(C3)}─${'─'.repeat(C4)}`;
 
-  const rpad = (s, n) => String(s).substring(0, n).padEnd(n);
-  const lpad = (s, n) => String(s).substring(0, n).padStart(n);
-  const sep  = `${'─'.repeat(C1)}─${'─'.repeat(C2)}─${'─'.repeat(C3)}─${'─'.repeat(C4)}`;
-
-  let table = '';
-  table += `${rpad('#', C1)} ${rpad('Sheet', C2)} ${rpad('Status', C3)} ${rpad('Filled By', C4)}\n`;
-  table += sep + '\n';
-
+  let hbmTable = '';
+  hbmTable += `${rpad('#', C1)} ${rpad('Sheet', C2)} ${rpad('Status', C3)} ${rpad('Filled By', C4)}\n`;
+  hbmTable += sep + '\n';
   rows.forEach((r, i) => {
     const num   = lpad(i + 1, C1);
     const label = rpad(r.label, C2);
     const name  = rpad(r.filledBy || '—', C4);
-    let   sts;
+    let sts;
     if (r.status === 'today')     sts = rpad('✅ Filled',      C3);
     else if (r.status === 'prev') sts = rpad(`⚠ ${r.dateStr}`, C3);
     else                          sts = rpad('❌ Not Filled',   C3);
-    table += `${num} ${label} ${sts} ${name}\n`;
+    hbmTable += `${num} ${label} ${sts} ${name}\n`;
   });
-
-  table += sep + '\n';
-  table += `${rpad('', C1)} ${rpad(`Total: ${total}  ✅${todayCnt}  ⚠${prevCnt}  ❌${noneCnt}`, C2 + C3 + C4 + 2)}`;
-
-  const displayDate = fmtDateShort(date);
-  const genTime = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' });
+  hbmTable += sep + '\n';
+  hbmTable += `${rpad('', C1)} ${rpad(`Total: ${total}  ✅${todayCnt}  ⚠${prevCnt}  ❌${noneCnt}`, C2 + C3 + C4 + 2)}`;
 
   let msg  = `<b>📋 HBM Daily Sheet Status</b>\n`;
   msg     += `📅 <b>${displayDate}</b>  ⏰ ${genTime}\n`;
-  msg     += `<pre>${table}</pre>`;
+  msg     += `<pre>${hbmTable}</pre>`;
 
   await sendToIds(chatIds, msg);
+
+  // ── Part 2: Crane Maintenance Inspections ─────────────────────────────────
+  try {
+    // Get all cranes with sub-department info filled today or not
+    const craneRes = await query(
+      `SELECT
+         c.id as crane_id,
+         c.crane_number,
+         sh.name as shed_name,
+         d.name as dept_name,
+         sd.name as sub_dept_name,
+         i.inspection_date,
+         u.username as filled_by,
+         i.crane_status
+       FROM cranes c
+       JOIN sheds sh ON c.shed_id = sh.id
+       JOIN departments d ON sh.department_id = d.id
+       LEFT JOIN sub_departments sd ON c.department_id = sd.id
+       LEFT JOIN inspections i ON i.crane_id = c.id AND i.inspection_date = $1
+       LEFT JOIN users u ON i.recorded_by = u.id
+       WHERE c.is_active = true
+       ORDER BY d.name, sd.name NULLS LAST, sh.name, c.crane_number`,
+      [date]
+    );
+
+    if (craneRes.rows.length === 0) {
+      await sendToIds(chatIds, `<b>🏗 Crane Maintenance Inspections</b>\n📅 <b>${displayDate}</b>\n\nNo active cranes found.`);
+      return;
+    }
+
+    // Group by sub_department (Electrical / Mechanical / None)
+    const groups = {};
+    for (const row of craneRes.rows) {
+      const grp = row.sub_dept_name || row.dept_name || 'General';
+      if (!groups[grp]) groups[grp] = [];
+      groups[grp].push(row);
+    }
+
+    const CA = 14; const CB = 10; const CC = 8; const CD = 10;
+    const sepC = `${'─'.repeat(CA)}─${'─'.repeat(CB)}─${'─'.repeat(CC)}─${'─'.repeat(CD)}`;
+
+    for (const [grpName, cranes] of Object.entries(groups)) {
+      const filled   = cranes.filter(c => c.inspection_date).length;
+      const notFilled = cranes.length - filled;
+
+      let craneTable = '';
+      craneTable += `${rpad('Crane', CA)} ${rpad('Shed', CB)} ${rpad('Status', CC)} ${rpad('Filled By', CD)}\n`;
+      craneTable += sepC + '\n';
+
+      for (const c of cranes) {
+        const sts      = c.inspection_date ? rpad('✅ Done', CC) : rpad('❌ Pending', CC);
+        const filledBy = rpad(c.filled_by || '—', CD);
+        const crane    = rpad(c.crane_number, CA);
+        const shed     = rpad(c.shed_name, CB);
+        craneTable += `${crane} ${shed} ${sts} ${filledBy}\n`;
+      }
+      craneTable += sepC + '\n';
+      craneTable += rpad(`Total: ${cranes.length}  ✅${filled}  ❌${notFilled}`, CA + CB + CC + CD + 3);
+
+      const grpMsg =
+        `<b>🏗 Crane Inspections — ${grpName}</b>\n` +
+        `📅 <b>${displayDate}</b>  ⏰ ${genTime}\n` +
+        `<pre>${craneTable}</pre>`;
+
+      await sendToIds(chatIds, grpMsg);
+    }
+  } catch (e) {
+    console.error('Crane inspection summary error:', e.message);
+  }
 }
 
 // ─── Exports ──────────────────────────────────────────────────────────────────
