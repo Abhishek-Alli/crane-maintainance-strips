@@ -187,7 +187,8 @@ const SHEET_CONFIG = {
     label: 'Section 6 — Backwash Pump',
     color: 'bg-orange-600',
     blocks: {
-      'BACKWASH PUMP': ICW_DCW_ITEMS,
+      'BACKWASH PUMP-1': ICW_DCW_ITEMS,
+      'BACKWASH PUMP-2': ICW_DCW_ITEMS,
     },
   },
   'SECTION-7': {
@@ -241,6 +242,7 @@ const SHEET_CONFIG = {
       'COMPRESSOR-1': COMPRESSOR_ITEMS,
       'COMPRESSOR-2': COMPRESSOR_ITEMS,
       'COMPRESSOR-3': COMPRESSOR_ITEMS,
+      'COMPRESSOR-4': COMPRESSOR_ITEMS,
     },
   },
   'SECTION-12': {
