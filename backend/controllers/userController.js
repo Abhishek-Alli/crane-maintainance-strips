@@ -31,7 +31,7 @@ class UserController {
         });
       }
 
-      const validUserTypes = ['ADMIN', 'CRANE_MAINTENANCE', 'HBM_CHECKSHEETS'];
+      const validUserTypes = ['ADMIN', 'CRANE_MAINTENANCE', 'HBM_CHECKSHEETS', 'HSM_CHECKSHEETS'];
       const effectiveUserType = user_type && validUserTypes.includes(user_type)
         ? user_type
         : (role === 'ADMIN' ? 'ADMIN' : 'CRANE_MAINTENANCE');

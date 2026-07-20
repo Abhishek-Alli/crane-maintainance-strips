@@ -565,6 +565,7 @@ const CreateUser = ({ user }) => {
                   {[
                     ['CRANE_MAINTENANCE', 'Crane Maintenance', 'bg-orange-50 border-orange-400 text-orange-800', 'border-gray-200 text-gray-600'],
                     ['HBM_CHECKSHEETS',   'HBM Checksheets',   'bg-emerald-50 border-emerald-400 text-emerald-800', 'border-gray-200 text-gray-600'],
+                    ['HSM_CHECKSHEETS',   'HSM Checksheets',   'bg-indigo-50 border-indigo-400 text-indigo-800', 'border-gray-200 text-gray-600'],
                     ['ADMIN',             'Admin',              'bg-purple-50 border-purple-400 text-purple-800',  'border-gray-200 text-gray-600'],
                   ].map(([val, label, activeClass, inactiveClass]) => (
                     <label key={val}
@@ -626,6 +627,7 @@ const CreateUser = ({ user }) => {
                         <div className="flex flex-wrap gap-1.5 mt-1">
                           <span className={`text-xs px-2 py-0.5 rounded font-medium ${
                             u.user_type === 'HBM_CHECKSHEETS'   ? 'bg-emerald-100 text-emerald-800'
+                            : u.user_type === 'HSM_CHECKSHEETS' ? 'bg-indigo-100 text-indigo-800'
                             : u.user_type === 'ADMIN'           ? 'bg-purple-100 text-purple-800'
                             :                                     'bg-orange-100 text-orange-800'
                           }`}>{(u.user_type || 'CRANE_MAINTENANCE').replace(/_/g, ' ')}</span>

@@ -8,6 +8,7 @@ const API_URL = process.env.REACT_APP_API_URL || (window.location.hostname === '
 const MODULE_OPTIONS = [
   { value: 'CRANE_MAINTENANCE', label: 'Crane Maintenance', color: 'blue' },
   { value: 'HBM_CHECKSHEETS',   label: 'HBM Checksheets',  color: 'emerald' },
+  { value: 'HSM_CHECKSHEETS',   label: 'HSM Checksheets',  color: 'indigo' },
   { value: 'ADMIN',             label: 'Admin',             color: 'slate' },
 ];
 
@@ -43,6 +44,7 @@ const Login = ({ onLoginSuccess }) => {
         toast.success(`Welcome, ${formData.username}!`);
         const loginType = userData.loginType || userData.user_type;
         if (loginType === 'HBM_CHECKSHEETS') navigate('/hbm/dashboard');
+        else if (loginType === 'HSM_CHECKSHEETS') navigate('/hsm/dashboard');
         else if (loginType === 'ADMIN') navigate('/create-user');
         else navigate('/');
       }
@@ -56,6 +58,8 @@ const Login = ({ onLoginSuccess }) => {
   const selected = MODULE_OPTIONS.find(m => m.value === formData.userType);
   const btnColor = selected?.color === 'emerald'
     ? 'bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500'
+    : selected?.color === 'indigo'
+    ? 'bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500'
     : selected?.color === 'slate'
     ? 'bg-slate-700 hover:bg-slate-800 focus:ring-slate-500'
     : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500';

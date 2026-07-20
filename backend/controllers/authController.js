@@ -32,7 +32,7 @@ class AuthController {
         });
       }
 
-      const validUserTypes = ['ADMIN', 'CRANE_MAINTENANCE', 'HBM_CHECKSHEETS'];
+      const validUserTypes = ['ADMIN', 'CRANE_MAINTENANCE', 'HBM_CHECKSHEETS', 'HSM_CHECKSHEETS'];
       if (!validUserTypes.includes(userType)) {
         return res.status(400).json({
           success: false,
