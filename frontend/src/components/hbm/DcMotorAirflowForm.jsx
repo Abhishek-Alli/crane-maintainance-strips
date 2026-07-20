@@ -111,6 +111,7 @@ const DcMotorAirflowForm = () => {
     shift_eng:  '',
     reading_by: '',
   });
+  const [millStatus, setMillStatus] = useState('ON');
   const [values, setValues]     = useState(() => {
     const init = {};
     for (const stand of STANDS) {
@@ -164,7 +165,7 @@ const DcMotorAirflowForm = () => {
     return { filled, notOk };
   };
 
-  const buildEntries = () => STANDS.map(stand => {
+  const buildEntries = () => millStatus === 'OFF' ? [] : STANDS.map(stand => {
       const v = values[stand] || {};
       const isOff = standStatus2[stand] === 'OFF';
       const kpa = !isOff && v.running_kpa !== '' && v.running_kpa != null ? v.running_kpa : null;
@@ -196,8 +197,12 @@ const DcMotorAirflowForm = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!header.log_date) { toast.error('Date is required'); return; }
-    const hasAnyOn = STANDS.some(s => standStatus2[s] === 'ON');
-    if (!hasAnyOn) { toast.error('At least one stand must be ON'); return; }
+    if (millStatus === 'OFF') {
+      if (!remark.trim()) { toast.error('Remark is required when mill is OFF'); return; }
+    } else {
+      const hasAnyOn = STANDS.some(s => standStatus2[s] === 'ON');
+      if (!hasAnyOn) { toast.error('At least one stand must be ON'); return; }
+    }
     setShowPreview(true);
   };
 
@@ -205,11 +210,12 @@ const DcMotorAirflowForm = () => {
     setSubmitting(true);
     try {
       await hbmAPI.createDcMotorAirflowLog({
-        log_date:   header.log_date,
-        shift_eng:  header.shift_eng  || null,
-        reading_by: header.reading_by || null,
-        remark:     remark || null,
-        entries:    buildEntries(),
+        log_date:    header.log_date,
+        shift_eng:   header.shift_eng  || null,
+        reading_by:  header.reading_by || null,
+        remark:      remark || null,
+        mill_status: millStatus,
+        entries:     buildEntries(),
       });
       toast.success('DC Motor Airflow sheet submitted!');
       navigate('/hbm/dc-motor-airflow/history');
@@ -240,6 +246,24 @@ const DcMotorAirflowForm = () => {
         </div>
 
         <form onSubmit={handleSubmit}>
+
+          {/* Mill Status */}
+          <div className={`rounded-xl border p-5 mb-5 ${millStatus === 'OFF' ? 'bg-gray-100 border-gray-300' : 'bg-white border-gray-200'}`}>
+            <h2 className="text-base font-bold text-gray-800 mb-3">Mill Status</h2>
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setMillStatus('ON')}
+                className={`px-6 py-2 rounded-lg text-sm font-bold border-2 transition-all ${
+                  millStatus === 'ON' ? 'bg-green-500 border-green-500 text-white' : 'bg-white border-gray-300 text-gray-600 hover:border-green-400'
+                }`}>Mill ON</button>
+              <button type="button" onClick={() => setMillStatus('OFF')}
+                className={`px-6 py-2 rounded-lg text-sm font-bold border-2 transition-all ${
+                  millStatus === 'OFF' ? 'bg-gray-600 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-600 hover:border-gray-400'
+                }`}>Mill OFF</button>
+            </div>
+            {millStatus === 'OFF' && (
+              <p className="text-xs text-gray-500 mt-3">Mill is off for the day — no stand readings needed. Just add the reason below and submit.</p>
+            )}
+          </div>
 
           {/* Sheet Header */}
           <div className="bg-white rounded-xl border border-gray-200 p-5 mb-5">
@@ -272,6 +296,8 @@ const DcMotorAirflowForm = () => {
           </div>
 
           {/* Stand Entries */}
+          {millStatus === 'ON' && (
+          <>
           <div className="flex items-center gap-3 mb-4">
             <div className="h-px flex-1 bg-gray-200" />
             <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Stand Readings</span>
@@ -424,13 +450,17 @@ const DcMotorAirflowForm = () => {
               );
             })}
           </div>
+          </>
+          )}
 
           {/* Remark */}
           <div className="bg-white rounded-xl border border-gray-200 p-5 mb-5">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Remark</label>
-            <textarea rows={3} value={remark}
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Remark{millStatus === 'OFF' && <span className="text-red-500"> * (reason mill is off)</span>}
+            </label>
+            <textarea rows={3} value={remark} required={millStatus === 'OFF'}
               onChange={e => setRemark(e.target.value)}
-              placeholder="Any additional remarks..."
+              placeholder={millStatus === 'OFF' ? 'Why is the mill off today?' : 'Any additional remarks...'}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none" />
           </div>
 
@@ -453,29 +483,38 @@ const DcMotorAirflowForm = () => {
       onConfirm={handleConfirmSubmit}
       submitting={submitting}
     >
-      <PreviewGrid rows={[['Date', header.log_date], ['Shift Eng', header.shift_eng], ['Reading By', header.reading_by]]} />
-      <PreviewSection title="Stand Summary" color="bg-blue-700">
-        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-          {STANDS.map(stand => {
-            const isOff = standStatus2[stand] === 'OFF';
-            const { filled, notOk } = standStatus(stand);
-            return (
-              <div key={stand} className={`rounded-lg p-2 text-center border text-xs ${
-                isOff ? 'border-gray-200 bg-gray-50' :
-                notOk > 0 ? 'border-red-200 bg-red-50' :
-                filled > 0 ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50'
-              }`}>
-                <p className={`font-bold ${isOff ? 'text-gray-400' : 'text-gray-700'}`}>{stand}</p>
-                {isOff
-                  ? <p className="text-gray-400">OFF</p>
-                  : filled > 0 && <p className="text-gray-500">{filled} fields{notOk > 0 ? ` · ${notOk} NOT OK` : ''}</p>
-                }
-              </div>
-            );
-          })}
+      <PreviewGrid rows={[['Date', header.log_date], ['Shift Eng', header.shift_eng], ['Reading By', header.reading_by], ['Mill Status', millStatus]]} />
+      {millStatus === 'OFF' ? (
+        <div className="bg-gray-50 rounded-lg p-3 text-sm">
+          <span className="font-semibold text-gray-600">Reason (Remark): </span>
+          <span className="text-gray-800">{remark}</span>
         </div>
-      </PreviewSection>
-      {remark && <div className="bg-gray-50 rounded-lg p-3 text-sm"><span className="font-semibold text-gray-600">Remark: </span><span className="text-gray-800">{remark}</span></div>}
+      ) : (
+        <>
+        <PreviewSection title="Stand Summary" color="bg-blue-700">
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+            {STANDS.map(stand => {
+              const isOff = standStatus2[stand] === 'OFF';
+              const { filled, notOk } = standStatus(stand);
+              return (
+                <div key={stand} className={`rounded-lg p-2 text-center border text-xs ${
+                  isOff ? 'border-gray-200 bg-gray-50' :
+                  notOk > 0 ? 'border-red-200 bg-red-50' :
+                  filled > 0 ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50'
+                }`}>
+                  <p className={`font-bold ${isOff ? 'text-gray-400' : 'text-gray-700'}`}>{stand}</p>
+                  {isOff
+                    ? <p className="text-gray-400">OFF</p>
+                    : filled > 0 && <p className="text-gray-500">{filled} fields{notOk > 0 ? ` · ${notOk} NOT OK` : ''}</p>
+                  }
+                </div>
+              );
+            })}
+          </div>
+        </PreviewSection>
+        {remark && <div className="bg-gray-50 rounded-lg p-3 text-sm"><span className="font-semibold text-gray-600">Remark: </span><span className="text-gray-800">{remark}</span></div>}
+        </>
+      )}
     </ChecksheetPreviewModal>
     </>
   );

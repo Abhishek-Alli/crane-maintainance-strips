@@ -123,7 +123,11 @@ const DcMotorAirflowHistory = () => {
                     <td className="px-5 py-3 text-gray-600">{log.reading_by || '—'}</td>
                     <td className="px-5 py-3 text-gray-600">{log.filled_by_name}</td>
                     <td className="px-5 py-3">
-                      {log.not_ok_count > 0 ? (
+                      {log.mill_status === 'OFF' ? (
+                        <span className="text-xs font-bold px-2 py-1 rounded-full bg-gray-200 text-gray-600">
+                          MILL OFF
+                        </span>
+                      ) : log.not_ok_count > 0 ? (
                         <span className="text-xs font-bold px-2 py-1 rounded-full bg-red-100 text-red-700">
                           {log.not_ok_count} NOT OK
                         </span>

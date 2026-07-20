@@ -2788,10 +2788,15 @@ class HbmController {
 
   static async createDcMotorAirflowLog(req, res) {
     try {
-      const { log_date, shift_eng, reading_by, remark, entries } = req.body;
+      const { log_date, shift_eng, reading_by, remark, entries, mill_status } = req.body;
 
       if (!log_date) {
         return res.status(400).json({ success: false, message: 'Date is required' });
+      }
+
+      const millStatus = mill_status === 'OFF' ? 'OFF' : 'ON';
+      if (millStatus === 'OFF' && !(remark && remark.trim())) {
+        return res.status(400).json({ success: false, message: 'Remark is required when mill is OFF' });
       }
 
       const n = (v) => (v != null && v !== '' ? v : null);
@@ -2799,14 +2804,14 @@ class HbmController {
       let log;
       await transaction(async (client) => {
         const logResult = await client.query(
-          `INSERT INTO hbm_dc_motor_airflow_logs (log_date, shift_eng, reading_by, remark, filled_by)
-           VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-          [log_date, n(shift_eng), n(reading_by), n(remark), req.user.id]
+          `INSERT INTO hbm_dc_motor_airflow_logs (log_date, shift_eng, reading_by, remark, filled_by, mill_status)
+           VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+          [log_date, n(shift_eng), n(reading_by), n(remark), req.user.id, millStatus]
         );
 
         log = logResult.rows[0];
 
-        if (entries && Array.isArray(entries)) {
+        if (millStatus === 'ON' && entries && Array.isArray(entries)) {
           for (const e of entries) {
             await client.query(
               `INSERT INTO hbm_dc_motor_airflow_entries

@@ -111,14 +111,22 @@ const DcMotorAirflowView = () => {
         </div>
 
         {/* Status Banner */}
-        <div className={`rounded-xl border p-4 mb-5 ${notOkCount > 0 ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
-          <p className="text-xs font-semibold text-gray-500 uppercase">Overall Status</p>
-          <p className={`text-xl font-bold mt-1 ${notOkCount > 0 ? 'text-red-700' : 'text-green-700'}`}>
-            {notOkCount > 0 ? `${notOkCount} Stand${notOkCount > 1 ? 's' : ''} with NOT OK readings` : 'All Readings OK'}
-          </p>
-        </div>
+        {log.mill_status === 'OFF' ? (
+          <div className="rounded-xl border p-4 mb-5 bg-gray-100 border-gray-300">
+            <p className="text-xs font-semibold text-gray-500 uppercase">Overall Status</p>
+            <p className="text-xl font-bold mt-1 text-gray-700">Mill OFF — no readings taken</p>
+          </div>
+        ) : (
+          <div className={`rounded-xl border p-4 mb-5 ${notOkCount > 0 ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
+            <p className="text-xs font-semibold text-gray-500 uppercase">Overall Status</p>
+            <p className={`text-xl font-bold mt-1 ${notOkCount > 0 ? 'text-red-700' : 'text-green-700'}`}>
+              {notOkCount > 0 ? `${notOkCount} Stand${notOkCount > 1 ? 's' : ''} with NOT OK readings` : 'All Readings OK'}
+            </p>
+          </div>
+        )}
 
         {/* Stand Table */}
+        {log.mill_status !== 'OFF' && (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-5">
           <div className="overflow-x-auto">
             <table className="w-full text-xs min-w-[1100px]">
@@ -224,11 +232,14 @@ const DcMotorAirflowView = () => {
             </table>
           </div>
         </div>
+        )}
 
         {/* Remark */}
         {log.remark && (
           <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Remark</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase mb-2">
+              {log.mill_status === 'OFF' ? 'Reason Mill is OFF' : 'Remark'}
+            </p>
             <p className="text-sm text-gray-800">{log.remark}</p>
           </div>
         )}
