@@ -1,13 +1,19 @@
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
 require('dotenv').config();
 
+// Return DATE columns as plain 'YYYY-MM-DD' strings instead of Date objects
+// (avoids timezone shift: 2026-07-01 stored as 2026-06-30T18:30:00Z in IST)
+types.setTypeParser(1082, (val) => val);
+
 // Support both DATABASE_URL (Vercel/Supabase/Neon) and individual vars (local)
+const isLocal = process.env.NODE_ENV === 'development';
+
 const poolConfig = process.env.DATABASE_URL
   ? {
       connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false },
-      max: 1,                      // Serverless: 1 connection per function instance
-      idleTimeoutMillis: 10000,
+      ssl: isLocal ? false : { rejectUnauthorized: false },
+      max: isLocal ? 20 : 1,
+      idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 10000,
     }
   : {

@@ -1,4 +1,4 @@
-// Telegram Bot Utility – HBM Checksheet System
+﻿// Telegram Bot Utility – HBM Checksheet System
 // Tabular per-sheet notification templates for all 14 sheet types
 
 const https = require('https');
@@ -26,6 +26,12 @@ const TYPE_LABEL_TO_KEY = {
 };
 
 // ─── Core helpers ─────────────────────────────────────────────────────────────
+
+// Escape special HTML chars so user-entered text doesn't break Telegram HTML parse_mode
+function esc(str) {
+  if (str == null) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
 
 function sendToChat(chatId, message) {
   return new Promise((resolve) => {
@@ -119,8 +125,8 @@ async function sendLongMessage(text) {
 
 // ─── Table builder helpers ────────────────────────────────────────────────────
 
-const p  = (s, n) => String(s ?? '—').padEnd(n);    // pad right
-const pL = (s, n) => String(s ?? '—').padStart(n);  // pad left
+const p  = (s, n) => esc(s ?? '—').padEnd(n);    // pad right (HTML-safe)
+const pL = (s, n) => esc(s ?? '—').padStart(n);  // pad left  (HTML-safe)
 const hr = (cols) => cols.map((n) => '─'.repeat(n)).join('─┼─');
 const row = (cells, cols) => cells.map((c, i) => p(c, cols[i])).join(' │ ');
 const hdr = (cells, cols) => cells.map((c, i) => p(c, cols[i])).join(' │ ');
@@ -136,11 +142,11 @@ const sts = (s) => s === 'NOT_OK' ? 'NOK' : s === 'OFF' ? 'OFF' : s === 'LOW' ? 
 
 function msgHeader(icon, title, date, filledBy, submittedAt, extraLines = []) {
   return (
-    `${icon} <b>${title}</b>\n` +
+    `${icon} <b>${esc(title)}</b>\n` +
     `━━━━━━━━━━━━━━━━━━━━━━\n` +
     `📅 <b>${fmtDate(date)}</b>\n` +
     extraLines.filter(Boolean).map(l => `${l}\n`).join('') +
-    `👤 Filled By: <b>${filledBy}</b>\n` +
+    `👤 Filled By: <b>${esc(filledBy)}</b>\n` +
     `🕐 Submitted: <b>${fmtSubmitted(submittedAt)}</b>\n`
   );
 }
@@ -159,7 +165,7 @@ async function sendHbmChecksheetNotification(opts) {
   const ok    = items.filter(i => i.status !== 'NOT_OK' && i.status !== 'OFF');
 
   let msg = msgHeader('🔔', `${checksheetType} Checksheet`, date, filledBy, submittedAt,
-    [(shift && `📋 Shift: <b>${shift}</b>`) || (time && `⏰ Time: <b>${time}</b>`) || null]
+    [(shift && `📋 Shift: <b>${esc(shift)}</b>`) || (time && `⏰ Time: <b>${esc(time)}</b>`) || null]
   );
 
   msg +=
@@ -168,7 +174,7 @@ async function sendHbmChecksheetNotification(opts) {
     `❌ NOT OK <b>${notOk.length}</b>` +
     (off.length ? `  ⭕ OFF <b>${off.length}</b>` : '') + '\n';
 
-  if (remarks && remarks.trim()) msg += `📝 <i>${remarks.trim()}</i>\n`;
+  if (remarks && remarks.trim()) msg += `📝 <i>${esc(remarks.trim())}</i>\n`;
 
   if (notOk.length === 0) {
     msg += `\n✅ <b>All items OK — No issues found.</b>\n`;
@@ -196,14 +202,14 @@ function buildSectionedMsg(icon, title, typeKey, sectionLabels, date, shift, tim
   const okItems    = items.filter(i => i.status !== 'NOT_OK' && i.status !== 'OFF');
 
   let msg = msgHeader(icon, `${title} Checksheet`, date, filledBy, submittedAt,
-    [(shift && `📋 Shift: <b>${shift}</b>`) || (time && `⏰ Time: <b>${time}</b>`) || null]
+    [(shift && `📋 Shift: <b>${esc(shift)}</b>`) || (time && `⏰ Time: <b>${esc(time)}</b>`) || null]
   );
   msg +=
     `📊 Total <b>${items.length}</b>  ` +
     `✓ OK <b>${okItems.length}</b>  ` +
     `✗ NOK <b>${notOkItems.length}</b>` +
     (offItems.length ? `  - OFF <b>${offItems.length}</b>` : '') + '\n';
-  if (remarks && remarks.trim()) msg += `📝 <i>${remarks.trim()}</i>\n`;
+  if (remarks && remarks.trim()) msg += `📝 <i>${esc(remarks.trim())}</i>\n`;
 
   // Group items by section, preserve section order
   const secOrder = [];
@@ -349,9 +355,9 @@ async function sendBeforeRollingNotification({ date, time, shift, filledBy, subm
   let msg = buildSectionedMsg('▶️', 'Before Rolling', 'before-rolling', sectionLabels, date, shift, time, filledBy, submittedAt, remarks, labeledItems);
   if (checkedBy || millShiftIncharge || mechEngineer) {
     msg += `\n`;
-    if (checkedBy)         msg += `🔍 Checked By: <b>${checkedBy}</b>\n`;
-    if (millShiftIncharge) msg += `👷 Mill Shift Incharge: <b>${millShiftIncharge}</b>\n`;
-    if (mechEngineer)      msg += `🔧 Mech Engineer: <b>${mechEngineer}</b>\n`;
+    if (checkedBy)         msg += `🔍 Checked By: <b>${esc(checkedBy)}</b>\n`;
+    if (millShiftIncharge) msg += `👷 Mill Shift Incharge: <b>${esc(millShiftIncharge)}</b>\n`;
+    if (mechEngineer)      msg += `🔧 Mech Engineer: <b>${esc(mechEngineer)}</b>\n`;
   }
   return sendLongMessageToIds(chatIds, msg);
 }
@@ -367,14 +373,14 @@ async function sendOilLevelNotification({ date, shiftEng, readingBy, remark, ent
   const ok    = entries.length - notOk - low;
 
   let msg = msgHeader('🛢', 'Daily Oil Level Sheet', date, filledBy, submittedAt, [
-    shiftEng  && `⚙️ Shift Eng: <b>${shiftEng}</b>`,
+    shiftEng  && `⚙️ Shift Eng: <b>${esc(shiftEng)}</b>`,
     readingBy && `📖 Reading By: <b>${readingBy}</b>`,
   ]);
   msg +=
     `📊 Tanks <b>${entries.length}</b>  ✅ OK <b>${ok}</b>` +
     (low   ? `  🟡 LOW <b>${low}</b>`   : '') +
     (notOk ? `  ❌ NOK <b>${notOk}</b>` : '') + '\n';
-  if (remark && remark.trim()) msg += `📝 <i>${remark.trim()}</i>\n`;
+  if (remark && remark.trim()) msg += `📝 <i>${esc(remark.trim())}</i>\n`;
 
   // Table
   const C = [22, 7, 7, 6, 5];   // Tank | Level | Press | Temp | Sts
@@ -404,13 +410,13 @@ async function sendDcMotorAirflowNotification({ date, shiftEng, readingBy, remar
   const issues = entries.filter(hasIssue).length;
 
   let msg = msgHeader('🌡', 'DC Motor Airflow Report', date, filledBy, submittedAt, [
-    shiftEng  && `⚙️ Shift Eng: <b>${shiftEng}</b>`,
+    shiftEng  && `⚙️ Shift Eng: <b>${esc(shiftEng)}</b>`,
     readingBy && `📖 Reading By: <b>${readingBy}</b>`,
   ]);
   msg +=
     `📊 Stands <b>${entries.length}</b>  ✅ Normal <b>${entries.length - issues}</b>` +
     (issues ? `  ❌ Issues <b>${issues}</b>` : '') + '\n';
-  if (remark && remark.trim()) msg += `📝 <i>${remark.trim()}</i>\n`;
+  if (remark && remark.trim()) msg += `📝 <i>${esc(remark.trim())}</i>\n`;
 
   // Table: Stand | KPa | Mtr°C | DE°C | NDE°C | Vib | Sts
   const C = [7, 5, 6, 6, 6, 5, 4];
@@ -461,7 +467,7 @@ async function sendPumpParamNotification({ date, sizeValue, entries = [], sec2It
   const off     = entries.filter(e => e.status === 'OFF').length;
 
   let msg = msgHeader('📊', 'Pump Parameter Report', date, filledBy, submittedAt, [
-    sizeValue && `📏 Size: <b>${sizeValue}</b>`,
+    sizeValue && `📏 Size: <b>${esc(sizeValue)}</b>`,
   ]);
   msg +=
     `📊 Pumps <b>${entries.length}</b>  ▶️ Running <b>${running}</b>` +
@@ -528,7 +534,7 @@ async function sendWaterParamNotification({ date, remark, entries = [], filledBy
   msg +=
     `📊 Sources <b>${entries.length}</b>  ✅ Normal <b>${entries.length - issues}</b>` +
     (issues ? `  ❌ Issues <b>${issues}</b>` : '') + '\n';
-  if (remark && remark.trim()) msg += `📝 <i>${remark.trim()}</i>\n`;
+  if (remark && remark.trim()) msg += `📝 <i>${esc(remark.trim())}</i>\n`;
 
   // Table: Source | TDS | Hardness | pH | Temp | Sts
   const C = [20, 6, 8, 5, 5, 4];
@@ -684,7 +690,7 @@ async function sendRoughingGbTempNotification({ date, shiftEng, tempTakenBy, s1,
   );
 
   let msg = msgHeader('🌡', 'Roughing GB Bearing Temp', date, filledBy, submittedAt, [
-    shiftEng    && `⚙️ Shift Eng: <b>${shiftEng}</b>`,
+    shiftEng    && `⚙️ Shift Eng: <b>${esc(shiftEng)}</b>`,
     tempTakenBy && `📖 Temp By: <b>${tempTakenBy}</b>`,
   ]);
   msg += `📊 C-Stands filled: <b>${filledStands.length}</b>/14\n`;
@@ -781,7 +787,7 @@ async function sendBreakdownNotification({ date, size, filledBy, submittedAt, sl
   const activeSlots     = slots.filter(s => (s.entries || []).some(e => e.breakdown_type));
 
   let msg = msgHeader('🔴', 'HBM Breakdown Report', date, filledBy, submittedAt, [
-    `📏 Size: <b>${size}</b>`,
+    `📏 Size: <b>${esc(size)}</b>`,
     `🎯 Miss Roll: <b>${totalMissRoll}</b>  |  18" Miss Roll: <b>${totalMissRoll18}</b>`,
   ]);
 
@@ -1020,3 +1026,4 @@ module.exports = {
   sendBreakdownNotification,
   sendDailyStatusSummary,
 };
+

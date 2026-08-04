@@ -3649,6 +3649,543 @@ class HbmController {
       res.status(500).json({ success: false, message: 'Failed to send status summary' });
     }
   }
+
+  // ==========================================
+  // MONTHLY REGISTER (pivot: items as rows, dates as columns)
+  // ==========================================
+
+  static async getMonthlyRegister(req, res) {
+    try {
+      const { type } = req.params;
+      const { year, month } = req.query;
+      const y = parseInt(year) || new Date().getFullYear();
+      const m = parseInt(month) || (new Date().getMonth() + 1);
+      const dateFrom = `${y}-${String(m).padStart(2, '0')}-01`;
+      const dateTo   = new Date(y, m, 0).toISOString().slice(0, 10);
+      const daysInMonth = new Date(y, m, 0).getDate();
+
+      const ITEM_SHEETS = {
+        'dc-motor':       { log: 'hbm_dc_motor_logs',      items: 'hbm_dc_motor_items',      shift: true  },
+        'rolling-stand':  { log: 'hbm_rolling_stand_logs', items: 'hbm_rolling_stand_items', shift: true  },
+        'mill-mech':      { log: 'hbm_mill_mech_logs',     items: 'hbm_mill_mech_items',     shift: true  },
+        'cooling-bed':    { log: 'hbm_cooling_bed_logs',   items: 'hbm_cooling_bed_items',   shift: true  },
+        'pumphouse':      { log: 'hbm_pumphouse_logs',     items: 'hbm_pumphouse_items',     shift: false },
+        'bar-bundle':     { log: 'hbm_bar_bundle_logs',    items: 'hbm_bar_bundle_items',    shift: false },
+        'before-rolling': { log: 'hbm_before_rolling_logs',items: 'hbm_before_rolling_items',shift: false },
+      };
+
+      // ── Helper: build days array and dateToLog map ──────────────
+      const buildDaysAndMap = (logsRes) => {
+        const dateToLog = {};
+        for (const log of logsRes.rows) {
+          const d = String(log.log_date).slice(0, 10);
+          if (!dateToLog[d]) dateToLog[d] = log;
+        }
+        const days = Array.from({ length: daysInMonth }, (_, i) => {
+          const d = `${y}-${String(m).padStart(2,'0')}-${String(i+1).padStart(2,'0')}`;
+          const log = dateToLog[d];
+          return { date: d, day: i + 1, filled: !!log, filledBy: log?.filled_by || null };
+        });
+        return { days, dateToLog };
+      };
+
+      // ── Helper: build pivot items from normalized rows ────────────
+      // normalizedRows: [{ section, item, date, value, status }]
+      const buildParamItems = (normalizedRows, days) => {
+        const keySet = [];
+        const keyMap = {};
+        for (const r of normalizedRows) {
+          const key = `${r.section}||${r.item}`;
+          if (!keyMap[key]) { keyMap[key] = { section: r.section, item: r.item }; keySet.push(key); }
+        }
+        return keySet.map(key => {
+          const meta = keyMap[key];
+          const cells = {};
+          for (const day of days) cells[day.date] = null;
+          for (const r of normalizedRows) {
+            if (`${r.section}||${r.item}` === key) cells[r.date] = { value: r.value, status: r.status || null };
+          }
+          return { section: meta.section, block: null, item: meta.item, cells };
+        });
+      };
+
+      // ── Parameter sheets with actual data ────────────────────────
+      if (type === 'pump-param') {
+        const logsRes = await query(`SELECT l.id, l.log_date FROM hbm_pump_param_logs l WHERE l.log_date >= $1 AND l.log_date <= $2 ORDER BY l.log_date`, [dateFrom, dateTo]);
+        const { days, dateToLog } = buildDaysAndMap(logsRes);
+        const logIds = logsRes.rows.map(r => r.id);
+        const normalized = [];
+        if (logIds.length > 0) {
+          const eRes = await query(`SELECT e.log_id, e.pump_name, e.kw, e.amp, e.rpm, e.pressure, e.load_pct, e.kwh_diff, e.status FROM hbm_pump_param_entries e WHERE e.log_id = ANY($1) ORDER BY e.pump_name`, [logIds]);
+          for (const r of eRes.rows) {
+            const log = logsRes.rows.find(l => l.id === r.log_id);
+            const date = String(log.log_date).slice(0, 10);
+            const push = (param, val) => normalized.push({ section: r.pump_name, item: param, date, value: val != null ? String(val) : null, status: r.status });
+            push('KW', r.kw); push('AMP', r.amp); push('RPM', r.rpm); push('Pressure', r.pressure); push('Load %', r.load_pct); push('KWH Diff', r.kwh_diff);
+          }
+          const s2Res = await query(`SELECT s.log_id, s.item_name, s.value_text, s.item_status FROM hbm_pump_param_sec2 s WHERE s.log_id = ANY($1)`, [logIds]);
+          for (const r of s2Res.rows) {
+            const log = logsRes.rows.find(l => l.id === r.log_id);
+            normalized.push({ section: 'General', item: r.item_name, date: String(log.log_date).slice(0, 10), value: r.value_text, status: r.item_status });
+          }
+        }
+        const items = buildParamItems(normalized, days);
+        return res.json({ success: true, data: { type, year: y, month: m, daysInMonth, days, items, paramType: true } });
+      }
+
+      if (type === 'water-param') {
+        const logsRes = await query(`SELECT l.id, l.log_date FROM hbm_water_param_logs l WHERE l.log_date >= $1 AND l.log_date <= $2 ORDER BY l.log_date`, [dateFrom, dateTo]);
+        const { days } = buildDaysAndMap(logsRes);
+        const logIds = logsRes.rows.map(r => r.id);
+        const normalized = [];
+        if (logIds.length > 0) {
+          const eRes = await query(`SELECT e.log_id, e.water_source, e.tds, e.tds_status, e.hardness, e.hardness_status, e.ph, e.ph_status, e.temperature, e.temp_status FROM hbm_water_param_entries e WHERE e.log_id = ANY($1) ORDER BY e.water_source`, [logIds]);
+          for (const r of eRes.rows) {
+            const log = logsRes.rows.find(l => l.id === r.log_id);
+            const date = String(log.log_date).slice(0, 10);
+            normalized.push({ section: r.water_source, item: 'TDS',         date, value: r.tds,         status: r.tds_status });
+            normalized.push({ section: r.water_source, item: 'Hardness',    date, value: r.hardness,    status: r.hardness_status });
+            normalized.push({ section: r.water_source, item: 'pH',          date, value: r.ph,          status: r.ph_status });
+            normalized.push({ section: r.water_source, item: 'Temperature', date, value: r.temperature, status: r.temp_status });
+          }
+        }
+        const items = buildParamItems(normalized, days);
+        return res.json({ success: true, data: { type, year: y, month: m, daysInMonth, days, items, paramType: true } });
+      }
+
+      if (type === 'ph-maint') {
+        const logsRes = await query(`SELECT l.id, l.log_date FROM hbm_ph_maint_logs l WHERE l.log_date >= $1 AND l.log_date <= $2 ORDER BY l.log_date`, [dateFrom, dateTo]);
+        const { days } = buildDaysAndMap(logsRes);
+        const logIds = logsRes.rows.map(r => r.id);
+        const normalized = [];
+        if (logIds.length > 0) {
+          const iRes = await query(`SELECT i.log_id, i.item_no, i.item_text FROM hbm_ph_maint_items i WHERE i.log_id = ANY($1) ORDER BY i.item_no`, [logIds]);
+          for (const r of iRes.rows) {
+            const log = logsRes.rows.find(l => l.id === r.log_id);
+            normalized.push({ section: 'PH Maintenance', item: `${r.item_no}. ${r.item_text.slice(0, 60)}`, date: String(log.log_date).slice(0, 10), value: 'Done', status: 'OK' });
+          }
+        }
+        const items = buildParamItems(normalized, days);
+        return res.json({ success: true, data: { type, year: y, month: m, daysInMonth, days, items, paramType: true } });
+      }
+
+      if (type === 'transformer') {
+        const logsRes = await query(`SELECT l.id, l.log_date FROM hbm_transformer_logs l WHERE l.log_date >= $1 AND l.log_date <= $2 ORDER BY l.log_date`, [dateFrom, dateTo]);
+        const { days } = buildDaysAndMap(logsRes);
+        const logIds = logsRes.rows.map(r => r.id);
+        const normalized = [];
+        if (logIds.length > 0) {
+          const s1 = await query(`SELECT s.log_id, s.unit_name, s.ht_current, s.ht_volt, s.wind_temperature, s.oil_temperature, s.main_tank_oil_level, s.oltc_oil_level, s.silica_gel_color, s.oil_leakage FROM hbm_transformer_sec1 s WHERE s.log_id = ANY($1) ORDER BY s.unit_name`, [logIds]);
+          for (const r of s1.rows) {
+            const log = logsRes.rows.find(l => l.id === r.log_id);
+            const date = String(log.log_date).slice(0, 10);
+            normalized.push({ section: r.unit_name, item: 'HT Current (A)',       date, value: r.ht_current,           status: null });
+            normalized.push({ section: r.unit_name, item: 'HT Voltage (V)',       date, value: r.ht_volt,              status: null });
+            normalized.push({ section: r.unit_name, item: 'Winding Temp (°C)',    date, value: r.wind_temperature,     status: null });
+            normalized.push({ section: r.unit_name, item: 'Oil Temp (°C)',        date, value: r.oil_temperature,      status: null });
+            normalized.push({ section: r.unit_name, item: 'Main Tank Oil Level',  date, value: r.main_tank_oil_level,  status: null });
+            normalized.push({ section: r.unit_name, item: 'OLTC Oil Level',       date, value: r.oltc_oil_level,       status: null });
+            normalized.push({ section: r.unit_name, item: 'Silica Gel Color',     date, value: r.silica_gel_color,     status: null });
+            normalized.push({ section: r.unit_name, item: 'Oil Leakage',          date, value: r.oil_leakage,          status: r.oil_leakage === 'YES' ? 'NOT_OK' : 'OK' });
+          }
+          const s3 = await query(`SELECT s.log_id, s.unit_name, s.diff_kwh, s.diff_kvah FROM hbm_transformer_sec3 s WHERE s.log_id = ANY($1) ORDER BY s.unit_name`, [logIds]);
+          for (const r of s3.rows) {
+            const log = logsRes.rows.find(l => l.id === r.log_id);
+            const date = String(log.log_date).slice(0, 10);
+            normalized.push({ section: r.unit_name + ' (Energy)', item: 'KWH Diff',  date, value: r.diff_kwh,  status: null });
+            normalized.push({ section: r.unit_name + ' (Energy)', item: 'KVAH Diff', date, value: r.diff_kvah, status: null });
+          }
+        }
+        const items = buildParamItems(normalized, days);
+        return res.json({ success: true, data: { type, year: y, month: m, daysInMonth, days, items, paramType: true } });
+      }
+
+      if (type === 'oil-level') {
+        const logsRes = await query(`SELECT l.id, l.log_date FROM hbm_oil_level_logs l WHERE l.log_date >= $1 AND l.log_date <= $2 ORDER BY l.log_date`, [dateFrom, dateTo]);
+        const { days } = buildDaysAndMap(logsRes);
+        const logIds = logsRes.rows.map(r => r.id);
+        const normalized = [];
+        if (logIds.length > 0) {
+          const eRes = await query(`SELECT e.log_id, e.tank_name, e.oil_level, e.oil_status, e.pressure, e.temperature FROM hbm_oil_level_entries e WHERE e.log_id = ANY($1) ORDER BY e.tank_name`, [logIds]);
+          for (const r of eRes.rows) {
+            const log = logsRes.rows.find(l => l.id === r.log_id);
+            const date = String(log.log_date).slice(0, 10);
+            normalized.push({ section: r.tank_name, item: 'Oil Level',   date, value: r.oil_level,   status: r.oil_status });
+            normalized.push({ section: r.tank_name, item: 'Pressure',    date, value: r.pressure,    status: null });
+            normalized.push({ section: r.tank_name, item: 'Temperature', date, value: r.temperature, status: null });
+          }
+        }
+        const items = buildParamItems(normalized, days);
+        return res.json({ success: true, data: { type, year: y, month: m, daysInMonth, days, items, paramType: true } });
+      }
+
+      if (type === 'dc-motor-airflow') {
+        const logsRes = await query(`SELECT l.id, l.log_date FROM hbm_dc_motor_airflow_logs l WHERE l.log_date >= $1 AND l.log_date <= $2 ORDER BY l.log_date`, [dateFrom, dateTo]);
+        const { days } = buildDaysAndMap(logsRes);
+        const logIds = logsRes.rows.map(r => r.id);
+        const normalized = [];
+        if (logIds.length > 0) {
+          const eRes = await query(`SELECT e.log_id, e.stand_name, e.running_kpa, e.kpa_status, e.dc_motor_temp, e.dc_motor_temp_status, e.de_bearing_temp, e.de_bearing_temp_status, e.nde_bearing_temp, e.nde_bearing_temp_status, e.motor_center_vib, e.motor_center_vib_status FROM hbm_dc_motor_airflow_entries e WHERE e.log_id = ANY($1) ORDER BY e.stand_name`, [logIds]);
+          for (const r of eRes.rows) {
+            const log = logsRes.rows.find(l => l.id === r.log_id);
+            const date = String(log.log_date).slice(0, 10);
+            normalized.push({ section: r.stand_name, item: 'KPa',             date, value: r.running_kpa,      status: r.kpa_status });
+            normalized.push({ section: r.stand_name, item: 'DC Motor Temp °C',date, value: r.dc_motor_temp,    status: r.dc_motor_temp_status });
+            normalized.push({ section: r.stand_name, item: 'DE Bearing °C',   date, value: r.de_bearing_temp,  status: r.de_bearing_temp_status });
+            normalized.push({ section: r.stand_name, item: 'NDE Bearing °C',  date, value: r.nde_bearing_temp, status: r.nde_bearing_temp_status });
+            normalized.push({ section: r.stand_name, item: 'Centre Vib',      date, value: r.motor_center_vib, status: r.motor_center_vib_status });
+          }
+        }
+        const items = buildParamItems(normalized, days);
+        return res.json({ success: true, data: { type, year: y, month: m, daysInMonth, days, items, paramType: true } });
+      }
+
+      if (type === 'roughing-gb-temp') {
+        const logsRes = await query(`SELECT l.id, l.log_date, l.s1_flywheel_de, l.s1_flywheel_nde, l.s1_reduction_de, l.s1_reduction_nde, l.s1_reduction_output, l.s1_pinion_de_top, l.s1_pinion_de_mid, l.s1_pinion_de_bot, l.s1_pinion_nde_top, l.s1_pinion_nde_mid, l.s1_pinion_nde_bot, l.s1_stand_de_top, l.s1_stand_de_mid, l.s1_stand_de_bot, l.s1_stand_nde_top, l.s1_stand_nde_mid, l.s1_stand_nde_bot FROM hbm_roughing_gb_temp_logs l WHERE l.log_date >= $1 AND l.log_date <= $2 ORDER BY l.log_date`, [dateFrom, dateTo]);
+        const { days } = buildDaysAndMap(logsRes);
+        const normalized = [];
+        const paramMap = [
+          ['Flywheel', 'DE', 's1_flywheel_de'], ['Flywheel', 'NDE', 's1_flywheel_nde'],
+          ['Reduction GB', 'DE', 's1_reduction_de'], ['Reduction GB', 'NDE', 's1_reduction_nde'], ['Reduction GB', 'Output', 's1_reduction_output'],
+          ['Pinion DE', 'Top', 's1_pinion_de_top'], ['Pinion DE', 'Mid', 's1_pinion_de_mid'], ['Pinion DE', 'Bot', 's1_pinion_de_bot'],
+          ['Pinion NDE', 'Top', 's1_pinion_nde_top'], ['Pinion NDE', 'Mid', 's1_pinion_nde_mid'], ['Pinion NDE', 'Bot', 's1_pinion_nde_bot'],
+          ['Stand DE', 'Top', 's1_stand_de_top'], ['Stand DE', 'Mid', 's1_stand_de_mid'], ['Stand DE', 'Bot', 's1_stand_de_bot'],
+          ['Stand NDE', 'Top', 's1_stand_nde_top'], ['Stand NDE', 'Mid', 's1_stand_nde_mid'], ['Stand NDE', 'Bot', 's1_stand_nde_bot'],
+        ];
+        for (const r of logsRes.rows) {
+          const date = String(r.log_date).slice(0, 10);
+          for (const [section, item, col] of paramMap) {
+            if (r[col] != null) normalized.push({ section, item, date, value: r[col], status: null });
+          }
+        }
+        const items = buildParamItems(normalized, days);
+        return res.json({ success: true, data: { type, year: y, month: m, daysInMonth, days, items, paramType: true } });
+      }
+
+      if (type === 'breakdown') {
+        // Logs (which dates had a breakdown report submitted)
+        const logsRes = await query(`SELECT l.id, l.log_date FROM hbm_breakdown_logs l WHERE l.log_date >= $1 AND l.log_date <= $2 ORDER BY l.log_date`, [dateFrom, dateTo]);
+        const { days } = buildDaysAndMap(logsRes);
+        const normalized = [];
+        if (logsRes.rows.length > 0) {
+          // Group by log_date + breakdown_type → sum minutes, aggregate reasons
+          const bRes = await query(
+            `SELECT l.log_date, e.breakdown_type,
+                    SUM(e.breakdown_minutes) AS total_minutes,
+                    STRING_AGG(DISTINCT e.breakdown_reason, ' | ' ORDER BY e.breakdown_reason) AS reasons
+             FROM hbm_breakdown_logs l
+             JOIN hbm_breakdown_slots sl ON sl.log_id = l.id
+             JOIN hbm_breakdown_entries e ON e.slot_id = sl.id
+             WHERE l.log_date >= $1 AND l.log_date <= $2
+             GROUP BY l.log_date, e.breakdown_type
+             ORDER BY l.log_date, e.breakdown_type`,
+            [dateFrom, dateTo]
+          );
+          for (const r of bRes.rows) {
+            const mins = parseInt(r.total_minutes) || 0;
+            normalized.push({
+              section: 'Breakdown Type',
+              item: r.breakdown_type,
+              date: String(r.log_date).slice(0, 10),
+              value: mins > 0 ? `${mins} min` : '0 min',
+              status: mins > 0 ? 'NOT_OK' : 'OK',
+              remark: r.reasons || null,
+            });
+          }
+        }
+        const items = buildParamItems(normalized, days);
+
+        // Detailed rows: one per entry (date, slot/time, type, minutes, reason)
+        const detailRes = await query(
+          `SELECT l.log_date, l.size, sl.slot_label,
+                  e.breakdown_type, e.breakdown_minutes, e.breakdown_reason
+           FROM hbm_breakdown_logs l
+           JOIN hbm_breakdown_slots sl ON sl.log_id = l.id
+           JOIN hbm_breakdown_entries e ON e.slot_id = sl.id
+           WHERE l.log_date >= $1 AND l.log_date <= $2
+             AND e.breakdown_type IS NOT NULL
+             AND e.breakdown_minutes > 0
+           ORDER BY l.log_date, sl.slot_order, e.id`,
+          [dateFrom, dateTo]
+        );
+        const details = detailRes.rows.map(r => ({
+          date: String(r.log_date).slice(0, 10),
+          size: r.size || '',
+          slot: r.slot_label || '',
+          type: r.breakdown_type,
+          minutes: parseInt(r.breakdown_minutes) || 0,
+          reason: r.breakdown_reason || '',
+        }));
+
+        return res.json({ success: true, data: { type, year: y, month: m, daysInMonth, days, items, paramType: true, details } });
+      }
+
+      const cfg = ITEM_SHEETS[type];
+      if (!cfg) return res.status(400).json({ success: false, message: 'Unknown sheet type' });
+
+      // Get all logs in the month
+      const logsRes = await query(
+        `SELECT l.id, l.log_date, ${cfg.shift ? 'l.shift,' : ''} u.username AS filled_by
+         FROM ${cfg.log} l
+         LEFT JOIN users u ON l.filled_by = u.id
+         WHERE l.log_date >= $1 AND l.log_date <= $2
+         ORDER BY l.log_date, l.id`,
+        [dateFrom, dateTo]
+      );
+
+      if (logsRes.rows.length === 0) {
+        return res.json({ success: true, data: { type, year: y, month: m, daysInMonth, days: Array.from({ length: daysInMonth }, (_, i) => ({ date: `${y}-${String(m).padStart(2,'0')}-${String(i+1).padStart(2,'0')}`, day: i+1, filled: false })), items: [] } });
+      }
+
+      const logIds = logsRes.rows.map(r => r.id);
+
+      // Build date->logId map (one per day; if multiple shifts take first)
+      const dateToLog = {};
+      for (const log of logsRes.rows) {
+        const d = String(log.log_date).slice(0, 10);
+        if (!dateToLog[d]) dateToLog[d] = log;
+      }
+
+      // Get all items for those logs
+      const itemsRes = await query(
+        `SELECT i.log_id, i.section_name, i.block_name, i.item_name, i.status, i.remark, i.action_taken
+         FROM ${cfg.items} i
+         WHERE i.log_id = ANY($1)
+         ORDER BY i.log_id, i.section_name, i.block_name, i.item_name`,
+        [logIds]
+      );
+
+      // Get canonical item list from ALL items across all logs (union of section+item)
+      const itemKeySet = [];
+      const itemKeyMap = {};
+      for (const row of itemsRes.rows) {
+        const key = `${row.section_name}||${row.block_name || ''}||${row.item_name}`;
+        if (!itemKeyMap[key]) {
+          itemKeyMap[key] = { section: row.section_name, block: row.block_name, item: row.item_name };
+          itemKeySet.push(key);
+        }
+      }
+
+      // Build pivot: itemKey -> { [date]: { status, remark, action_taken } }
+      const pivot = {};
+      for (const row of itemsRes.rows) {
+        const key = `${row.section_name}||${row.block_name || ''}||${row.item_name}`;
+        const log = logsRes.rows.find(l => l.id === row.log_id);
+        if (!log) continue;
+        const d = String(log.log_date).slice(0, 10);
+        if (!pivot[key]) pivot[key] = {};
+        pivot[key][d] = { status: row.status, remark: row.remark, action_taken: row.action_taken };
+      }
+
+      // Build days array (all days in month, mark which are filled)
+      const days = Array.from({ length: daysInMonth }, (_, i) => {
+        const d = `${y}-${String(m).padStart(2,'0')}-${String(i+1).padStart(2,'0')}`;
+        const log = dateToLog[d];
+        return { date: d, day: i + 1, filled: !!log, shift: log?.shift || null, filledBy: log?.filled_by || null };
+      });
+
+      // Build rows
+      const items = itemKeySet.map(key => {
+        const meta = itemKeyMap[key];
+        const cells = {};
+        for (const day of days) {
+          cells[day.date] = pivot[key]?.[day.date] || null;
+        }
+        return { section: meta.section, block: meta.block, item: meta.item, cells };
+      });
+
+      res.json({ success: true, data: { type, year: y, month: m, daysInMonth, days, items } });
+    } catch (error) {
+      console.error('HBM monthly register error:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch monthly register' });
+    }
+  }
+
+  // ==========================================
+  // MONTHLY INSIGHTS
+  // ==========================================
+
+  static async getMonthlyDetail(req, res) {
+    try {
+      const { type } = req.params;
+      const { year, month } = req.query;
+      const y = parseInt(year) || new Date().getFullYear();
+      const m = parseInt(month) || (new Date().getMonth() + 1);
+
+      const dateFrom = `${y}-${String(m).padStart(2, '0')}-01`;
+      const dateTo   = new Date(y, m, 0).toISOString().slice(0, 10);
+      const daysInMonth = new Date(y, m, 0).getDate();
+
+      const cfg = {
+        'dc-motor':         { table: 'hbm_dc_motor_logs',         itemTable: 'hbm_dc_motor_items',         hasShift: true,  hasRemarks: false },
+        'rolling-stand':    { table: 'hbm_rolling_stand_logs',    itemTable: 'hbm_rolling_stand_items',    hasShift: true,  hasRemarks: false },
+        'mill-mech':        { table: 'hbm_mill_mech_logs',        itemTable: 'hbm_mill_mech_items',        hasShift: true,  hasRemarks: false },
+        'cooling-bed':      { table: 'hbm_cooling_bed_logs',      itemTable: 'hbm_cooling_bed_items',      hasShift: true,  hasRemarks: false },
+        'pumphouse':        { table: 'hbm_pumphouse_logs',        itemTable: 'hbm_pumphouse_items',        hasShift: false, hasRemarks: false },
+        'bar-bundle':       { table: 'hbm_bar_bundle_logs',       itemTable: 'hbm_bar_bundle_items',       hasShift: false, hasRemarks: false },
+        'before-rolling':   { table: 'hbm_before_rolling_logs',   itemTable: 'hbm_before_rolling_items',   hasShift: false, hasRemarks: false },
+        'pump-param':       { table: 'hbm_pump_param_logs',       itemTable: null,                         hasShift: false, hasRemarks: false },
+        'water-param':      { table: 'hbm_water_param_logs',      itemTable: null,                         hasShift: false, hasRemarks: false },
+        'ph-maint':         { table: 'hbm_ph_maint_logs',         itemTable: null,                         hasShift: false, hasRemarks: false },
+        'transformer':      { table: 'hbm_transformer_logs',      itemTable: null,                         hasShift: false, hasRemarks: false },
+        'oil-level':        { table: 'hbm_oil_level_logs',        itemTable: null,                         hasShift: false, hasRemarks: false },
+        'dc-motor-airflow': { table: 'hbm_dc_motor_airflow_logs', itemTable: null,                         hasShift: false, hasRemarks: false },
+        'roughing-gb-temp': { table: 'hbm_roughing_gb_temp_logs', itemTable: null,                         hasShift: false, hasRemarks: false },
+        'breakdown':        { table: 'hbm_breakdown_logs',        itemTable: null,                         hasShift: false, hasRemarks: false, isBreakdown: true },
+      };
+
+      const s = cfg[type];
+      if (!s) return res.status(400).json({ success: false, message: 'Unknown sheet type' });
+
+      const shiftCol   = s.hasShift   ? 'l.shift'  : "null::text AS shift";
+      const remarksCol = s.hasRemarks ? 'l.remarks' : "null::text AS remarks";
+
+      const logsRes = await query(
+        `SELECT l.id, l.log_date, ${shiftCol}, ${remarksCol}, u.username AS filled_by
+         FROM ${s.table} l
+         LEFT JOIN users u ON l.filled_by = u.id
+         WHERE l.log_date >= $1 AND l.log_date <= $2
+         ORDER BY l.log_date, l.id`,
+        [dateFrom, dateTo]
+      );
+
+      const logIds = logsRes.rows.map(r => r.id);
+      const itemsByLog = {};
+
+      if (logIds.length > 0 && s.itemTable) {
+        const itemsRes = await query(
+          `SELECT i.log_id, i.section_name, i.block_name, i.item_name, i.status, i.remark, i.action_taken
+           FROM ${s.itemTable} i
+           WHERE i.log_id = ANY($1) AND i.status = 'NOT_OK'
+           ORDER BY i.log_id, i.section_name, i.item_name`,
+          [logIds]
+        );
+        for (const row of itemsRes.rows) {
+          if (!itemsByLog[row.log_id]) itemsByLog[row.log_id] = [];
+          itemsByLog[row.log_id].push(row);
+        }
+      }
+
+      if (logIds.length > 0 && s.isBreakdown) {
+        const bRes = await query(
+          `SELECT sl.log_id, sl.slot_label, e.breakdown_type, e.breakdown_minutes, e.breakdown_reason
+           FROM hbm_breakdown_slots sl
+           JOIN hbm_breakdown_entries e ON e.slot_id = sl.id
+           WHERE sl.log_id = ANY($1)
+           ORDER BY sl.log_id, sl.slot_order`,
+          [logIds]
+        );
+        for (const row of bRes.rows) {
+          if (!itemsByLog[row.log_id]) itemsByLog[row.log_id] = [];
+          itemsByLog[row.log_id].push({
+            section_name: row.slot_label,
+            item_name:    row.breakdown_type,
+            remark:       row.breakdown_reason || null,
+            action_taken: row.breakdown_minutes ? `${row.breakdown_minutes} min downtime` : null,
+          });
+        }
+      }
+
+      const logsByDate = {};
+      for (const log of logsRes.rows) {
+        const d = String(log.log_date).slice(0, 10);
+        if (!logsByDate[d]) logsByDate[d] = [];
+        logsByDate[d].push({ ...log, not_ok_items: itemsByLog[log.id] || [] });
+      }
+
+      const days = Array.from({ length: daysInMonth }, (_, i) => {
+        const d = `${y}-${String(m).padStart(2,'0')}-${String(i+1).padStart(2,'0')}`;
+        return { date: d, logs: logsByDate[d] || [] };
+      });
+
+      res.json({ success: true, data: { type, year: y, month: m, days } });
+    } catch (error) {
+      console.error('HBM monthly detail error:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch monthly detail' });
+    }
+  }
+
+  static async getMonthlyInsights(req, res) {
+    try {
+      const { year, month } = req.query;
+      const y = parseInt(year) || new Date().getFullYear();
+      const m = parseInt(month) || (new Date().getMonth() + 1);
+
+      const dateFrom = `${y}-${String(m).padStart(2, '0')}-01`;
+      const dateTo   = new Date(y, m, 0).toISOString().slice(0, 10);
+
+      const sheets = [
+        { key: 'dc-motor',         label: 'DC Motor',             table: 'hbm_dc_motor_logs',         dateCol: 'log_date', itemTable: 'hbm_dc_motor_items',         itemFk: 'log_id' },
+        { key: 'rolling-stand',    label: 'Rolling Stand',        table: 'hbm_rolling_stand_logs',    dateCol: 'log_date', itemTable: 'hbm_rolling_stand_items',    itemFk: 'log_id' },
+        { key: 'mill-mech',        label: 'Mill Mechanical',      table: 'hbm_mill_mech_logs',        dateCol: 'log_date', itemTable: 'hbm_mill_mech_items',        itemFk: 'log_id' },
+        { key: 'cooling-bed',      label: 'Cooling Bed',          table: 'hbm_cooling_bed_logs',      dateCol: 'log_date', itemTable: 'hbm_cooling_bed_items',      itemFk: 'log_id' },
+        { key: 'pumphouse',        label: 'Pumphouse',            table: 'hbm_pumphouse_logs',        dateCol: 'log_date', itemTable: 'hbm_pumphouse_items',        itemFk: 'log_id' },
+        { key: 'bar-bundle',       label: 'Bar Bundle Area',      table: 'hbm_bar_bundle_logs',       dateCol: 'log_date', itemTable: 'hbm_bar_bundle_items',       itemFk: 'log_id' },
+        { key: 'before-rolling',   label: 'Before Rolling',       table: 'hbm_before_rolling_logs',   dateCol: 'log_date', itemTable: 'hbm_before_rolling_items',   itemFk: 'log_id' },
+        { key: 'pump-param',       label: 'Pump Parameter',       table: 'hbm_pump_param_logs',       dateCol: 'log_date', itemTable: null },
+        { key: 'water-param',      label: 'Water Parameter',      table: 'hbm_water_param_logs',      dateCol: 'log_date', itemTable: null },
+        { key: 'ph-maint',         label: 'PH Maintenance',       table: 'hbm_ph_maint_logs',         dateCol: 'log_date', itemTable: null },
+        { key: 'transformer',      label: 'Transformer',          table: 'hbm_transformer_logs',      dateCol: 'log_date', itemTable: null },
+        { key: 'oil-level',        label: 'Oil Level',            table: 'hbm_oil_level_logs',        dateCol: 'log_date', itemTable: null },
+        { key: 'dc-motor-airflow', label: 'DC Motor Airflow',     table: 'hbm_dc_motor_airflow_logs', dateCol: 'log_date', itemTable: null },
+        { key: 'roughing-gb-temp', label: 'Roughing GB Temp',     table: 'hbm_roughing_gb_temp_logs', dateCol: 'log_date', itemTable: null },
+        { key: 'breakdown',        label: 'Breakdown Report',     table: 'hbm_breakdown_logs',        dateCol: 'log_date', itemTable: null },
+      ];
+
+      const results = await Promise.all(sheets.map(async (s) => {
+        const countRes = await query(
+          `SELECT COUNT(*) as total, COUNT(DISTINCT ${s.dateCol}) as unique_days
+           FROM ${s.table}
+           WHERE ${s.dateCol} >= $1 AND ${s.dateCol} <= $2`,
+          [dateFrom, dateTo]
+        );
+
+        let issues = 0;
+        if (s.itemTable) {
+          const issueRes = await query(
+            `SELECT COUNT(*) as total
+             FROM ${s.itemTable} i
+             JOIN ${s.table} l ON i.${s.itemFk} = l.id
+             WHERE l.${s.dateCol} >= $1 AND l.${s.dateCol} <= $2
+               AND i.status = 'NOT_OK'`,
+            [dateFrom, dateTo]
+          );
+          issues = parseInt(issueRes.rows[0].total);
+        }
+
+        const dailyRes = await query(
+          `SELECT ${s.dateCol} as day, COUNT(*) as cnt
+           FROM ${s.table}
+           WHERE ${s.dateCol} >= $1 AND ${s.dateCol} <= $2
+           GROUP BY ${s.dateCol}
+           ORDER BY ${s.dateCol}`,
+          [dateFrom, dateTo]
+        );
+
+        return {
+          key: s.key,
+          label: s.label,
+          total: parseInt(countRes.rows[0].total),
+          unique_days: parseInt(countRes.rows[0].unique_days),
+          issues,
+          daily: dailyRes.rows,
+        };
+      }));
+
+      res.json({
+        success: true,
+        data: {
+          year: y,
+          month: m,
+          days_in_month: new Date(y, m, 0).getDate(),
+          sheets: results,
+        }
+      });
+    } catch (error) {
+      console.error('HBM monthly insights error:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch monthly insights' });
+    }
+  }
 }
 
 /* ── PDF helper: row height ── */

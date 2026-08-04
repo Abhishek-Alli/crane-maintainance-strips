@@ -318,6 +318,11 @@ export const hbmAPI = {
 
   // Sheet Viewer — flat rows for any sheet type
   getSheetView: (type, params) => api.get(`/hbm/sheet-view/${type}`, { params }),
+
+  // Monthly Insights
+  getMonthlyInsights: (params) => api.get('/hbm/monthly-insights', { params }),
+  getMonthlyDetail: (type, params) => api.get(`/hbm/monthly-detail/${type}`, { params }),
+  getMonthlyRegister: (type, params) => api.get(`/hbm/monthly-register/${type}`, { params }),
 };
 
 /* =============================

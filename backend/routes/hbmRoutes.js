@@ -10,6 +10,11 @@ router.use(requireHBM);
 router.get('/dashboard/stats', HbmController.getDashboardStats);
 router.get('/dashboard/recent', HbmController.getRecentChecksheets);
 
+// Monthly Insights
+router.get('/monthly-insights', HbmController.getMonthlyInsights);
+router.get('/monthly-detail/:type', HbmController.getMonthlyDetail);
+router.get('/monthly-register/:type', HbmController.getMonthlyRegister);
+
 // Machines
 router.get('/machines', HbmController.getMachines);
 router.get('/machines/:id', HbmController.getMachineById);

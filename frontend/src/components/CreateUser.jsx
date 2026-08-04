@@ -522,8 +522,7 @@ const CreateUser = ({ user }) => {
   const showSheetToggles = formData.user_type === 'HBM_CHECKSHEETS' || formData.user_type === 'CRANE_MAINTENANCE';
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4 sm:p-6 lg:p-8">
-      <div className="max-w-6xl mx-auto">
+    <div className="max-w-6xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
           <p className="text-gray-600 mt-2">Create and manage system users</p>
@@ -700,7 +699,6 @@ const CreateUser = ({ user }) => {
           </div>
         </div>
       </div>
-    </div>
   );
 };
 

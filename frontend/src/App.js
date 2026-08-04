@@ -15,6 +15,10 @@ import MaintenanceCalendarPage from './components/MaintenanceCalendarPage';
 import ReportGenerator from './components/ReportGenerator';
 import TelegramSettings from './components/TelegramSettings';
 
+// Admin Components
+import AdminLayout from './components/admin/AdminLayout';
+import AdminDashboard from './components/admin/AdminDashboard';
+
 // HBM Components
 import HbmDashboard from './components/hbm/HbmDashboard';
 import HbmMachines from './components/hbm/HbmMachines';
@@ -66,6 +70,8 @@ import BreakdownReportForm from './components/hbm/BreakdownReportForm';
 import BreakdownReportHistory from './components/hbm/BreakdownReportHistory';
 import BreakdownReportView from './components/hbm/BreakdownReportView';
 import SheetViewer from './components/hbm/SheetViewer';
+import HbmMonthlyInsights from './components/hbm/HbmMonthlyInsights';
+import HbmMonthlyRegister from './components/hbm/HbmMonthlyRegister';
 
 // HSM Components
 import HsmDashboard from './components/hsm/HsmDashboard';
@@ -147,14 +153,14 @@ function App() {
   const isAdminUser = user?.role === 'ADMIN' || user?.user_type === 'ADMIN';
   const isOnHBMRoute = location.pathname.startsWith('/hbm');
   const isOnHSMRoute = location.pathname.startsWith('/hsm');
-  const isOnAdminRoute = ['/create-user', '/telegram-settings', '/fabrication'].some(r => location.pathname.startsWith(r));
+  const isOnAdminRoute = ['/create-user', '/telegram-settings', '/fabrication', '/admin/dashboard'].some(r => location.pathname.startsWith(r));
 
-  // Don't show nav on login page
-  const showNav = user && location.pathname !== '/login';
+  // Don't show nav on login page or admin routes (AdminLayout supplies its own top bar)
+  const showNav = user && location.pathname !== '/login' && !isOnAdminRoute;
 
   // Determine default redirect after login restore
   const getDefaultRoute = () => {
-    if (isAdminUser) return '/create-user';
+    if (isAdminUser) return '/admin/dashboard';
     if (isHBMUser) return '/hbm/dashboard';
     if (isHSMUser) return '/hsm/dashboard';
     return '/';
@@ -197,6 +203,32 @@ function App() {
 
               {/* Top-right controls */}
               <div className="flex items-center space-x-1">
+                {/* Monthly Insights Icon (HBM + Admin only) */}
+                {isOnHBMRoute && isAdminUser && (
+                  <Link
+                    to="/hbm/monthly-insights"
+                    title="Monthly Insights"
+                    className={`p-2 rounded-lg ${navHover} ${location.pathname === '/hbm/monthly-insights' ? navActive : ''}`}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                  </Link>
+                )}
+
+                {/* Monthly Register Icon (HBM + Admin only) */}
+                {isOnHBMRoute && isAdminUser && (
+                  <Link
+                    to="/hbm/monthly-register"
+                    title="Monthly Register"
+                    className={`p-2 rounded-lg ${navHover} ${location.pathname === '/hbm/monthly-register' ? navActive : ''}`}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 6h18M3 14h18M3 18h18" />
+                    </svg>
+                  </Link>
+                )}
+
                 {/* Download Icon (HBM only) */}
                 {isOnHBMRoute && (
                   <Link
@@ -402,6 +434,18 @@ function App() {
                         <span className="font-medium">Dashboard</span>
                       </Link>
 
+                      {isAdminUser && (
+                        <Link
+                          to="/hbm/monthly-insights"
+                          className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/hbm/monthly-insights' ? navActive + ' text-white' : navHover}`}
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                          </svg>
+                          <span className="font-medium">Monthly Insights</span>
+                        </Link>
+                      )}
+
                       <Link
                         to="/hbm/download"
                         className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/hbm/download' ? navActive + ' text-white' : navHover}`}
@@ -592,28 +636,37 @@ function App() {
             element={user ? <ReportGenerator /> : <Navigate to="/login" replace />}
           />
 
-          {/* Admin Only Routes */}
-          <Route
-            path="/create-user"
-            element={
-              user && (user.role === 'ADMIN' || user.user_type === 'ADMIN') ? (
-                <CreateUser user={user} />
-              ) : (
-                <Navigate to="/" replace />
-              )
-            }
-          />
-
-          <Route
-            path="/telegram-settings"
-            element={
-              user && user.role === 'ADMIN' ? (
-                <TelegramSettings />
-              ) : (
-                <Navigate to="/" replace />
-              )
-            }
-          />
+          {/* Admin Only Routes — sidebar shell layout */}
+          <Route element={<AdminLayout user={user} onLogout={handleLogout} />}>
+            <Route
+              path="/admin/dashboard"
+              element={user ? <AdminDashboard /> : <Navigate to="/login" replace />}
+            />
+            <Route
+              path="/create-user"
+              element={
+                user && (user.role === 'ADMIN' || user.user_type === 'ADMIN') ? (
+                  <CreateUser user={user} />
+                ) : (
+                  <Navigate to="/" replace />
+                )
+              }
+            />
+            <Route
+              path="/telegram-settings"
+              element={
+                user && user.role === 'ADMIN' ? (
+                  <TelegramSettings />
+                ) : (
+                  <Navigate to="/" replace />
+                )
+              }
+            />
+            <Route
+              path="/fabrication"
+              element={user ? <FabricationReport /> : <Navigate to="/login" replace />}
+            />
+          </Route>
 
           {/* ========== HBM ROUTES ========== */}
 
@@ -733,6 +786,8 @@ function App() {
           <Route path="/hbm/breakdown/history" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('breakdown') ? <BreakdownReportHistory /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
           <Route path="/hbm/breakdown/:id" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('breakdown') ? <BreakdownReportView /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
           <Route path="/hbm/sheet-viewer" element={user ? isAdminUser ? <SheetViewer /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hbm/monthly-insights" element={user ? isAdminUser ? <HbmMonthlyInsights /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hbm/monthly-register" element={user ? isAdminUser ? <HbmMonthlyRegister /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
 
           {/* ========== HSM ROUTES ========== */}
 
@@ -748,18 +803,6 @@ function App() {
               )
             }
           />
-
-          <Route
-            path="/fabrication"
-            element={
-              user ? (
-                <FabricationReport />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-
 
           {/* Catch all - redirect to appropriate home or login */}
           <Route path="*" element={<Navigate to={user ? getDefaultRoute() : '/login'} replace />} />
