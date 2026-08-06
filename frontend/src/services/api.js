@@ -299,6 +299,7 @@ export const hbmAPI = {
   getBreakdownLogs: (params) => api.get('/hbm/breakdown', { params }),
   getBreakdownLogById: (id) => api.get(`/hbm/breakdown/${id}`),
   createBreakdownLog: (data) => api.post('/hbm/breakdown', data),
+  downloadBreakdownPDF: (id) => api.get(`/hbm/breakdown/${id}/pdf`, { responseType: 'blob' }),
 
   // PDF downloads
   downloadPDF: (type, id) =>
@@ -337,6 +338,14 @@ export const userAPI = {
   getCranePermissions: (id) => api.get(`/users/${id}/crane-permissions`),
   updateCranePermissions: (id, data) => api.put(`/users/${id}/crane-permissions`, data),
   changePassword: (id, password) => api.put(`/users/${id}`, { password }),
+  changeModule: (id, user_type) => api.put(`/users/${id}`, { user_type }),
+};
+
+export const permissionListsAPI = {
+  getAll: (module_code) => api.get('/permission-lists' + (module_code ? `?module_code=${module_code}` : '')),
+  create: (data) => api.post('/permission-lists', data),
+  update: (id, data) => api.put(`/permission-lists/${id}`, data),
+  delete: (id) => api.delete(`/permission-lists/${id}`),
 };
 
 export const pumpHouseAPI = {
@@ -363,6 +372,54 @@ export const savePumpReadings = (data) =>
 
 
 /* =============================
+   PTM API
+============================= */
+export const ptmAPI = {
+  getDashboard: () => api.get('/ptm/dashboard'),
+  getTemplates: () => api.get('/ptm/templates'),
+  getTemplateById: (id) => api.get(`/ptm/templates/${id}`),
+  createTemplate: (data) => api.post('/ptm/templates', data),
+  updateTemplate: (id, data) => api.put(`/ptm/templates/${id}`, data),
+  addItem: (templateId, data) => api.post(`/ptm/templates/${templateId}/items`, data),
+  updateItem: (templateId, itemId, data) => api.put(`/ptm/templates/${templateId}/items/${itemId}`, data),
+  deleteItem: (templateId, itemId) => api.delete(`/ptm/templates/${templateId}/items/${itemId}`),
+  getLogs: (params) => api.get('/ptm/logs', { params }),
+  getLogById: (id) => api.get(`/ptm/logs/${id}`),
+  createLog: (data) => api.post('/ptm/logs', data),
+  getMonthlyRegister: (templateId, params) => api.get(`/ptm/monthly-register/${templateId}`, { params }),
+  getBreakdownLogs: (params) => api.get('/ptm/breakdown', { params }),
+  getBreakdownReasons: (q) => api.get('/ptm/breakdown-reasons', { params: { q } }),
+  getBreakdownLogById: (id) => api.get(`/ptm/breakdown/${id}`),
+  createBreakdownLog: (data) => api.post('/ptm/breakdown', data),
+
+  // Config
+  getMills: () => api.get('/ptm/config/mills'),
+  createMill: (data) => api.post('/ptm/config/mills', data),
+  updateMill: (id, data) => api.put(`/ptm/config/mills/${id}`, data),
+  deleteMill: (id) => api.delete(`/ptm/config/mills/${id}`),
+
+  getBreakdownTypes: () => api.get('/ptm/config/breakdown-types'),
+  createBreakdownType: (data) => api.post('/ptm/config/breakdown-types', data),
+  updateBreakdownType: (id, data) => api.put(`/ptm/config/breakdown-types/${id}`, data),
+  deleteBreakdownType: (id) => api.delete(`/ptm/config/breakdown-types/${id}`),
+
+  getSizes: () => api.get('/ptm/config/sizes'),
+  createSize: (data) => api.post('/ptm/config/sizes', data),
+  updateSize: (id, data) => api.put(`/ptm/config/sizes/${id}`, data),
+  deleteSize: (id) => api.delete(`/ptm/config/sizes/${id}`),
+};
+
+/* =============================
    EXPORT AXIOS INSTANCE
 ============================= */
+/* =============================
+   MODULES API
+============================= */
+export const modulesAPI = {
+  getAll: () => api.get('/modules'),
+  create: (data) => api.post('/modules', data),
+  update: (id, data) => api.put(`/modules/${id}`, data),
+  delete: (id) => api.delete(`/modules/${id}`),
+};
+
 export default api;

@@ -1,7 +1,89 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
+
+// Autocomplete input for breakdown reason — portal-based to escape overflow:hidden parents
+function ReasonAutocomplete({ value, onChange }) {
+  const [suggestions, setSuggestions] = useState([]);
+  const [rect, setRect] = useState(null);
+  const debounceRef = useRef(null);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    const hide = (e) => { if (inputRef.current && !inputRef.current.contains(e.target)) setRect(null); };
+    document.addEventListener('mousedown', hide);
+    return () => document.removeEventListener('mousedown', hide);
+  }, []);
+
+  const handleChange = (val) => {
+    onChange(val);
+    clearTimeout(debounceRef.current);
+    if (!val.trim()) { setSuggestions([]); setRect(null); return; }
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await hbmAPI.getBreakdownReasons(val);
+        const list = res.reasons || [];
+        setSuggestions(list);
+        if (list.length > 0 && inputRef.current) {
+          setRect(inputRef.current.getBoundingClientRect());
+        } else {
+          setRect(null);
+        }
+      } catch (err) {
+        console.error('Reason autocomplete:', err);
+      }
+    }, 250);
+  };
+
+  const pick = (r) => { onChange(r); setSuggestions([]); setRect(null); };
+
+  const dropdown = rect && suggestions.length > 0 && createPortal(
+    <ul style={{
+        position: 'fixed',
+        top: rect.bottom + 2,
+        left: rect.left,
+        width: rect.width,
+        zIndex: 999999,
+        background: '#fff',
+        border: '1px solid #e5e7eb',
+        borderRadius: 8,
+        boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+        maxHeight: 220,
+        overflowY: 'auto',
+        margin: 0,
+        padding: 0,
+        listStyle: 'none',
+      }}>
+      {suggestions.map((r, i) => (
+        <li key={i}
+          onMouseDown={e => { e.preventDefault(); pick(r); }}
+          style={{ padding: '9px 14px', fontSize: 13, cursor: 'pointer', borderBottom: '1px solid #f3f4f6', color: '#374151' }}
+          onMouseEnter={e => e.currentTarget.style.background = '#fef2f2'}
+          onMouseLeave={e => e.currentTarget.style.background = '#fff'}>
+          {r}
+        </li>
+      ))}
+    </ul>,
+    document.body
+  );
+
+  return (
+    <>
+      <input
+        ref={inputRef}
+        type="text"
+        value={value}
+        onChange={e => handleChange(e.target.value)}
+        onFocus={() => { if (suggestions.length > 0 && inputRef.current) setRect(inputRef.current.getBoundingClientRect()); }}
+        placeholder="Type reason..."
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+      />
+      {dropdown}
+    </>
+  );
+}
 
 const TIME_SLOTS = [
   '08:00-09:00','09:00-10:00','10:00-11:00','11:00-12:00',
@@ -245,10 +327,10 @@ const BreakdownReportForm = () => {
                               </div>
                               <div>
                                 <label className="block text-xs font-semibold text-gray-600 mb-1">Breakdown Reason</label>
-                                <input type="text" value={entry.breakdown_reason}
-                                  onChange={e => updateEntry(si, ei, 'breakdown_reason', e.target.value)}
-                                  placeholder="Reason..."
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-400" />
+                                <ReasonAutocomplete
+                                  value={entry.breakdown_reason}
+                                  onChange={val => updateEntry(si, ei, 'breakdown_reason', val)}
+                                />
                               </div>
                             </div>
                             {slot.entries.length > 1 && (

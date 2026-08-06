@@ -31,9 +31,8 @@ class UserController {
         });
       }
 
-      const validUserTypes = ['ADMIN', 'CRANE_MAINTENANCE', 'HBM_CHECKSHEETS', 'HSM_CHECKSHEETS'];
-      const effectiveUserType = user_type && validUserTypes.includes(user_type)
-        ? user_type
+      const effectiveUserType = (user_type && user_type.trim())
+        ? user_type.trim().toUpperCase().replace(/\s+/g, '_')
         : (role === 'ADMIN' ? 'ADMIN' : 'CRANE_MAINTENANCE');
 
       // Check if username already exists
@@ -194,7 +193,7 @@ class UserController {
   static async updateUser(req, res) {
     try {
       const { id } = req.params;
-      const { password, role, department_ids, is_active } = req.body;
+      const { password, role, user_type, department_ids, is_active } = req.body;
 
       // Check if user exists
       const userCheck = await query('SELECT id FROM users WHERE id = $1', [id]);
@@ -229,6 +228,11 @@ class UserController {
       if (is_active !== undefined) {
         updates.push(`is_active = $${paramCount++}`);
         values.push(is_active);
+      }
+
+      if (user_type !== undefined && user_type.trim()) {
+        updates.push(`user_type = $${paramCount++}`);
+        values.push(user_type.trim().toUpperCase().replace(/\s+/g, '_'));
       }
 
       // Handle department updates
@@ -322,7 +326,7 @@ class UserController {
       console.error('Update user error:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to update user'
+        message: error.message || 'Failed to update user'
       });
     }
   }

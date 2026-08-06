@@ -21,229 +21,210 @@ function formatDate(dateStr) {
 function SheetDetailDrawer({ sheetKey, label, year, month, onClose }) {
   const [data, setData]   = useState(null);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter]   = useState('all'); // 'all' | 'issues' | 'not-filled'
+  // Default to filled days so the panel is never a wall of empty "Not filled" rows
+  const [filter, setFilter]   = useState('filled'); // 'filled' | 'issues' | 'not-filled'
 
   useEffect(() => {
+    setLoading(true);
     hbmAPI.getMonthlyDetail(sheetKey, { year, month })
       .then(res => setData(res.data))
       .catch(() => toast.error(`Failed to load detail for ${label}`))
       .finally(() => setLoading(false));
-  }, [sheetKey, year, month]);
+  }, [sheetKey, year, month, label]);
 
   const today = new Date().toISOString().slice(0, 10);
 
-  // Build flat table rows: one row per date; if filled with issues → extra rows per issue
-  const buildRows = () => {
-    if (!data) return [];
-    const rows = [];
-    for (const { date, logs } of data.days) {
-      const isPast   = date <= today;
-      const isFilled = logs.length > 0;
-      const notOkAll = logs.flatMap(l => l.not_ok_items || []);
-      const remarks  = logs.map(l => l.remarks).filter(Boolean).join(' | ');
-      const shift    = logs.map(l => l.shift).filter(Boolean).join(', ');
-      const filledBy = logs.map(l => l.filled_by).filter(Boolean).join(', ');
-
-      if (filter === 'not-filled' && (isFilled || !isPast)) continue;
-      if (filter === 'issues' && notOkAll.length === 0) continue;
-
-      if (!isFilled) {
-        rows.push({ type: 'not-filled', date, isPast });
-      } else if (notOkAll.length === 0) {
-        rows.push({ type: 'ok', date, shift, filledBy, remarks });
-      } else {
-        // First item also carries the date header
-        notOkAll.forEach((item, idx) => {
-          rows.push({
-            type: 'issue',
-            date: idx === 0 ? date : null,
-            shift: idx === 0 ? shift : null,
-            filledBy: idx === 0 ? filledBy : null,
-            remarks: idx === 0 ? remarks : null,
-            issueCount: idx === 0 ? notOkAll.length : null,
-            section: item.section_name,
-            item:    item.item_name,
-            remark:  item.remark,
-            action:  item.action_taken,
-            isFirst: idx === 0,
-            isLast:  idx === notOkAll.length - 1,
-          });
-        });
-      }
-    }
-    return rows;
-  };
-
-  const rows = buildRows();
   const totalFilled    = data?.days.filter(d => d.logs.length > 0).length ?? 0;
   const totalNotFilled = data?.days.filter(d => d.logs.length === 0 && d.date <= today).length ?? 0;
   const totalIssues    = data?.days.flatMap(d => d.logs.flatMap(l => l.not_ok_items || [])).length ?? 0;
+  const daysInMonth    = data?.days.length ?? 0;
+
+  const filledDays = (data?.days || []).filter(d => d.logs.length > 0).map(({ date, logs }) => {
+    const notOkAll = logs.flatMap(l => l.not_ok_items || []);
+    return {
+      date,
+      shift: logs.map(l => l.shift).filter(Boolean).join(', ') || '—',
+      filledBy: logs.map(l => l.filled_by).filter(Boolean).join(', ') || '—',
+      remarks: logs.map(l => l.remarks).filter(Boolean).join(' | '),
+      issues: notOkAll,
+      ok: notOkAll.length === 0,
+    };
+  });
+
+  const issueDays = filledDays.filter(d => !d.ok);
+  const notFilledDays = (data?.days || []).filter(d => d.logs.length === 0 && d.date <= today);
+
+  const listDays =
+    filter === 'issues' ? issueDays
+    : filter === 'not-filled' ? notFilledDays.map(d => ({ date: d.date, notFilled: true }))
+    : filledDays;
 
   return (
     <div className="fixed inset-0 z-50 flex">
       <div className="flex-1 bg-black/40" onClick={onClose} />
 
-      <div className="w-full max-w-5xl bg-white shadow-2xl overflow-y-auto flex flex-col">
-
-        {/* Sticky header */}
-        <div className="sticky top-0 bg-emerald-700 text-white z-10">
-          <div className="px-5 py-4 flex items-start justify-between">
-            <div>
-              <h2 className="text-lg font-bold">{label}</h2>
-              <p className="text-emerald-200 text-sm">{MONTH_NAMES[month - 1]} {year} — Date-wise Detail</p>
-            </div>
-            <button onClick={onClose} className="p-2 hover:bg-emerald-600 rounded-lg">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+      <div className="w-full max-w-2xl bg-white shadow-2xl flex flex-col max-h-full">
+        <div className="bg-emerald-700 text-white px-5 py-4 flex items-start justify-between shrink-0">
+          <div>
+            <h2 className="text-lg font-bold">{label}</h2>
+            <p className="text-emerald-200 text-sm">{MONTH_NAMES[month - 1]} {year}</p>
           </div>
-
-          {/* Summary chips + filter */}
-          {data && (
-            <div className="px-5 pb-3 flex items-center gap-3 flex-wrap">
-              <button onClick={() => setFilter('all')}
-                className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${filter === 'all' ? 'bg-white text-emerald-800' : 'bg-emerald-600 text-emerald-100 hover:bg-emerald-500'}`}>
-                All Days ({data.days.length})
-              </button>
-              <button onClick={() => setFilter('issues')}
-                className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${filter === 'issues' ? 'bg-red-100 text-red-800' : 'bg-emerald-600 text-emerald-100 hover:bg-emerald-500'}`}>
-                Issues Only ({totalIssues} items)
-              </button>
-              <button onClick={() => setFilter('not-filled')}
-                className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${filter === 'not-filled' ? 'bg-gray-200 text-gray-800' : 'bg-emerald-600 text-emerald-100 hover:bg-emerald-500'}`}>
-                Not Filled ({totalNotFilled} days)
-              </button>
-            </div>
-          )}
+          <button type="button" onClick={onClose} className="p-2 hover:bg-emerald-600 rounded-lg" aria-label="Close">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
         {loading ? (
           <div className="flex-1 flex items-center justify-center py-20">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-600" />
           </div>
-        ) : !data ? null : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm border-collapse">
-              <thead className="sticky top-[104px] z-10">
-                <tr className="bg-gray-100 text-gray-600 text-xs uppercase tracking-wide">
-                  <th className="text-left px-4 py-2.5 font-semibold w-36 border-b border-gray-200">Date</th>
-                  <th className="text-center px-3 py-2.5 font-semibold w-20 border-b border-gray-200">Status</th>
-                  <th className="text-center px-3 py-2.5 font-semibold w-20 border-b border-gray-200">Shift</th>
-                  <th className="text-left px-3 py-2.5 font-semibold border-b border-gray-200">NOT OK Item</th>
-                  <th className="text-left px-3 py-2.5 font-semibold border-b border-gray-200">Remark / Cause</th>
-                  <th className="text-left px-3 py-2.5 font-semibold border-b border-gray-200">Action Taken</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="text-center py-12 text-gray-400 text-sm">No data for selected filter</td>
-                  </tr>
-                )}
-                {rows.map((row, idx) => {
-                  if (row.type === 'not-filled') {
-                    return (
-                      <tr key={idx} className="border-b border-gray-100 bg-gray-50">
-                        <td className="px-4 py-3 text-gray-500 text-xs font-medium">
-                          {formatDate(row.date)}
-                        </td>
-                        <td className="px-3 py-3 text-center">
-                          <span className="inline-flex items-center gap-1 text-xs text-gray-400 italic">
-                            <span className="w-2 h-2 rounded-full bg-gray-300 inline-block" />
-                            Not filled
-                          </span>
-                        </td>
-                        <td colSpan={4} className="px-3 py-3 text-gray-300 text-xs">—</td>
-                      </tr>
+        ) : !data ? (
+          <div className="p-10 text-center text-gray-400 text-sm">Failed to load details</div>
+        ) : (
+          <div className="flex-1 overflow-y-auto p-5 space-y-5">
+            {/* Compact month calendar — avoids listing 31 blank rows */}
+            <div className="bg-gray-50 rounded-xl border border-gray-200 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Month overview</p>
+                <p className="text-xs text-gray-500">
+                  <span className="text-emerald-600 font-semibold">{totalFilled}</span> filled ·{' '}
+                  <span className="text-gray-500 font-semibold">{totalNotFilled}</span> missed ·{' '}
+                  <span className={`font-semibold ${totalIssues ? 'text-red-600' : 'text-gray-400'}`}>{totalIssues}</span> issues
+                </p>
+              </div>
+              <div className="grid grid-cols-7 gap-1.5">
+                {['S','M','T','W','T','F','S'].map((d, i) => (
+                  <div key={i} className="text-[10px] text-center text-gray-400 font-semibold py-0.5">{d}</div>
+                ))}
+                {(() => {
+                  const first = new Date(year, month - 1, 1).getDay();
+                  const cells = [];
+                  for (let i = 0; i < first; i++) cells.push(<div key={`e${i}`} />);
+                  for (let day = 1; day <= daysInMonth; day++) {
+                    const date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                    const entry = data.days.find(d => d.date === date);
+                    const filled = (entry?.logs?.length || 0) > 0;
+                    const hasIssue = filled && (entry.logs || []).some(l => (l.not_ok_items || []).length > 0);
+                    const isPast = date <= today;
+                    const isFuture = date > today;
+                    let cls = 'bg-gray-100 text-gray-400';
+                    if (isFuture) cls = 'bg-white border border-dashed border-gray-200 text-gray-300';
+                    else if (hasIssue) cls = 'bg-red-500 text-white';
+                    else if (filled) cls = 'bg-emerald-500 text-white';
+                    else if (isPast) cls = 'bg-red-100 text-red-700';
+                    cells.push(
+                      <div
+                        key={date}
+                        title={`${formatDate(date)}: ${hasIssue ? 'Issues' : filled ? 'Filled' : isPast ? 'Not filled' : 'Future'}`}
+                        className={`aspect-square rounded-md text-[11px] font-semibold flex items-center justify-center ${cls}`}
+                      >
+                        {day}
+                      </div>
                     );
                   }
+                  return cells;
+                })()}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-3 text-[10px] text-gray-500">
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-emerald-500" /> Filled OK</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-red-500" /> Issues</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-red-100" /> Missed</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded border border-dashed border-gray-300" /> Future</span>
+              </div>
+            </div>
 
-                  if (row.type === 'ok') {
-                    return (
-                      <tr key={idx} className="border-b border-gray-100 hover:bg-emerald-50/40">
-                        <td className="px-4 py-3 text-gray-700 text-xs font-medium">
-                          {formatDate(row.date)}
-                        </td>
-                        <td className="px-3 py-3 text-center">
-                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-                            All OK
-                          </span>
-                        </td>
-                        <td className="px-3 py-3 text-center text-xs text-gray-500">
-                          {row.shift || '—'}
-                        </td>
-                        <td colSpan={2} className="px-3 py-3 text-xs text-gray-500 italic">
-                          {row.remarks || '—'}
-                        </td>
-                        <td className="px-3 py-3 text-xs text-gray-300">—</td>
-                      </tr>
-                    );
-                  }
+            {/* Filters — filled first */}
+            <div className="flex flex-wrap gap-2">
+              {[
+                { id: 'filled', label: `Filled (${totalFilled})`, active: 'bg-emerald-600 text-white', idle: 'bg-white text-gray-600 border-gray-200' },
+                { id: 'issues', label: `Issues (${totalIssues})`, active: 'bg-red-600 text-white', idle: 'bg-white text-gray-600 border-gray-200' },
+                { id: 'not-filled', label: `Missed (${totalNotFilled})`, active: 'bg-slate-700 text-white', idle: 'bg-white text-gray-600 border-gray-200' },
+              ].map(f => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setFilter(f.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${filter === f.id ? f.active : f.idle}`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
 
-                  // type === 'issue'
-                  return (
-                    <tr
-                      key={idx}
-                      className={`border-b border-red-100 bg-red-50 hover:bg-red-100/60 ${row.isFirst ? 'border-t-2 border-t-red-200' : ''}`}
-                    >
-                      {/* Date cell — only on first issue row of a date */}
-                      <td className={`px-4 py-2.5 align-top text-xs font-semibold text-red-700 ${!row.isFirst ? 'border-l-2 border-l-red-200' : ''}`}>
-                        {row.date ? (
-                          <>
-                            <div>{formatDate(row.date)}</div>
-                            {row.issueCount > 0 && (
-                              <div className="mt-1 text-[10px] font-normal text-red-400">{row.issueCount} issue{row.issueCount > 1 ? 's' : ''}</div>
-                            )}
-                            {row.remarks && (
-                              <div className="mt-1 text-[10px] font-normal text-gray-500 bg-white/60 rounded px-1 py-0.5">{row.remarks}</div>
-                            )}
-                          </>
-                        ) : null}
-                      </td>
-
-                      {/* Status — only on first row */}
-                      <td className="px-3 py-2.5 text-center align-top">
-                        {row.isFirst && (
-                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-700 bg-red-100 px-2 py-0.5 rounded-full">
-                            <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" />
-                            NOT OK
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Shift — only on first row */}
-                      <td className="px-3 py-2.5 text-center align-top text-xs text-gray-500">
-                        {row.isFirst ? (row.shift || '—') : ''}
-                      </td>
-
-                      {/* NOT OK item */}
-                      <td className="px-3 py-2.5 align-top">
-                        {row.section && (
-                          <span className="block text-[10px] text-gray-400 leading-none mb-0.5">{row.section}</span>
-                        )}
-                        <span className="text-red-800 font-medium text-xs">{row.item}</span>
-                      </td>
-
-                      {/* Remark / Cause */}
-                      <td className="px-3 py-2.5 align-top text-xs text-gray-700">
-                        {row.remark
-                          ? <span className="bg-yellow-50 border border-yellow-200 text-yellow-900 rounded px-2 py-1 block">{row.remark}</span>
-                          : <span className="text-gray-300 italic">No remark</span>}
-                      </td>
-
-                      {/* Action Taken */}
-                      <td className="px-3 py-2.5 align-top text-xs text-gray-700">
-                        {row.action
-                          ? <span className="bg-blue-50 border border-blue-200 text-blue-900 rounded px-2 py-1 block">{row.action}</span>
-                          : <span className="text-gray-300 italic">No action recorded</span>}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            {/* Content list */}
+            {listDays.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-6 py-12 text-center">
+                <p className="text-sm font-semibold text-gray-600">
+                  {filter === 'issues' && 'No issues this month'}
+                  {filter === 'not-filled' && 'No missed days (past)'}
+                  {filter === 'filled' && 'No submissions this month'}
+                </p>
+                <p className="text-xs text-gray-400 mt-1">Try another filter or month</p>
+              </div>
+            ) : filter === 'not-filled' ? (
+              <div className="rounded-xl border border-gray-200 overflow-hidden">
+                <div className="px-4 py-2.5 bg-slate-50 border-b border-gray-200 text-xs font-semibold text-slate-600">
+                  Missed days — compact list
+                </div>
+                <div className="p-3 flex flex-wrap gap-2">
+                  {listDays.map(d => (
+                    <span key={d.date} className="text-xs px-2.5 py-1 rounded-md bg-red-50 text-red-700 border border-red-100 font-medium">
+                      {formatDate(d.date)}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {listDays.map(day => (
+                  <div
+                    key={day.date}
+                    className={`rounded-xl border p-4 ${day.ok ? 'border-emerald-100 bg-emerald-50/40' : 'border-red-200 bg-red-50/50'}`}
+                  >
+                    <div className="flex items-start justify-between gap-3 flex-wrap">
+                      <div>
+                        <p className="text-sm font-bold text-gray-900">{formatDate(day.date)}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          Shift: {day.shift} · By: {day.filledBy}
+                        </p>
+                      </div>
+                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                        day.ok ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {day.ok ? 'All OK' : `${day.issues.length} NOT OK`}
+                      </span>
+                    </div>
+                    {day.remarks && (
+                      <p className="mt-2 text-xs text-gray-600 bg-white/70 rounded-lg px-2.5 py-1.5 border border-gray-100">
+                        Remark: {day.remarks}
+                      </p>
+                    )}
+                    {!day.ok && (
+                      <div className="mt-3 space-y-2">
+                        {day.issues.map((item, i) => (
+                          <div key={i} className="bg-white rounded-lg border border-red-100 px-3 py-2.5">
+                            <p className="text-[10px] text-gray-400 uppercase tracking-wide">{item.section_name || 'Item'}</p>
+                            <p className="text-sm font-semibold text-red-800">{item.item_name}</p>
+                            <div className="mt-1.5 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                              <div>
+                                <span className="text-gray-400">Cause / remark</span>
+                                <p className="text-gray-800 mt-0.5">{item.remark || '—'}</p>
+                              </div>
+                              <div>
+                                <span className="text-gray-400">Action taken</span>
+                                <p className="text-gray-800 mt-0.5">{item.action_taken || '—'}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -274,6 +255,15 @@ export default function HbmMonthlyInsights() {
 
   useEffect(() => { fetchInsights(); }, [fetchInsights]);
 
+  // Open sheet detail when arriving from dashboard View → Monthly insights (?type=)
+  useEffect(() => {
+    if (!data?.sheets) return;
+    const type = new URLSearchParams(window.location.search).get('type');
+    if (!type || !SHEET_KEYS.includes(type)) return;
+    const sheet = data.sheets.find(s => s.key === type);
+    setDrawer({ key: type, label: sheet?.label || type });
+  }, [data]);
+
   const prevMonth = () => { if (month === 1) { setMonth(12); setYear(y => y - 1); } else setMonth(m => m - 1); };
   const nextMonth = () => { if (month === 12) { setMonth(1); setYear(y => y + 1); } else setMonth(m => m + 1); };
 
@@ -289,7 +279,7 @@ export default function HbmMonthlyInsights() {
         <div className="mb-5">
           <Link to="/hbm/dashboard" className="text-emerald-600 hover:underline text-sm">← Dashboard</Link>
           <h1 className="text-2xl font-bold text-gray-900 mt-1">Monthly Insights</h1>
-          <p className="text-sm text-gray-500">Click any checksheet row to see date-wise details, issues, causes and actions</p>
+          <p className="text-sm text-gray-500">Coverage and issues by checksheet — open a row for filled days and problem details</p>
         </div>
 
         {/* Month Selector */}
@@ -357,14 +347,16 @@ export default function HbmMonthlyInsights() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {data.sheets.map(sheet => {
+                    {[...data.sheets].sort((a, b) => (b.total || 0) - (a.total || 0)).map(sheet => {
                       const coverage  = Math.round((sheet.unique_days / data.days_in_month) * 100);
                       const filledSet = new Set(sheet.daily.map(d => String(d.day).slice(0, 10)));
+                      const focusType = new URLSearchParams(window.location.search).get('type');
+                      const focused = focusType === sheet.key;
                       return (
                         <tr
                           key={sheet.key}
                           onClick={() => setDrawer({ key: sheet.key, label: sheet.label })}
-                          className="hover:bg-emerald-50 cursor-pointer transition-colors group"
+                          className={`hover:bg-emerald-50 cursor-pointer transition-colors group ${focused ? 'bg-emerald-50 ring-1 ring-inset ring-emerald-200' : ''}`}
                         >
                           <td className="px-5 py-3">
                             <span className="font-medium text-gray-800 group-hover:text-emerald-700 transition-colors">

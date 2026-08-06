@@ -18,6 +18,9 @@ import TelegramSettings from './components/TelegramSettings';
 // Admin Components
 import AdminLayout from './components/admin/AdminLayout';
 import AdminDashboard from './components/admin/AdminDashboard';
+import AdminModules from './components/admin/AdminModules';
+import AdminConfig from './components/admin/AdminConfig';
+import AdminDownloadReports from './components/admin/AdminDownloadReports';
 
 // HBM Components
 import HbmDashboard from './components/hbm/HbmDashboard';
@@ -73,11 +76,16 @@ import SheetViewer from './components/hbm/SheetViewer';
 import HbmMonthlyInsights from './components/hbm/HbmMonthlyInsights';
 import HbmMonthlyRegister from './components/hbm/HbmMonthlyRegister';
 
+// PTM Components
+import PtmDashboard from './components/ptm/PtmDashboard';
+import PtmChecksheetHistory from './components/ptm/PtmChecksheetHistory';
+import PtmBreakdownForm from './components/ptm/PtmBreakdownForm';
+import PtmMonthlyRegister from './components/ptm/PtmMonthlyRegister';
+import PtmAdminConfig from './components/ptm/PtmAdminConfig';
+
 // HSM Components
 import HsmDashboard from './components/hsm/HsmDashboard';
 // import FabricationReport from "./components/fabrication/FabricationReport";
-// import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import FabricationReport from "./components/fabrication/FabricationReport";
 import Dashboard from "./components/Dashboard";
 
 
@@ -153,7 +161,8 @@ function App() {
   const isAdminUser = user?.role === 'ADMIN' || user?.user_type === 'ADMIN';
   const isOnHBMRoute = location.pathname.startsWith('/hbm');
   const isOnHSMRoute = location.pathname.startsWith('/hsm');
-  const isOnAdminRoute = ['/create-user', '/telegram-settings', '/fabrication', '/admin/dashboard'].some(r => location.pathname.startsWith(r));
+  const isOnPTMRoute = location.pathname.startsWith('/ptm');
+  const isOnAdminRoute = ['/create-user', '/telegram-settings', '/fabrication', '/admin/'].some(r => location.pathname.startsWith(r));
 
   // Don't show nav on login page or admin routes (AdminLayout supplies its own top bar)
   const showNav = user && location.pathname !== '/login' && !isOnAdminRoute;
@@ -171,14 +180,14 @@ function App() {
     isAdminUser || hbmAllowedSheets === null || (Array.isArray(hbmAllowedSheets) && hbmAllowedSheets.includes(key));
 
   // Nav colors based on module
-  const navBg        = isOnAdminRoute ? 'bg-slate-900'         : isOnHBMRoute ? 'bg-emerald-600'       : isOnHSMRoute ? 'bg-indigo-600'       : 'bg-blue-600';
-  const navHover     = isOnAdminRoute ? 'hover:bg-slate-700'   : isOnHBMRoute ? 'hover:bg-emerald-500'  : isOnHSMRoute ? 'hover:bg-indigo-500'  : 'hover:bg-blue-500';
-  const navActive    = isOnAdminRoute ? 'bg-slate-700'         : isOnHBMRoute ? 'bg-emerald-700'        : isOnHSMRoute ? 'bg-indigo-700'        : 'bg-blue-700';
-  const navBadgeBg   = isOnAdminRoute ? 'bg-violet-600'        : isOnHBMRoute ? 'bg-emerald-500'        : isOnHSMRoute ? 'bg-indigo-500'        : 'bg-blue-500';
-  const navBorderColor = isOnAdminRoute ? 'border-slate-700'   : isOnHBMRoute ? 'border-emerald-500'    : isOnHSMRoute ? 'border-indigo-500'    : 'border-blue-500';
-  const navInfoBg    = isOnAdminRoute ? 'bg-slate-800'         : isOnHBMRoute ? 'bg-emerald-700'        : isOnHSMRoute ? 'bg-indigo-700'        : 'bg-blue-700';
-  const navInfoAvatarBg = isOnAdminRoute ? 'bg-violet-600'     : isOnHBMRoute ? 'bg-emerald-400'        : isOnHSMRoute ? 'bg-indigo-400'        : 'bg-blue-400';
-  const navInfoSubText = isOnAdminRoute ? 'text-slate-400'     : isOnHBMRoute ? 'text-emerald-200'      : isOnHSMRoute ? 'text-indigo-200'      : 'text-blue-200';
+  const navBg        = isOnAdminRoute ? 'bg-slate-900'         : isOnHBMRoute ? 'bg-emerald-600'       : isOnHSMRoute ? 'bg-indigo-600'       : isOnPTMRoute ? 'bg-blue-700'       : 'bg-blue-600';
+  const navHover     = isOnAdminRoute ? 'hover:bg-slate-700'   : isOnHBMRoute ? 'hover:bg-emerald-500'  : isOnHSMRoute ? 'hover:bg-indigo-500'  : isOnPTMRoute ? 'hover:bg-blue-600' : 'hover:bg-blue-500';
+  const navActive    = isOnAdminRoute ? 'bg-slate-700'         : isOnHBMRoute ? 'bg-emerald-700'        : isOnHSMRoute ? 'bg-indigo-700'        : isOnPTMRoute ? 'bg-blue-800'       : 'bg-blue-700';
+  const navBadgeBg   = isOnAdminRoute ? 'bg-violet-600'        : isOnHBMRoute ? 'bg-emerald-500'        : isOnHSMRoute ? 'bg-indigo-500'        : isOnPTMRoute ? 'bg-blue-600'       : 'bg-blue-500';
+  const navBorderColor = isOnAdminRoute ? 'border-slate-700'   : isOnHBMRoute ? 'border-emerald-500'    : isOnHSMRoute ? 'border-indigo-500'    : isOnPTMRoute ? 'border-blue-600'   : 'border-blue-500';
+  const navInfoBg    = isOnAdminRoute ? 'bg-slate-800'         : isOnHBMRoute ? 'bg-emerald-700'        : isOnHSMRoute ? 'bg-indigo-700'        : isOnPTMRoute ? 'bg-blue-800'       : 'bg-blue-700';
+  const navInfoAvatarBg = isOnAdminRoute ? 'bg-violet-600'     : isOnHBMRoute ? 'bg-emerald-400'        : isOnHSMRoute ? 'bg-indigo-400'        : isOnPTMRoute ? 'bg-blue-500'       : 'bg-blue-400';
+  const navInfoSubText = isOnAdminRoute ? 'text-slate-400'     : isOnHBMRoute ? 'text-emerald-200'      : isOnHSMRoute ? 'text-indigo-200'      : isOnPTMRoute ? 'text-blue-200'     : 'text-blue-200';
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
@@ -190,7 +199,7 @@ function App() {
           <div className="px-4 py-3">
             <div className="flex items-center justify-between">
               {/* Logo */}
-              <Link to={isOnAdminRoute ? '/create-user' : (isOnHBMRoute ? '/hbm/dashboard' : isOnHSMRoute ? '/hsm/dashboard' : '/')} className="text-lg font-bold tracking-tight">
+              <Link to={isOnAdminRoute ? '/create-user' : (isOnHBMRoute ? '/hbm/dashboard' : isOnHSMRoute ? '/hsm/dashboard' : isOnPTMRoute ? '/ptm/dashboard' : '/')} className="text-lg font-bold tracking-tight">
                 {isOnAdminRoute ? (
                   <span className="flex items-center gap-2">
                     <svg className="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -198,53 +207,14 @@ function App() {
                     </svg>
                     Admin Panel
                   </span>
-                ) : isOnHBMRoute ? 'HBM Checksheets' : isOnHSMRoute ? 'HSM Checksheets' : 'Crane Maintenance'}
+                ) : isOnHBMRoute ? 'HBM Checksheets' : isOnHSMRoute ? 'HSM Checksheets' : isOnPTMRoute ? 'PTM Checksheets' : 'Crane Maintenance'}
               </Link>
 
               {/* Top-right controls */}
               <div className="flex items-center space-x-1">
                 {/* Monthly Insights Icon (HBM + Admin only) */}
-                {isOnHBMRoute && isAdminUser && (
-                  <Link
-                    to="/hbm/monthly-insights"
-                    title="Monthly Insights"
-                    className={`p-2 rounded-lg ${navHover} ${location.pathname === '/hbm/monthly-insights' ? navActive : ''}`}
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                  </Link>
-                )}
-
-                {/* Monthly Register Icon (HBM + Admin only) */}
-                {isOnHBMRoute && isAdminUser && (
-                  <Link
-                    to="/hbm/monthly-register"
-                    title="Monthly Register"
-                    className={`p-2 rounded-lg ${navHover} ${location.pathname === '/hbm/monthly-register' ? navActive : ''}`}
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 6h18M3 14h18M3 18h18" />
-                    </svg>
-                  </Link>
-                )}
-
-                {/* Download Icon (HBM only) */}
-                {isOnHBMRoute && (
-                  <Link
-                    to="/hbm/download"
-                    title="Download Checksheets"
-                    className={`p-2 rounded-lg ${navHover} ${location.pathname === '/hbm/download' ? navActive : ''}`}
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                  </Link>
-                )}
-
-
                 {/* Maintenance Calendar icon — Crane route only */}
-                {!isOnHBMRoute && !isOnHSMRoute && !isOnAdminRoute && (
+                {!isOnHBMRoute && !isOnHSMRoute && !isOnAdminRoute && !isOnPTMRoute && (
                   <Link
                     to="/maintenance-calendar"
                     title="Maintenance Calendar"
@@ -257,7 +227,7 @@ function App() {
                 )}
 
                 {/* New Inspection icon — Crane route only */}
-                {!isOnHBMRoute && !isOnHSMRoute && !isOnAdminRoute && (
+                {!isOnHBMRoute && !isOnHSMRoute && !isOnAdminRoute && !isOnPTMRoute && (
                   <Link
                     to="/new-inspection"
                     title="New Inspection"
@@ -270,7 +240,7 @@ function App() {
                 )}
 
                 {/* Download / Reports icon — Crane route only */}
-                {!isOnHBMRoute && !isOnHSMRoute && !isOnAdminRoute && (
+                {!isOnHBMRoute && !isOnHSMRoute && !isOnAdminRoute && !isOnPTMRoute && (
                   <Link
                     to="/reports"
                     title="Reports & Download"
@@ -283,7 +253,7 @@ function App() {
                 )}
 
                 {/* Admin Panel icon — HBM/HSM route, admin only */}
-                {(isOnHBMRoute || isOnHSMRoute) && isAdminUser && (
+                {(isOnHBMRoute || isOnHSMRoute || isOnPTMRoute) && isAdminUser && (
                   <Link
                     to="/create-user"
                     title="Admin Panel"
@@ -297,7 +267,7 @@ function App() {
 
                 {/* User Badge */}
                 <div className={`text-xs ${navBadgeBg} px-2 py-1 rounded font-medium`}>
-                  {isOnAdminRoute ? 'Admin' : (isOnHBMRoute ? 'HBM' : (isOnHSMRoute ? 'HSM' : (user?.role === 'ADMIN' ? 'Admin' : 'Operator')))}
+                  {isOnAdminRoute ? 'Admin' : (isOnHBMRoute ? 'HBM' : (isOnHSMRoute ? 'HSM' : (isOnPTMRoute ? 'PTM' : (user?.role === 'ADMIN' ? 'Admin' : 'Operator'))))}
                 </div>
 
                 {/* Logout Icon (always visible) */}
@@ -345,7 +315,7 @@ function App() {
                     <div>
                       <p className="font-semibold">{user?.username || 'User'}</p>
                       <p className={`text-xs ${navInfoSubText}`}>
-                        {user?.role} | {isOnAdminRoute ? 'Admin Panel' : (isOnHBMRoute ? 'HBM Module' : (isOnHSMRoute ? 'HSM Module' : 'Crane Module'))}
+                        {user?.role} | {isOnAdminRoute ? 'Admin Panel' : (isOnHBMRoute ? 'HBM Module' : (isOnHSMRoute ? 'HSM Module' : (isOnPTMRoute ? 'PTM Module' : 'Crane Module')))}
                       </p>
                     </div>
                   </div>
@@ -420,6 +390,15 @@ function App() {
                         </svg>
                         <span className="font-medium">HSM Checksheets</span>
                       </Link>
+                      <Link
+                        to="/ptm/dashboard"
+                        className="flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors bg-blue-700 hover:bg-blue-600 text-white"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                        <span className="font-medium">PTM Checksheets</span>
+                      </Link>
                     </>
                   ) : isOnHBMRoute ? (
                     /* ========== HBM NAVIGATION ========== */
@@ -435,32 +414,10 @@ function App() {
                       </Link>
 
                       {isAdminUser && (
-                        <Link
-                          to="/hbm/monthly-insights"
-                          className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/hbm/monthly-insights' ? navActive + ' text-white' : navHover}`}
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                          </svg>
-                          <span className="font-medium">Monthly Insights</span>
-                        </Link>
-                      )}
-
-                      <Link
-                        to="/hbm/download"
-                        className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/hbm/download' ? navActive + ' text-white' : navHover}`}
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                        </svg>
-                        <span className="font-medium">Download</span>
-                      </Link>
-
-                      {isAdminUser && (
                         <>
                           <div className="border-t border-emerald-700 my-1" />
                           <Link
-                            to="/create-user"
+                            to="/admin/dashboard"
                             className="flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors bg-slate-700 hover:bg-slate-600 text-white"
                           >
                             <svg className="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -494,6 +451,39 @@ function App() {
                             <svg className="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                             </svg>
+                            <span className="font-medium">Admin Panel</span>
+                          </Link>
+                        </>
+                      )}
+                    </>
+                  ) : isOnPTMRoute ? (
+                    /* ========== PTM NAVIGATION ========== */
+                    <>
+                      <Link to="/ptm/dashboard" className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/ptm/dashboard' ? navActive + ' text-white' : navHover}`}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+                        <span className="font-medium">Dashboard</span>
+                      </Link>
+                      <Link to="/ptm/checksheet/history" className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/ptm/checksheet/history' ? navActive + ' text-white' : navHover}`}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                        <span className="font-medium">History</span>
+                      </Link>
+                      <Link to="/ptm/breakdown/new" className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/ptm/breakdown/new' ? navActive + ' text-white' : navHover}`}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M5.07 19H19a2 2 0 001.75-2.96l-7-12a2 2 0 00-3.5 0l-7 12A2 2 0 005.07 19z" /></svg>
+                        <span className="font-medium">Breakdown Report</span>
+                      </Link>
+                      <Link to="/ptm/monthly-register" className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/ptm/monthly-register' ? navActive + ' text-white' : navHover}`}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 6h18M3 14h18M3 18h18" /></svg>
+                        <span className="font-medium">Monthly Register</span>
+                      </Link>
+                      {isAdminUser && (
+                        <>
+                          <Link to="/ptm/admin/config" className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/ptm/admin/config' ? navActive + ' text-white' : navHover}`}>
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" /></svg>
+                            <span className="font-medium">Admin — Config</span>
+                          </Link>
+                          <div className="border-t border-blue-600 my-1" />
+                          <Link to="/create-user" className="flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors bg-slate-700 hover:bg-slate-600 text-white">
+                            <svg className="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
                             <span className="font-medium">Admin Panel</span>
                           </Link>
                         </>
@@ -563,6 +553,15 @@ function App() {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                             </svg>
                             <span className="font-medium">HSM Checksheets</span>
+                          </Link>
+                          <Link
+                            to="/ptm/dashboard"
+                            className="flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors bg-blue-700 hover:bg-blue-600 text-white"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                            </svg>
+                            <span className="font-medium">PTM Checksheets</span>
                           </Link>
                           <Link
                             to="/create-user"
@@ -640,32 +639,39 @@ function App() {
           <Route element={<AdminLayout user={user} onLogout={handleLogout} />}>
             <Route
               path="/admin/dashboard"
-              element={user ? <AdminDashboard /> : <Navigate to="/login" replace />}
+              element={user && isAdminUser ? <AdminDashboard /> : user ? <Navigate to="/" replace /> : <Navigate to="/login" replace />}
             />
             <Route
+              path="/admin/modules"
+              element={user && isAdminUser ? <AdminModules /> : user ? <Navigate to="/" replace /> : <Navigate to="/login" replace />}
+            />
+            <Route
+              path="/admin/users"
+              element={user && isAdminUser ? <CreateUser user={user} /> : user ? <Navigate to="/" replace /> : <Navigate to="/login" replace />}
+            />
+            <Route
+              path="/admin/share-access"
+              element={user && isAdminUser ? <AdminConfig /> : user ? <Navigate to="/" replace /> : <Navigate to="/login" replace />}
+            />
+            <Route
+              path="/admin/download-reports"
+              element={user && isAdminUser ? <AdminDownloadReports /> : user ? <Navigate to="/" replace /> : <Navigate to="/login" replace />}
+            />
+            <Route
+              path="/admin/telegram"
+              element={user && isAdminUser ? <TelegramSettings /> : user ? <Navigate to="/" replace /> : <Navigate to="/login" replace />}
+            />
+            {/* Legacy aliases → new Admin IA */}
+            <Route path="/admin/config" element={<Navigate to="/admin/share-access" replace />} />
+            <Route
               path="/create-user"
-              element={
-                user && (user.role === 'ADMIN' || user.user_type === 'ADMIN') ? (
-                  <CreateUser user={user} />
-                ) : (
-                  <Navigate to="/" replace />
-                )
-              }
+              element={user && isAdminUser ? <CreateUser user={user} /> : user ? <Navigate to="/" replace /> : <Navigate to="/login" replace />}
             />
             <Route
               path="/telegram-settings"
-              element={
-                user && user.role === 'ADMIN' ? (
-                  <TelegramSettings />
-                ) : (
-                  <Navigate to="/" replace />
-                )
-              }
+              element={user && isAdminUser ? <TelegramSettings /> : user ? <Navigate to="/" replace /> : <Navigate to="/login" replace />}
             />
-            <Route
-              path="/fabrication"
-              element={user ? <FabricationReport /> : <Navigate to="/login" replace />}
-            />
+            <Route path="/fabrication" element={<Navigate to="/admin/dashboard" replace />} />
           </Route>
 
           {/* ========== HBM ROUTES ========== */}
@@ -786,8 +792,8 @@ function App() {
           <Route path="/hbm/breakdown/history" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('breakdown') ? <BreakdownReportHistory /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
           <Route path="/hbm/breakdown/:id" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('breakdown') ? <BreakdownReportView /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
           <Route path="/hbm/sheet-viewer" element={user ? isAdminUser ? <SheetViewer /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
-          <Route path="/hbm/monthly-insights" element={user ? isAdminUser ? <HbmMonthlyInsights /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
-          <Route path="/hbm/monthly-register" element={user ? isAdminUser ? <HbmMonthlyRegister /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hbm/monthly-insights" element={user ? (isHBMUser || isAdminUser) ? <HbmMonthlyInsights /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hbm/monthly-register" element={user ? (isHBMUser || isAdminUser) ? <HbmMonthlyRegister /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
 
           {/* ========== HSM ROUTES ========== */}
 
@@ -804,13 +810,35 @@ function App() {
             }
           />
 
+          {/* ========== PTM ROUTES ========== */}
+          <Route
+            path="/ptm/dashboard"
+            element={user && isAdminUser ? <PtmDashboard /> : user ? <Navigate to="/" replace /> : <Navigate to="/login" replace />}
+          />
+          <Route
+            path="/ptm/checksheet/history"
+            element={user && isAdminUser ? <PtmChecksheetHistory /> : user ? <Navigate to="/" replace /> : <Navigate to="/login" replace />}
+          />
+          <Route
+            path="/ptm/breakdown/new"
+            element={user && isAdminUser ? <PtmBreakdownForm /> : user ? <Navigate to="/" replace /> : <Navigate to="/login" replace />}
+          />
+          <Route
+            path="/ptm/monthly-register"
+            element={user && isAdminUser ? <PtmMonthlyRegister /> : user ? <Navigate to="/" replace /> : <Navigate to="/login" replace />}
+          />
+          <Route
+            path="/ptm/admin/config"
+            element={user && isAdminUser ? <PtmAdminConfig /> : user ? <Navigate to="/" replace /> : <Navigate to="/login" replace />}
+          />
+
           {/* Catch all - redirect to appropriate home or login */}
           <Route path="*" element={<Navigate to={user ? getDefaultRoute() : '/login'} replace />} />
         </Routes>
       </main>
 
       {/* Footer - Only show on dashboard pages */}
-      {showNav && (location.pathname === '/' || location.pathname === '/hbm/dashboard' || location.pathname === '/hsm/dashboard') && (
+      {showNav && (location.pathname === '/' || location.pathname === '/hbm/dashboard' || location.pathname === '/hsm/dashboard' || location.pathname === '/ptm/dashboard') && (
         <footer className="bg-gray-800 text-white py-4">
           <div className="px-4 text-center">
             <p className="text-xs text-gray-400">
@@ -818,6 +846,8 @@ function App() {
                 ? 'HBM Checksheet System | SRJ Strips and Pipes Pvt Ltd'
                 : isOnHSMRoute
                 ? 'HSM Checksheet System | SRJ Strips and Pipes Pvt Ltd'
+                : isOnPTMRoute
+                ? 'PTM Checksheet System | SRJ Strips and Pipes Pvt Ltd'
                 : 'Crane Maintenance System | Department-Based Access Control'
               }
             </p>

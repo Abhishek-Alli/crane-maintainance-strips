@@ -63,10 +63,13 @@ export default function SheetViewer() {
     setError(''); setLoading(true); setResult(null); setFilter(''); setCollapsed({});
     try {
       const data = await hbmAPI.getSheetView(sheetType, { date_from: fromDate, date_to: toDate });
-      // Normalize: convert each row object to an ordered array matching columns
-      const keys = data.rows?.length > 0 ? Object.keys(data.rows[0]) : [];
+      // Prefer explicit keys from API (aligned with columns). Fall back to Object.keys only if needed.
+      const keys = (data.keys && data.keys.length)
+        ? data.keys
+        : (data.rows?.length > 0 ? Object.keys(data.rows[0]) : []);
+      const columns = data.columns?.length ? data.columns : keys;
       const normalized = {
-        columns: data.columns || [],
+        columns,
         keys,
         rows: (data.rows || []).map(r => keys.map(k => r[k])),
       };

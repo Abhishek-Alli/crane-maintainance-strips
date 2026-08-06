@@ -26,6 +26,9 @@ const cronRoutes = require('./routes/cronRoutes');
 const hbmRoutes = require('./routes/hbmRoutes');
 const pumphouseRoutes = require('./routes/pumphouseRoutes');
 const fabricationRoutes = require('./routes/fabricationRoutes');
+const ptmRoutes = require('./routes/ptmRoutes');
+const modulesRoutes = require('./routes/modulesRoutes');
+const permissionListsRoutes = require('./routes/permissionListsRoutes');
 
 const { pool } = require('./config/database');
 
@@ -71,6 +74,9 @@ app.use('/api/cron', cronRoutes);
 app.use('/api/hbm', hbmRoutes);
 app.use('/api/pumphouse', pumphouseRoutes);
 app.use('/api', fabricationRoutes);
+app.use('/api/ptm', ptmRoutes);
+app.use('/api/modules', modulesRoutes);
+app.use('/api/permission-lists', permissionListsRoutes);
 
 // Root Endpoint
 app.get('/', (req, res) => {

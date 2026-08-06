@@ -1,22 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 
 const API_URL = process.env.REACT_APP_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5001/api' : '/api');
 
-const MODULE_OPTIONS = [
-  { value: 'CRANE_MAINTENANCE', label: 'Crane Maintenance', color: 'blue' },
-  { value: 'HBM_CHECKSHEETS',   label: 'HBM Checksheets',  color: 'emerald' },
-  { value: 'HSM_CHECKSHEETS',   label: 'HSM Checksheets',  color: 'indigo' },
-  { value: 'ADMIN',             label: 'Admin',             color: 'slate' },
-];
+// Admin is always appended — it's not a DB module
+const ADMIN_OPTION = { code: 'ADMIN', name: 'Admin', color: 'slate', route_prefix: '/create-user' };
 
 const Login = ({ onLoginSuccess }) => {
   const [formData, setFormData] = useState({ username: '', password: '', userType: '' });
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [moduleOptions, setModuleOptions] = useState([]);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    axios.get(`${API_URL}/modules`)
+      .then(res => {
+        const mods = (res.data?.modules || []).filter(m => m.is_active);
+        setModuleOptions([...mods, ADMIN_OPTION]);
+      })
+      .catch(() => {
+        // fallback to hardcoded if API fails
+        setModuleOptions([
+          { code: 'CRANE_MAINTENANCE', name: 'Crane Maintenance', color: 'blue',    route_prefix: '/' },
+          { code: 'HBM_CHECKSHEETS',  name: 'HBM Checksheets',  color: 'emerald', route_prefix: '/hbm' },
+          { code: 'HSM_CHECKSHEETS',  name: 'HSM Checksheets',  color: 'indigo',  route_prefix: '/hsm' },
+          { code: 'PTM_CHECKSHEETS',  name: 'PTM Checksheets',  color: 'blue',    route_prefix: '/ptm' },
+          ADMIN_OPTION,
+        ]);
+      });
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -43,9 +58,9 @@ const Login = ({ onLoginSuccess }) => {
         if (onLoginSuccess) onLoginSuccess(userData);
         toast.success(`Welcome, ${formData.username}!`);
         const loginType = userData.loginType || userData.user_type;
-        if (loginType === 'HBM_CHECKSHEETS') navigate('/hbm/dashboard');
-        else if (loginType === 'HSM_CHECKSHEETS') navigate('/hsm/dashboard');
-        else if (loginType === 'ADMIN') navigate('/create-user');
+        if (loginType === 'ADMIN') { navigate('/create-user'); return; }
+        const mod = moduleOptions.find(m => m.code === loginType);
+        if (mod) navigate(mod.route_prefix === '/' ? '/' : `${mod.route_prefix}/dashboard`);
         else navigate('/');
       }
     } catch (error) {
@@ -55,7 +70,7 @@ const Login = ({ onLoginSuccess }) => {
     }
   };
 
-  const selected = MODULE_OPTIONS.find(m => m.value === formData.userType);
+  const selected = moduleOptions.find(m => m.code === formData.userType);
   const btnColor = selected?.color === 'emerald'
     ? 'bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500'
     : selected?.color === 'indigo'
@@ -177,8 +192,8 @@ const Login = ({ onLoginSuccess }) => {
                   className="w-full appearance-none px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-sm font-semibold text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors pr-10"
                 >
                   <option value="">— Select Module —</option>
-                  {MODULE_OPTIONS.map(m => (
-                    <option key={m.value} value={m.value}>{m.label}</option>
+                  {moduleOptions.map(m => (
+                    <option key={m.code} value={m.code}>{m.name}</option>
                   ))}
                 </select>
                 {/* chevron */}

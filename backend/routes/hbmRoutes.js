@@ -110,6 +110,8 @@ router.post('/roughing-gb-temp', HbmController.createRoughingGbTempLog);
 
 // HBM Breakdown Report
 router.get('/breakdown', HbmController.getBreakdownLogs);
+router.get('/breakdown-reasons', HbmController.getBreakdownReasons);
+router.get('/breakdown/:id/pdf', HbmController.downloadBreakdownPDF);
 router.get('/breakdown/:id', HbmController.getBreakdownLogById);
 router.post('/breakdown', HbmController.createBreakdownLog);
 

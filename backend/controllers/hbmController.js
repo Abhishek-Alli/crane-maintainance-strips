@@ -3059,6 +3059,25 @@ class HbmController {
     }
   }
 
+  static async getBreakdownReasons(req, res) {
+    try {
+      const { q = '' } = req.query;
+      const { rows } = await query(
+        `SELECT DISTINCT TRIM(breakdown_reason) AS reason
+         FROM hbm_breakdown_entries
+         WHERE breakdown_reason IS NOT NULL
+           AND TRIM(breakdown_reason) <> ''
+           AND TRIM(LOWER(breakdown_reason)) LIKE LOWER($1)
+         ORDER BY reason
+         LIMIT 20`,
+        [`%${q.trim()}%`]
+      );
+      res.json({ success: true, reasons: rows.map(r => r.reason) });
+    } catch (e) {
+      res.status(500).json({ success: false, message: 'Failed to fetch reasons' });
+    }
+  }
+
   static async getBreakdownLogById(req, res) {
     try {
       const { id } = req.params;
@@ -3127,7 +3146,7 @@ class HbmController {
                    VALUES ($1, $2, $3, $4)`,
                   [slotId, entry.breakdown_type,
                    entry.breakdown_minutes != null && entry.breakdown_minutes !== '' ? parseInt(entry.breakdown_minutes) : null,
-                   entry.breakdown_reason || null]
+                   entry.breakdown_reason ? entry.breakdown_reason.trim() : null]
                 );
               }
             }
@@ -3147,6 +3166,200 @@ class HbmController {
     } catch (error) {
       console.error('Create breakdown log error:', error);
       res.status(500).json({ success: false, message: 'Failed to submit breakdown report' });
+    }
+  }
+
+  // GET /api/hbm/breakdown/:id/pdf
+  static async downloadBreakdownPDF(req, res) {
+    const { id } = req.params;
+    try {
+      const logRes = await query(
+        `SELECT l.*, u.username AS filled_by_name
+         FROM hbm_breakdown_logs l
+         JOIN users u ON l.filled_by = u.id
+         WHERE l.id = $1`,
+        [id]
+      );
+      if (!logRes.rows.length)
+        return res.status(404).json({ success: false, message: 'Breakdown log not found' });
+
+      const log = logRes.rows[0];
+      const slotsRes = await query(
+        `SELECT * FROM hbm_breakdown_slots WHERE log_id = $1 ORDER BY slot_order`,
+        [id]
+      );
+      const slots = await Promise.all(slotsRes.rows.map(async (slot) => {
+        const entriesRes = await query(
+          `SELECT * FROM hbm_breakdown_entries WHERE slot_id = $1 ORDER BY id`,
+          [slot.id]
+        );
+        return { ...slot, entries: entriesRes.rows };
+      }));
+
+      const SUMMARY_TYPES = [
+        'Mill Breakdown',
+        'Mechanical Breakdown',
+        'Electrical Breakdown',
+        'RHF Breakdown',
+        'Mill Maintenance',
+        '132 KV Breakdown',
+        'RHF Low Temperature',
+        'Cold, CCM Chilli & Piping Breakdown',
+        'CCM Heat Over',
+        'Other',
+        'Contractor Mistake',
+      ];
+      const TMT_TYPES = new Set([
+        'Mill Breakdown', 'Mechanical Breakdown', 'Electrical Breakdown', 'RHF Breakdown',
+      ]);
+
+      const allEntries = slots.flatMap(s => (s.entries || []).filter(e => e.breakdown_type));
+      const sumByType = (type) => allEntries
+        .filter(e => e.breakdown_type === type)
+        .reduce((acc, e) => acc + (parseInt(e.breakdown_minutes, 10) || 0), 0);
+
+      const typeMinutes = {};
+      SUMMARY_TYPES.forEach(t => { typeMinutes[t] = sumByType(t); });
+      const tmtTotal = SUMMARY_TYPES.filter(t => TMT_TYPES.has(t)).reduce((a, t) => a + typeMinutes[t], 0);
+      const grandTotal = SUMMARY_TYPES.reduce((a, t) => a + typeMinutes[t], 0);
+      const totalMissRoll = slots.reduce((a, s) => a + (parseInt(s.miss_roll, 10) || 0), 0);
+      const totalMissRoll18 = slots.reduce((a, s) => a + (parseInt(s.miss_roll_18, 10) || 0), 0);
+
+      const margin = 40;
+      const pageW = 515;
+      const colX = margin;
+      const doc = new PDFDocument({ margin, size: 'A4', bufferPages: true });
+      const buffers = [];
+      doc.on('data', buffers.push.bind(buffers));
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition',
+        `attachment; filename=hbm_breakdown_${id}_${log.log_date || 'report'}.pdf`);
+
+      if (fs.existsSync(LOGO_PATH)) doc.image(LOGO_PATH, colX, 30, { width: 60, height: 60 });
+      doc.font('Helvetica-Bold').fontSize(14).fillColor('#000000')
+        .text('SRJ STRIPS AND PIPES PVT LTD', 110, 35, { width: pageW - 70 });
+      doc.font('Helvetica-Bold').fontSize(12).fillColor('#1e40af')
+        .text('HBM CHECKSHEET REPORT', 110, 55, { width: pageW - 70 });
+      doc.fillColor('#000000').font('Helvetica').fontSize(10)
+        .text('HBM Breakdown Report (24-hour)', 110, 72, { width: pageW - 70 });
+      doc.moveTo(colX, 97).lineTo(colX + pageW, 97).stroke('#1e40af');
+      doc.y = 108;
+
+      doc.font('Helvetica-Bold').fontSize(10).fillColor('#000000');
+      doc.text(`Date       : ${new Date(log.log_date).toLocaleDateString('en-IN')}`, colX);
+      doc.text(`Size       : ${log.size || '—'}`, colX);
+      doc.text(`Miss Roll  : ${totalMissRoll}    |    18" Miss Roll: ${totalMissRoll18}`, colX);
+      doc.text(`Filled By  : ${log.filled_by_name}`, colX);
+      doc.text(`Submitted  : ${new Date(log.created_at).toLocaleString('en-IN')}`, colX);
+      doc.moveDown(0.8);
+
+      // Summary banner
+      doc.rect(colX, doc.y, pageW, 20).fill('#1e40af');
+      doc.font('Helvetica-Bold').fontSize(10).fillColor('#FFFFFF')
+        .text('Breakdown Time Summary (minutes)', colX + 8, doc.y - 14, { width: pageW - 16 });
+      doc.fillColor('#000000');
+      doc.y += 8;
+
+      const sumCol1 = 360;
+      const sumCol2 = pageW - sumCol1;
+      const drawSumRow = (label, mins, opts = {}) => {
+        const { bold = false, highlight = false, divider = false } = opts;
+        if (doc.y + 18 > 760) { doc.addPage(); doc.y = margin; }
+        if (highlight) doc.rect(colX, doc.y, pageW, 18).fill('#dbeafe');
+        else if (divider) doc.rect(colX, doc.y, pageW, 18).fill('#f3f4f6');
+        doc.rect(colX, doc.y, pageW, 18).stroke('#cbd5e1');
+        doc.moveTo(colX + sumCol1, doc.y).lineTo(colX + sumCol1, doc.y + 18).stroke('#cbd5e1');
+        doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(9).fillColor('#000000')
+          .text(label, colX + 6, doc.y + 5, { width: sumCol1 - 12 })
+          .text(String(mins), colX + sumCol1 + 4, doc.y + 5, { width: sumCol2 - 8, align: 'right' });
+        doc.y += 18;
+      };
+
+      SUMMARY_TYPES.slice(0, 4).forEach(t => drawSumRow(t, typeMinutes[t]));
+      drawSumRow('TMT (HBM) Total Breakdown Time', tmtTotal, { bold: true, highlight: true });
+      SUMMARY_TYPES.slice(4).forEach(t => drawSumRow(t, typeMinutes[t]));
+      drawSumRow('TOTAL BREAKDOWN TIME', grandTotal, { bold: true, highlight: true });
+
+      doc.moveDown(1);
+
+      // Slot-wise details
+      if (doc.y + 40 > 760) { doc.addPage(); doc.y = margin; }
+      doc.rect(colX, doc.y, pageW, 20).fill('#1e40af');
+      doc.font('Helvetica-Bold').fontSize(10).fillColor('#FFFFFF')
+        .text('Slot-wise Details', colX + 8, doc.y - 14, { width: pageW - 16 });
+      doc.fillColor('#000000');
+      doc.y += 8;
+
+      const cols = [70, 150, 50, pageW - 70 - 150 - 50];
+      const drawDetailRow = (c1, c2, c3, c4, isHeader, rowH = 20) => {
+        if (doc.y + rowH > 760) {
+          doc.addPage();
+          doc.y = margin;
+          drawDetailRow('Slot', 'Breakdown Type', 'Min', 'Reason / Cause', true);
+        }
+        if (isHeader) doc.rect(colX, doc.y, pageW, rowH).fill('#334155');
+        else doc.rect(colX, doc.y, pageW, rowH).stroke('#cbd5e1');
+        let cx = colX;
+        cols.forEach((w) => {
+          doc.moveTo(cx, doc.y).lineTo(cx, doc.y + rowH).stroke(isHeader ? '#334155' : '#cbd5e1');
+          cx += w;
+        });
+        doc.font(isHeader ? 'Helvetica-Bold' : 'Helvetica')
+          .fontSize(isHeader ? 9 : 8)
+          .fillColor(isHeader ? '#FFFFFF' : '#000000');
+        const ty = doc.y + 5;
+        doc.text(c1 || '', colX + 4, ty, { width: cols[0] - 8 });
+        doc.text(c2 || '', colX + cols[0] + 4, ty, { width: cols[1] - 8 });
+        doc.text(c3 != null ? String(c3) : '', colX + cols[0] + cols[1] + 4, ty, { width: cols[2] - 8, align: 'center' });
+        doc.text(c4 || '', colX + cols[0] + cols[1] + cols[2] + 4, ty, { width: cols[3] - 8 });
+        doc.fillColor('#000000');
+        doc.y += rowH;
+      };
+
+      drawDetailRow('Slot', 'Breakdown Type', 'Min', 'Reason / Cause', true);
+
+      const activeSlots = slots.filter(s => (s.entries || []).some(e => e.breakdown_type));
+      if (!activeSlots.length) {
+        drawDetailRow('—', 'No breakdown recorded', '0', '—', false);
+      } else {
+        for (const slot of activeSlots) {
+          const valid = (slot.entries || []).filter(e => e.breakdown_type);
+          let first = true;
+          for (const e of valid) {
+            const reason = (e.breakdown_reason || '').trim();
+            const reasonH = Math.max(20, Math.min(60, doc.heightOfString(reason || '—', { width: cols[3] - 8 }) + 10));
+            drawDetailRow(
+              first ? (slot.slot_label || '') : '',
+              e.breakdown_type,
+              e.breakdown_minutes != null ? e.breakdown_minutes : 0,
+              reason || '—',
+              false,
+              reasonH
+            );
+            first = false;
+          }
+          // Miss roll line under slot
+          const miss = `Miss Roll: ${slot.miss_roll != null ? slot.miss_roll : 0}  |  18": ${slot.miss_roll_18 != null ? slot.miss_roll_18 : 0}`;
+          drawDetailRow('', miss, '', '', false, 18);
+        }
+      }
+
+      const range = doc.bufferedPageRange();
+      for (let i = 0; i < range.count; i++) {
+        doc.switchToPage(range.start + i);
+        doc.font('Helvetica').fontSize(8).fillColor('#888888')
+          .text(
+            `Generated: ${new Date().toLocaleString('en-IN')}   |   Page ${i + 1} of ${range.count}`,
+            colX, 820, { width: pageW, align: 'center' }
+          );
+      }
+
+      doc.on('end', () => res.send(Buffer.concat(buffers)));
+      doc.end();
+    } catch (error) {
+      console.error('Breakdown PDF download error:', error);
+      res.status(500).json({ success: false, message: 'Failed to generate PDF' });
     }
   }
 
@@ -3294,7 +3507,14 @@ class HbmController {
            JOIN hbm_breakdown_entries e ON e.slot_id = sl.id
            ${where} ORDER BY l.log_date DESC, l.id DESC, sl.slot_order`, params
         );
-        return res.json({ success: true, type, columns: ['Date', 'Size', 'Slot', 'Breakdown Type', 'Minutes', 'Reason'], rows });
+        // columns must match SELECT order exactly (Filled By was missing → Minutes/Reason appeared swapped)
+        return res.json({
+          success: true,
+          type,
+          columns: ['Date', 'Size', 'Filled By', 'Slot', 'Breakdown Type', 'Minutes', 'Reason'],
+          keys: ['log_date', 'size', 'filled_by', 'slot_label', 'breakdown_type', 'breakdown_minutes', 'breakdown_reason'],
+          rows,
+        });
       }
 
       return res.status(400).json({ success: false, message: `Unknown sheet type: ${type}` });

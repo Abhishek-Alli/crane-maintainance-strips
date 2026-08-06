@@ -29,9 +29,11 @@ const SUPPORTED_TYPES = [
 
 export default function HbmMonthlyRegister() {
   const now   = new Date();
+  const typeFromUrl = new URLSearchParams(window.location.search).get('type');
+  const initialType = SUPPORTED_TYPES.some(t => t.value === typeFromUrl) ? typeFromUrl : 'rolling-stand';
   const [year, setYear]   = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
-  const [type, setType]   = useState('rolling-stand');
+  const [type, setType]   = useState(initialType);
   const [data, setData]   = useState(null);
   const [loading, setLoading] = useState(false);
   const [tooltip, setTooltip] = useState(null); // { x, y, cell, item, date }
@@ -123,7 +125,7 @@ export default function HbmMonthlyRegister() {
           rowTotal += mins;
         } else {
           if (!day.filled)                    row.push('—');
-          else if (!cell)                     row.push('?');
+          else if (!cell)                     row.push('');
           else if (cell.status === 'NOT_OK') { row.push('✗'); notOkCount++; }
           else                               row.push('✓');
         }
@@ -233,16 +235,6 @@ export default function HbmMonthlyRegister() {
         : { content: '—', styles: { textColor: [200,200,200] } };
     };
 
-    // Helper: build a cell object for non-breakdown day cell
-    const itemCell = (item, day) => {
-      const c = item.cells[day.date];
-      if (!day.filled) return { content: '—', styles: { textColor: [200,200,200] } };
-      if (!c) return { content: '?', styles: { textColor: [234,179,8] } };
-      return c.status === 'NOT_OK'
-        ? { content: '✗', styles: { textColor: [185,28,28], fontStyle: 'bold' } }
-        : { content: '✓', styles: { textColor: [22,163,74] } };
-    };
-
     if (isBreakdown) {
       // Split days into 3 chunks
       const chunks = [
@@ -318,85 +310,131 @@ export default function HbmMonthlyRegister() {
       });
 
     } else {
-      // Non-breakdown: landscape A4, split into 3 stacked tables (days 1-10, 11-20, 21-end)
-      const chunks = [
-        data.days.filter(d => d.day <= 10),
-        data.days.filter(d => d.day >= 11 && d.day <= 20),
-        data.days.filter(d => d.day >= 21),
-      ];
-      const itemColW = data.paramType ? 90 : 100;
-      const lastColW = data.paramType ? 0 : 20;
-      let curY2 = 32;
+      // Non-breakdown: landscape A4, split into 2 tables (days 1–16 and 17–end)
+      const notOkColW = data.paramType ? 0 : 24;
+      const itemColW  = data.paramType ? 130 : 120;
 
-      // Helper: build a cell for param-type or item-type sheets
-      const buildCell = (item, day) => {
+      const buildDayCell = (item, day) => {
         const c = item.cells[day.date];
-        if (!day.filled) return { content: '—', styles: { textColor: [200,200,200] } };
-        if (!c) return { content: '?', styles: { textColor: [234,179,8] } };
+        if (!day.filled) return { content: '-', styles: { textColor: [200, 200, 200], halign: 'center' } };
+        if (!c)          return { content: '',  styles: { halign: 'center' } };
         if (data.paramType) {
-          const val = c.value != null ? String(c.value) : '';
-          const display = val.length > 7 ? val.slice(0,7) : val;
+          const val     = c.value != null ? String(c.value) : '';
           const isNotOk = c.status === 'NOT_OK';
-          const isOk = c.status === 'OK';
+          const isOk    = c.status === 'OK';
+          // No numeric value — equipment was OFF (tick in website = off, no reading)
+          if (!val) {
+            if (isNotOk) return { content: 'NO',  styles: { textColor: [185, 28, 28], fontStyle: 'bold', fillColor: [254, 226, 226], halign: 'center' } };
+            return { content: 'OFF', styles: { textColor: [107, 114, 128], fillColor: [243, 244, 246], halign: 'center', fontSize: 5 } };
+          }
           return {
-            content: display || '—',
+            content: val,
             styles: {
-              textColor: isNotOk ? [185,28,28] : isOk ? [21,128,61] : [50,50,50],
+              halign: 'center',
+              fillColor: isNotOk ? [254, 226, 226] : isOk ? [220, 252, 231] : [255, 255, 255],
+              textColor: isNotOk ? [185, 28, 28]   : isOk ? [21, 128, 61]   : [50, 50, 50],
               fontStyle: isNotOk ? 'bold' : 'normal',
             },
           };
         }
         return c.status === 'NOT_OK'
-          ? { content: '✗', styles: { textColor: [185,28,28], fontStyle: 'bold' } }
-          : { content: '✓', styles: { textColor: [22,163,74] } };
+          ? { content: 'NO', styles: { textColor: [185, 28, 28], fontStyle: 'bold', fillColor: [254, 226, 226], halign: 'center' } }
+          : { content: 'OK', styles: { textColor: [21, 128, 61], fillColor: [220, 252, 231], halign: 'center' } };
       };
 
-      chunks.forEach((chunkDays, ci) => {
-        if (!chunkDays.length) return;
-        const chunkLabel = ci === 0 ? '1–10' : ci === 1 ? '11–20' : `21–${data.daysInMonth}`;
-        const availW = pageW - margin*2 - itemColW - lastColW;
-        const dayColW = Math.max(10, Math.floor(availW / chunkDays.length));
+      const availW  = pageW - margin * 2 - itemColW - notOkColW;
+      const dayColW = Math.max(12, Math.floor(availW / data.days.length));
 
-        const headRow = [
-          { content: `Item — Days ${chunkLabel}`, styles: { halign: 'left' } },
-          ...chunkDays.map(d => {
-            const wd = new Date(d.date+'T00:00:00');
-            return { content: `${d.day}\n${SHORT_DAY[wd.getDay()]}`, styles: { halign: 'center' } };
-          }),
-          ...(data.paramType ? [] : [{ content: 'NOT\nOK', styles: { halign: 'center' } }]),
-        ];
+      const headRow = [
+        { content: 'Item', styles: { halign: 'left' } },
+        ...data.days.map(d => {
+          const wd = new Date(d.date + 'T00:00:00');
+          return {
+            content: `${d.day}\n${SHORT_DAY[wd.getDay()]}`,
+            styles: { halign: 'center', textColor: d.filled ? 255 : [180, 180, 180] },
+          };
+        }),
+        ...(data.paramType ? [] : [{ content: 'NOT\nOK', styles: { halign: 'center' } }]),
+      ];
 
-        const body = [];
-        let lastSec = null;
-        for (const item of data.items) {
-          if (item.section !== lastSec) {
-            lastSec = item.section;
-            const span = 1 + chunkDays.length + (data.paramType ? 0 : 1);
-            body.push([{ content: item.section, colSpan: span, styles: { fontStyle:'bold', fillColor:[209,250,229], textColor:[6,95,70], fontSize: 6 } }]);
-          }
-          const notOkCount = data.paramType ? null : data.days.filter(day=>item.cells[day.date]?.status==='NOT_OK').length;
-          body.push([
-            { content: item.item, styles: { halign: 'left' } },
-            ...chunkDays.map(day => buildCell(item, day)),
-            ...(data.paramType ? [] : [{ content: String(notOkCount||''), styles: { halign:'center' } }]),
-          ]);
+      const body = [];
+      let lastSec = null;
+      for (const item of data.items) {
+        if (item.section !== lastSec) {
+          lastSec = item.section;
+          const span = 1 + data.days.length + (data.paramType ? 0 : 1);
+          body.push([{
+            content: item.section,
+            colSpan: span,
+            styles: { fontStyle: 'bold', fillColor: [209, 250, 229], textColor: [6, 95, 70], fontSize: 5.5 },
+          }]);
         }
+        const notOkCount = data.paramType ? null
+          : data.days.filter(day => item.cells[day.date]?.status === 'NOT_OK').length;
+        body.push([
+          { content: item.item, styles: { halign: 'left' } },
+          ...data.days.map(day => buildDayCell(item, day)),
+          ...(data.paramType ? [] : [{
+            content: notOkCount ? String(notOkCount) : '',
+            styles: { halign: 'center', fontStyle: 'bold', textColor: notOkCount ? [185, 28, 28] : [150, 150, 150] },
+          }]),
+        ]);
+      }
+
+      autoTable(doc, {
+        head: [headRow],
+        body,
+        startY: 32,
+        margin: { left: margin, right: margin },
+        styles: { fontSize: 5, cellPadding: 1, overflow: 'ellipsize' },
+        headStyles: { fillColor: [22, 163, 74], textColor: 255, fontStyle: 'bold', fontSize: 5.5, halign: 'center', minCellHeight: 16 },
+        columnStyles: {
+          0: { cellWidth: itemColW, halign: 'left' },
+          ...Object.fromEntries(data.days.map((_, i) => [i + 1, { cellWidth: dayColW, halign: 'center' }])),
+          ...(data.paramType ? {} : { [data.days.length + 1]: { cellWidth: notOkColW, halign: 'center', fontStyle: 'bold' } }),
+        },
+      });
+      const curY3 = doc.lastAutoTable.finalY + 14;
+
+      // NOT OK details table — remarks & action taken
+      const issues = getNotOkIssues();
+      if (issues.length > 0) {
+        const detailStartY = curY3 + 2;
+        doc.setFontSize(8);
+        doc.setTextColor(185, 28, 28);
+        doc.text(`NOT OK Issues — ${issues.length} item(s)`, margin, detailStartY - 4);
+        doc.setTextColor(0);
 
         autoTable(doc, {
-          head: [headRow],
-          body,
-          startY: curY2,
+          head: [['Date', 'Day', 'Section', 'Item / Parameter', 'Value', 'Remark / Cause', 'Action Taken']],
+          body: issues.map(iss => {
+            const d = new Date(iss.date + 'T00:00:00');
+            const cell = data.items.find(it => it.item === iss.item)?.cells[iss.date];
+            return [
+              `${iss.day} ${SHORT_DAY[d.getDay()]} ${MONTH_NAMES[month-1].slice(0,3)}`,
+              iss.day,
+              iss.section,
+              iss.item,
+              cell?.value != null ? String(cell.value) : '',
+              iss.remark   || '',
+              iss.action   || '',
+            ];
+          }),
+          startY: detailStartY,
           margin: { left: margin, right: margin },
-          styles: { fontSize: 6, cellPadding: 1.5, overflow: 'ellipsize' },
-          headStyles: { fillColor: [22,163,74], textColor: 255, fontStyle: 'bold', fontSize: 6.5, halign: 'center', minCellHeight: 18 },
+          styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
+          headStyles: { fillColor: [185, 28, 28], textColor: 255, fontStyle: 'bold', fontSize: 7 },
           columnStyles: {
-            0: { cellWidth: itemColW, halign: 'left' },
-            ...Object.fromEntries(chunkDays.map((_,i) => [i+1, { cellWidth: dayColW, halign:'center' }])),
-            ...(data.paramType ? {} : { [chunkDays.length+1]: { cellWidth: lastColW, halign:'center', fontStyle:'bold' } }),
+            0: { cellWidth: 42 },
+            1: { cellWidth: 14 },
+            2: { cellWidth: 60 },
+            3: { cellWidth: 80 },
+            4: { cellWidth: 28 },
+            5: { cellWidth: 'auto' },
+            6: { cellWidth: 'auto' },
           },
         });
-        curY2 = doc.lastAutoTable.finalY + 12;
-      });
+      }
     }
 
     doc.save(`HBM-${type}-Pivot-${MONTH_NAMES[month-1]}-${year}.pdf`);
@@ -625,7 +663,7 @@ export default function HbmMonthlyRegister() {
                                   return <td key={day.date} className="border border-gray-100 text-center bg-gray-50 text-gray-300">—</td>;
                                 }
                                 if (!cell) {
-                                  return <td key={day.date} className="border border-gray-100 text-center text-gray-300">{isBreakdown ? '—' : '?'}</td>;
+                                  return <td key={day.date} className="border border-gray-100 text-center text-gray-300">{isBreakdown ? '—' : ''}</td>;
                                 }
                                 const isNotOk = cell.status === 'NOT_OK';
                                 const isOk = cell.status === 'OK';
@@ -642,6 +680,14 @@ export default function HbmMonthlyRegister() {
                                       onMouseLeave={() => setTooltip(null)}
                                     >
                                       {isBreakdown ? parseMins(cell.value) || '—' : (String(cell.value).length > 6 ? String(cell.value).slice(0,6) : cell.value)}
+                                    </td>
+                                  );
+                                }
+                                // Param sheet, no value → equipment OFF
+                                if (data.paramType) {
+                                  return (
+                                    <td key={day.date} className="border border-gray-100 text-center bg-gray-50 text-gray-400 text-[9px] font-medium">
+                                      {isNotOk ? <span className="text-red-500 font-bold text-[10px]">NO</span> : 'OFF'}
                                     </td>
                                   );
                                 }
@@ -705,8 +751,8 @@ export default function HbmMonthlyRegister() {
                 <div className="px-4 py-2 border-t border-gray-100 flex gap-5 text-xs text-gray-500">
                   <span><span className="text-green-600 font-bold">✓</span> OK</span>
                   <span><span className="text-red-600 font-bold">✗</span> NOT OK (hover to see remark)</span>
-                  <span><span className="text-yellow-500">?</span> Missing</span>
                   <span><span className="text-gray-400">—</span> Day not filled</span>
+                  {data.paramType && <span><span className="text-gray-500 font-medium">OFF</span> Equipment off / no reading</span>}
                 </div>
               </div>
 

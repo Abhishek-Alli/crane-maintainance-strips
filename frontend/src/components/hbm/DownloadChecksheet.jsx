@@ -16,7 +16,7 @@ const CHECKSHEET_TYPES = [
   { value: 'oil-level',         label: 'Daily Oil Level',                    fetchLogs: (p) => hbmAPI.getOilLevelLogs(p) },
   { value: 'dc-motor-airflow',  label: 'DC Motor Airflow, Temp & Vibration', fetchLogs: (p) => hbmAPI.getDcMotorAirflowLogs(p) },
   { value: 'roughing-gb-temp', label: 'Roughing Stand & GB Bearing Temp',    fetchLogs: (p) => hbmAPI.getRoughingGbTempLogs(p) },
-  { value: 'breakdown',        label: 'HBM Breakdown Report',               fetchLogs: (p) => hbmAPI.getBreakdownLogs(p) },
+  { value: 'breakdown',        label: 'HBM Breakdown Report',               fetchLogs: (p) => hbmAPI.getBreakdownLogs(p), downloadFn: (id) => hbmAPI.downloadBreakdownPDF(id) },
 ];
 
 function getDatesInRange(from, to) {
@@ -37,7 +37,10 @@ function formatDate(dateStr) {
 
 export default function DownloadChecksheet() {
   const today = new Date().toLocaleDateString('en-CA');
-  const [selectedType, setSelectedType] = useState('dc-motor');
+  const params = new URLSearchParams(window.location.search);
+  const typeFromUrl = params.get('type');
+  const initialType = CHECKSHEET_TYPES.some(t => t.value === typeFromUrl) ? typeFromUrl : 'dc-motor';
+  const [selectedType, setSelectedType] = useState(initialType);
   const [fromDate, setFromDate] = useState(today);
   const [toDate, setToDate] = useState(today);
   const [results, setResults] = useState(null);
