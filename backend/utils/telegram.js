@@ -108,14 +108,48 @@ async function sendTestMessage(chatId) {
 async function sendLongMessageToIds(chatIds, text) {
   const MAX = 4000;
   if (text.length <= MAX) return sendToIds(chatIds, text);
+
+  // Split by lines, but never leave a dangling <pre> open across chunks
+  // (Telegram HTML parse_mode rejects mismatched <pre>/</pre>).
   const lines = text.split('\n');
   const chunks = [];
   let cur = '';
+  let preDepth = 0;
+
+  const countPreDelta = (line) => {
+    const opens = (line.match(/<pre\b[^>]*>/gi) || []).length;
+    const closes = (line.match(/<\/pre>/gi) || []).length;
+    return opens - closes;
+  };
+
+  const flush = (nextLine) => {
+    if (!cur.trim()) {
+      cur = nextLine || '';
+      return;
+    }
+    let out = cur.trim();
+    if (preDepth > 0) out += '\n</pre>';
+    chunks.push(out);
+    cur = preDepth > 0
+      ? (nextLine != null ? `<pre>\n${nextLine}` : '<pre>')
+      : (nextLine != null ? nextLine : '');
+  };
+
   for (const line of lines) {
-    if ((cur + '\n' + line).length > MAX) { if (cur) chunks.push(cur.trim()); cur = line; }
-    else { cur = cur ? cur + '\n' + line : line; }
+    const candidate = cur ? `${cur}\n${line}` : line;
+    if (candidate.length > MAX && cur) {
+      flush(line);
+    } else {
+      cur = candidate;
+    }
+    preDepth = Math.max(0, preDepth + countPreDelta(line));
   }
-  if (cur.trim()) chunks.push(cur.trim());
+  if (cur.trim()) {
+    let out = cur.trim();
+    if (preDepth > 0) out += '\n</pre>';
+    chunks.push(out);
+  }
+
   for (const chunk of chunks) await sendToIds(chatIds, chunk);
 }
 
@@ -826,7 +860,7 @@ async function sendBreakdownNotification({ date, size, filledBy, submittedAt, sl
       for (const e of validEntries) {
         msg += ` ${row([first ? slot.slot_label : '', e.breakdown_type, pL(e.breakdown_minutes || 0, C2[2])], C2)}\n`;
         if (e.breakdown_reason && e.breakdown_reason.trim()) {
-          msg += `   > ${e.breakdown_reason.trim()}\n`;
+          msg += `   > ${esc(e.breakdown_reason.trim())}\n`;
         }
         first = false;
       }
