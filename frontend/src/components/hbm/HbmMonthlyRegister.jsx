@@ -27,10 +27,17 @@ const SUPPORTED_TYPES = [
   { value: 'breakdown',        label: 'HBM Breakdown Report',              itemBased: false },
 ];
 
-export default function HbmMonthlyRegister() {
+export default function HbmMonthlyRegister({ allowedSheets }) {
+  // null/undefined = admin / all sheets; otherwise only assigned sheets
+  const availableTypes = !allowedSheets
+    ? SUPPORTED_TYPES
+    : SUPPORTED_TYPES.filter((t) => allowedSheets.includes(t.value));
+
   const now   = new Date();
   const typeFromUrl = new URLSearchParams(window.location.search).get('type');
-  const initialType = SUPPORTED_TYPES.some(t => t.value === typeFromUrl) ? typeFromUrl : 'rolling-stand';
+  const initialType = availableTypes.some(t => t.value === typeFromUrl)
+    ? typeFromUrl
+    : (availableTypes[0]?.value || '');
   const [year, setYear]   = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [type, setType]   = useState(initialType);
@@ -39,7 +46,7 @@ export default function HbmMonthlyRegister() {
   const [tooltip, setTooltip] = useState(null); // { x, y, cell, item, date }
 
   const years = Array.from({ length: 3 }, (_, i) => now.getFullYear() - i);
-  const label = SUPPORTED_TYPES.find(t => t.value === type)?.label || type;
+  const label = availableTypes.find(t => t.value === type)?.label || type;
 
   const fetchData = async () => {
     setLoading(true);
@@ -555,7 +562,7 @@ export default function HbmMonthlyRegister() {
             <label className="block text-xs font-medium text-gray-600 mb-1">Checksheet</label>
             <select value={type} onChange={e => { setType(e.target.value); setData(null); }}
               className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-              {SUPPORTED_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+              {availableTypes.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </div>
           <div>

@@ -233,7 +233,7 @@ function SheetDetailDrawer({ sheetKey, label, year, month, onClose }) {
 }
 
 // ── Main monthly insights page ─────────────────────────────────────────────
-export default function HbmMonthlyInsights() {
+export default function HbmMonthlyInsights({ allowedSheets }) {
   const now = new Date();
   const [year, setYear]     = useState(now.getFullYear());
   const [month, setMonth]   = useState(now.getMonth() + 1);
@@ -241,17 +241,24 @@ export default function HbmMonthlyInsights() {
   const [loading, setLoading] = useState(false);
   const [drawer, setDrawer] = useState(null); // { key, label }
 
+  const canSeeSheet = (key) => !allowedSheets || allowedSheets.includes(key);
+
   const fetchInsights = useCallback(async () => {
     setLoading(true);
     try {
       const res = await hbmAPI.getMonthlyInsights({ year, month });
-      setData(res.data);
+      const raw = res.data;
+      if (raw?.sheets && allowedSheets) {
+        setData({ ...raw, sheets: raw.sheets.filter(s => allowedSheets.includes(s.key)) });
+      } else {
+        setData(raw);
+      }
     } catch {
       toast.error('Failed to load monthly insights');
     } finally {
       setLoading(false);
     }
-  }, [year, month]);
+  }, [year, month, allowedSheets]);
 
   useEffect(() => { fetchInsights(); }, [fetchInsights]);
 
@@ -259,10 +266,10 @@ export default function HbmMonthlyInsights() {
   useEffect(() => {
     if (!data?.sheets) return;
     const type = new URLSearchParams(window.location.search).get('type');
-    if (!type || !SHEET_KEYS.includes(type)) return;
+    if (!type || !SHEET_KEYS.includes(type) || !canSeeSheet(type)) return;
     const sheet = data.sheets.find(s => s.key === type);
     setDrawer({ key: type, label: sheet?.label || type });
-  }, [data]);
+  }, [data, allowedSheets]);
 
   const prevMonth = () => { if (month === 1) { setMonth(12); setYear(y => y - 1); } else setMonth(m => m - 1); };
   const nextMonth = () => { if (month === 12) { setMonth(1); setYear(y => y + 1); } else setMonth(m => m + 1); };

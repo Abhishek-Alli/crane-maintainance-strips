@@ -743,7 +743,7 @@ function App() {
             path="/hbm/download"
             element={
               user && (isHBMUser || isAdminUser) ? (
-                <DownloadChecksheet />
+                <DownloadChecksheet allowedSheets={isAdminUser ? null : hbmAllowedSheets} />
               ) : user ? (
                 <Navigate to="/" replace />
               ) : (
@@ -792,8 +792,8 @@ function App() {
           <Route path="/hbm/breakdown/history" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('breakdown') ? <BreakdownReportHistory /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
           <Route path="/hbm/breakdown/:id" element={user ? (isHBMUser || isAdminUser) && canAccessSheet('breakdown') ? <BreakdownReportView /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
           <Route path="/hbm/sheet-viewer" element={user ? isAdminUser ? <SheetViewer /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
-          <Route path="/hbm/monthly-insights" element={user ? (isHBMUser || isAdminUser) ? <HbmMonthlyInsights /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
-          <Route path="/hbm/monthly-register" element={user ? (isHBMUser || isAdminUser) ? <HbmMonthlyRegister /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hbm/monthly-insights" element={user ? (isHBMUser || isAdminUser) ? <HbmMonthlyInsights allowedSheets={isAdminUser ? null : hbmAllowedSheets} /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hbm/monthly-register" element={user ? (isHBMUser || isAdminUser) ? <HbmMonthlyRegister allowedSheets={isAdminUser ? null : hbmAllowedSheets} /> : <Navigate to="/hbm/dashboard" replace /> : <Navigate to="/login" replace />} />
 
           {/* ========== HSM ROUTES ========== */}
 

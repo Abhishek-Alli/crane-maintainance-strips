@@ -35,11 +35,18 @@ function formatDate(dateStr) {
   return d.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-export default function DownloadChecksheet() {
+export default function DownloadChecksheet({ allowedSheets }) {
+  // null/undefined = admin / all sheets; otherwise only assigned sheets
+  const availableTypes = !allowedSheets
+    ? CHECKSHEET_TYPES
+    : CHECKSHEET_TYPES.filter((t) => allowedSheets.includes(t.value));
+
   const today = new Date().toLocaleDateString('en-CA');
   const params = new URLSearchParams(window.location.search);
   const typeFromUrl = params.get('type');
-  const initialType = CHECKSHEET_TYPES.some(t => t.value === typeFromUrl) ? typeFromUrl : 'dc-motor';
+  const initialType = availableTypes.some(t => t.value === typeFromUrl)
+    ? typeFromUrl
+    : (availableTypes[0]?.value || '');
   const [selectedType, setSelectedType] = useState(initialType);
   const [fromDate, setFromDate] = useState(today);
   const [toDate, setToDate] = useState(today);
@@ -48,9 +55,10 @@ export default function DownloadChecksheet() {
   const [error, setError] = useState('');
   const [downloading, setDownloading] = useState(null);
 
-  const typeConfig = CHECKSHEET_TYPES.find((t) => t.value === selectedType);
+  const typeConfig = availableTypes.find((t) => t.value === selectedType);
 
   const handleSearch = async () => {
+    if (!typeConfig) { setError('No checksheet access for your login.'); return; }
     if (!fromDate || !toDate) { setError('Please select both dates.'); return; }
     if (fromDate > toDate) { setError('From date cannot be after To date.'); return; }
     setError('');
@@ -133,10 +141,13 @@ export default function DownloadChecksheet() {
                 onChange={(e) => { setSelectedType(e.target.value); setResults(null); }}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
               >
-                {CHECKSHEET_TYPES.map((t) => (
+                {availableTypes.map((t) => (
                   <option key={t.value} value={t.value}>{t.label}</option>
                 ))}
               </select>
+              {allowedSheets && availableTypes.length === 0 && (
+                <p className="text-xs text-amber-700 mt-1">No checksheets assigned to your login.</p>
+              )}
             </div>
 
             {/* Date Range */}
@@ -167,7 +178,7 @@ export default function DownloadChecksheet() {
 
             <button
               onClick={handleSearch}
-              disabled={loading}
+              disabled={loading || !typeConfig}
               className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2"
             >
               {loading ? (
