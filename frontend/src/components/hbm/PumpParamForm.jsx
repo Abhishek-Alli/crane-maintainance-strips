@@ -61,7 +61,8 @@ const PUMP_GROUPS = [
   {
     key: 'BACKWASH', label: 'Back Wash Pump', color: 'bg-orange-600', textColor: 'text-orange-700', borderColor: 'border-orange-200',
     pumps: [
-      { name: 'Back Wash Pump', kw_max: 45, amp_max: 80, rpm_max: 1475 },
+      { name: 'Back Wash Pump-1', kw_max: 45, amp_max: 80, rpm_max: 1475 },
+      { name: 'Back Wash Pump-2', kw_max: 45, amp_max: 80, rpm_max: 1475 },
     ],
   },
   {
@@ -112,6 +113,8 @@ const PUMP_GROUPS = [
     key: 'COMPRESSOR', label: 'Compressor', color: 'bg-gray-700', textColor: 'text-gray-700', borderColor: 'border-gray-300',
     pumps: [
       { name: 'Compressor-2', kw_max: 160, amp_max: 277, rpm_max: 1489 },
+      { name: 'Compressor-3', kw_max: 160, amp_max: 277, rpm_max: 1489 },
+      { name: 'Compressor-4', kw_max: 160, amp_max: 277, rpm_max: 1489 },
     ],
   },
   {
