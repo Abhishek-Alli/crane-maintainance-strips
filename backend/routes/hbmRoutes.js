@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const HbmController = require('../controllers/hbmController');
-const { authenticate, requireHBM } = require('../middleware/auth');
+const { authenticate, requireHBM, requireAdmin } = require('../middleware/auth');
 
 router.use(authenticate);
 router.use(requireHBM);
@@ -15,16 +15,16 @@ router.get('/monthly-insights', HbmController.getMonthlyInsights);
 router.get('/monthly-detail/:type', HbmController.getMonthlyDetail);
 router.get('/monthly-register/:type', HbmController.getMonthlyRegister);
 
-// Machines
+// Machines — Admin only for mutations
 router.get('/machines', HbmController.getMachines);
 router.get('/machines/:id', HbmController.getMachineById);
-router.post('/machines', HbmController.createMachine);
-router.put('/machines/:id', HbmController.updateMachine);
-router.delete('/machines/:id', HbmController.deleteMachine);
+router.post('/machines', requireAdmin, HbmController.createMachine);
+router.put('/machines/:id', requireAdmin, HbmController.updateMachine);
+router.delete('/machines/:id', requireAdmin, HbmController.deleteMachine);
 
 // Machine template assignments
 router.get('/machines/:id/templates', HbmController.getMachineTemplates);
-router.post('/machines/:id/templates', HbmController.assignTemplate);
+router.post('/machines/:id/templates', requireAdmin, HbmController.assignTemplate);
 
 // Checksheet templates
 router.get('/templates', HbmController.getTemplates);
@@ -122,16 +122,16 @@ router.get('/pdf/:type/:id', HbmController.downloadHbmPDF);
 // Sheet Viewer — flat rows for any sheet type
 router.get('/sheet-view/:type', HbmController.getSheetView);
 
-// Send today's notifications for all filled sheets
-router.post('/send-daily-notifications', HbmController.sendDailyNotifications);
+// Send today's notifications for all filled sheets — Admin only
+router.post('/send-daily-notifications', requireAdmin, HbmController.sendDailyNotifications);
 
-// Send daily status summary (filled / prev date / not filled)
-router.post('/send-status-summary', HbmController.sendStatusSummary);
+// Send daily status summary (filled / prev date / not filled) — Admin only
+router.post('/send-status-summary', requireAdmin, HbmController.sendStatusSummary);
 
 // Delete a log entry (admin only)
 router.delete('/:type/:id', HbmController.deleteHbmLog);
 
-// Resend Telegram notification for any HBM checksheet
-router.post('/:type/:id/resend-telegram', HbmController.resendTelegramNotification);
+// Resend Telegram notification for any HBM checksheet — Admin only
+router.post('/:type/:id/resend-telegram', requireAdmin, HbmController.resendTelegramNotification);
 
 module.exports = router;

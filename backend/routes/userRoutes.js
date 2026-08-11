@@ -3,13 +3,20 @@ const router = express.Router();
 const UserController = require('../controllers/userController');
 const { authenticate, authorize } = require('../middleware/auth');
 
+function selfOrAdmin(req, res, next) {
+  const role = (req.user.role_name || req.user.role || '').toUpperCase();
+  const userType = (req.user.user_type || '').toUpperCase();
+  const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN' || userType === 'ADMIN';
+  if (String(req.user.id) === String(req.params.id) || isAdmin) return next();
+  return res.status(403).json({ success: false, message: 'Access denied' });
+}
+
 router.use(authenticate);
 
-// Allow any authenticated user to read their own permissions (needed on login)
-router.get('/:id/hbm-permissions', UserController.getPermissions);
-router.get('/:id/crane-permissions', UserController.getCranePermissions);
+// Own permissions (or admin reading another user)
+router.get('/:id/hbm-permissions', selfOrAdmin, UserController.getPermissions);
+router.get('/:id/crane-permissions', selfOrAdmin, UserController.getCranePermissions);
 
-// All remaining routes: Admin only
 router.use(authorize('ADMIN'));
 
 router.get('/', UserController.getAll);

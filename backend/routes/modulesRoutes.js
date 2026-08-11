@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const { query } = require('../config/database');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, requireAdmin } = require('../middleware/auth');
 
-// Public — login page needs this without auth
+// Public — login page needs module list without auth
 router.get('/', async (req, res) => {
   try {
     const { rows } = await query('SELECT * FROM app_modules ORDER BY display_order, id');
@@ -11,8 +11,8 @@ router.get('/', async (req, res) => {
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
-// Protected — admin only below
 router.use(authenticate);
+router.use(requireAdmin);
 
 router.post('/', async (req, res) => {
   try {

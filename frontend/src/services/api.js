@@ -20,9 +20,26 @@ export const UPLOAD_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, '') ||
 
 export function resolveUploadUrl(urlOrPath) {
   if (!urlOrPath) return '';
-  if (/^https?:\/\//i.test(urlOrPath) || urlOrPath.startsWith('blob:')) return urlOrPath;
+  if (/^https?:\/\//i.test(urlOrPath) || urlOrPath.startsWith('blob:')) {
+    // Still attach token for same-origin upload URLs if possible
+    try {
+      const u = new URL(urlOrPath, window.location.origin);
+      if (u.pathname.startsWith('/uploads')) {
+        const token = localStorage.getItem('token');
+        if (token && !u.searchParams.get('access_token')) {
+          u.searchParams.set('access_token', token);
+        }
+        return u.toString();
+      }
+    } catch (_) { /* ignore */ }
+    return urlOrPath;
+  }
   const path = urlOrPath.startsWith('/') ? urlOrPath : `/${urlOrPath}`;
-  return `${UPLOAD_BASE_URL}${path}`;
+  const base = `${UPLOAD_BASE_URL}${path}`;
+  const token = localStorage.getItem('token');
+  if (!token || !path.startsWith('/uploads')) return base;
+  const sep = base.includes('?') ? '&' : '?';
+  return `${base}${sep}access_token=${encodeURIComponent(token)}`;
 }
 
 /* =============================

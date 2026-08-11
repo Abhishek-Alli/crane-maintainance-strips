@@ -1,8 +1,22 @@
 const jwt = require('jsonwebtoken');
 const { query } = require('../config/database');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const FALLBACK_JWT_SECRET = 'your-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET || FALLBACK_JWT_SECRET;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
+
+if (!process.env.JWT_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('FATAL: JWT_SECRET must be set in production');
+    process.exit(1);
+  }
+  console.warn('WARNING: JWT_SECRET is not set — using insecure development fallback');
+}
+
+if (process.env.NODE_ENV === 'production' && JWT_SECRET === FALLBACK_JWT_SECRET) {
+  console.error('FATAL: JWT_SECRET must not use the default value in production');
+  process.exit(1);
+}
 
 /**
  * Generate JWT token
@@ -38,17 +52,22 @@ const verifyToken = (token) => {
  */
 const authenticate = async (req, res, next) => {
   try {
-    // Get token from header
+    // Get token from header (or query for static upload links)
     const authHeader = req.headers.authorization;
+    const queryToken = req.query.access_token || req.query.token;
+    let token = null;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    } else if (queryToken) {
+      token = String(queryToken);
+    }
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!token) {
       return res.status(401).json({
         success: false,
         message: 'No authentication token provided'
       });
     }
-
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
 
     // Verify token
     const decoded = verifyToken(token);

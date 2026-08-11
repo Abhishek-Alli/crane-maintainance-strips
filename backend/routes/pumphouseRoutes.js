@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
 const PDFDocument = require('pdfkit');
+const { authenticate } = require('../middleware/auth');
+
+router.use(authenticate);
 
 /* =========================================
    GET ALL LOCATIONS
@@ -30,9 +33,6 @@ router.post('/readings-with-pdf', async (req, res) => {
       return res.status(400).json({ error: "Missing date or readings" });
     }
 
-    /* ==============================
-       SAVE TO DATABASE
-    ============================== */
     for (const item of readings) {
       await pool.query(
         `
@@ -51,9 +51,6 @@ router.post('/readings-with-pdf', async (req, res) => {
       );
     }
 
-    /* ==============================
-       CREATE PDF
-    ============================== */
     const doc = new PDFDocument({ margin: 40, size: "A4" });
 
     res.setHeader(
@@ -64,7 +61,6 @@ router.post('/readings-with-pdf', async (req, res) => {
 
     doc.pipe(res);
 
-    // TITLE
     doc.fontSize(16)
        .text("PUMP HOUSE WATER PARAMETERS", { align: "center" });
 
@@ -72,9 +68,6 @@ router.post('/readings-with-pdf', async (req, res) => {
     doc.fontSize(12).text(`Date: ${date}`);
     doc.moveDown(2);
 
-    /* ==============================
-       TABLE HEADER
-    ============================== */
     const startX = 40;
     let y = doc.y;
 
@@ -88,9 +81,6 @@ router.post('/readings-with-pdf', async (req, res) => {
 
     doc.moveDown();
 
-    /* ==============================
-       TABLE DATA
-    ============================== */
     doc.font("Helvetica");
 
     for (const item of readings) {

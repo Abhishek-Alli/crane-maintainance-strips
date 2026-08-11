@@ -1,27 +1,18 @@
 const express = require('express');
 const router = express.Router();
-// const InspectionConfigModel = require('../models/InspectionConfig');
 const GoogleSheetsService = require('../services/googleSheetsService');
 const db = require('../config/database');
 const InspectionConfigModel = require('../models/InspectionConfig');
 const InspectionConfigController = require('../controllers/inspectionConfigController');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, requireAdmin } = require('../middleware/auth');
 
-
+router.use(authenticate);
 
 router.get(
   '/inspection-structure',
-  authenticate,
   InspectionConfigController.getInspectionStructure
 );
 
-
-/**
- * =========================================================
- * GET /api/config/departments
- * Fetch all active departments
- * =========================================================
- */
 router.get('/departments', async (req, res) => {
   try {
     const { rows } = await db.query(`
@@ -41,8 +32,7 @@ router.get('/departments', async (req, res) => {
     });
   }
 });
-// GET /api/config/sub-departments?department_id=1
-// GET /api/config/sub-departments?department_id=1
+
 router.get('/sub-departments', async (req, res) => {
   try {
     const { department_id } = req.query;
@@ -76,13 +66,7 @@ router.get('/sub-departments', async (req, res) => {
     });
   }
 });
-/**
- * =========================================================
- * GET /api/config/sheds
- * Fetch sheds for a specific department
- * REQUIRED: department_id
- * =========================================================
- */
+
 router.get('/sheds', async (req, res) => {
   try {
     const { department_id } = req.query;
@@ -115,12 +99,6 @@ router.get('/sheds', async (req, res) => {
   }
 });
 
-/**
- * =========================================================
- * GET /api/config/sheds/by-department/:departmentId
- * (kept for backward compatibility)
- * =========================================================
- */
 router.get('/sheds/by-department/:departmentId', async (req, res) => {
   try {
     const { rows } = await db.query(`
@@ -140,13 +118,6 @@ router.get('/sheds/by-department/:departmentId', async (req, res) => {
   }
 });
 
-/**
- * =========================================================
- * GET /api/config/cranes
- * Fetch cranes for a specific department
- * REQUIRED: department_id
- * =========================================================
- */
 router.get('/cranes', async (req, res) => {
   try {
     const { department_id } = req.query;
@@ -190,18 +161,7 @@ router.get('/cranes', async (req, res) => {
     });
   }
 });
-/**
- * =========================================================
- * GET /api/config/inspection-sections
- * =========================================================
- */
 
-/**
- * =========================================================
- * GET /api/config/sections
- * Requires form_id query parameter to load sections
- * =========================================================
- */
 router.get('/sections', async (req, res) => {
   try {
     const { form_id } = req.query;
@@ -232,11 +192,7 @@ router.get('/sections', async (req, res) => {
   }
 });
 
-
-/**
- * POST /api/config/sections
- */
-router.post('/sections', async (req, res) => {
+router.post('/sections', requireAdmin, async (req, res) => {
   try {
     const section = await InspectionConfigModel.createSection(req.body);
     res.status(201).json({ success: true, message: 'Section created', data: section });
@@ -249,10 +205,7 @@ router.post('/sections', async (req, res) => {
   }
 });
 
-/**
- * POST /api/config/items
- */
-router.post('/items', async (req, res) => {
+router.post('/items', requireAdmin, async (req, res) => {
   try {
     const item = await InspectionConfigModel.createItem(req.body);
     res.status(201).json({ success: true, message: 'Item created', data: item });
@@ -265,10 +218,7 @@ router.post('/items', async (req, res) => {
   }
 });
 
-/**
- * PUT /api/config/items/:id
- */
-router.put('/items/:id', async (req, res) => {
+router.put('/items/:id', requireAdmin, async (req, res) => {
   try {
     const item = await InspectionConfigModel.updateItem(req.params.id, req.body);
     res.json({ success: true, message: 'Item updated', data: item });
@@ -281,10 +231,7 @@ router.put('/items/:id', async (req, res) => {
   }
 });
 
-/**
- * POST /api/config/sheds
- */
-router.post('/sheds', async (req, res) => {
+router.post('/sheds', requireAdmin, async (req, res) => {
   try {
     const shed = await InspectionConfigModel.createShed(req.body);
     res.status(201).json({ success: true, message: 'Shed created', data: shed });
@@ -297,10 +244,7 @@ router.post('/sheds', async (req, res) => {
   }
 });
 
-/**
- * PUT /api/config/sheds/:id
- */
-router.put('/sheds/:id', async (req, res) => {
+router.put('/sheds/:id', requireAdmin, async (req, res) => {
   try {
     const shed = await InspectionConfigModel.updateShed(req.params.id, req.body);
     res.json({ success: true, message: 'Shed updated', data: shed });
@@ -313,12 +257,14 @@ router.put('/sheds/:id', async (req, res) => {
   }
 });
 
-/**
- * =========================================================
- * GET /api/config/test-google-sheets
- * =========================================================
- */
-router.get('/test-google-sheets', async (req, res) => {
+/** Admin-only diagnostic — disabled unless explicitly enabled */
+router.get('/test-google-sheets', requireAdmin, async (req, res) => {
+  if (process.env.ALLOW_SHEETS_TEST !== 'true') {
+    return res.status(403).json({
+      success: false,
+      message: 'Google Sheets test endpoint is disabled'
+    });
+  }
   try {
     const result = await GoogleSheetsService.testConnection();
     res.json(result);

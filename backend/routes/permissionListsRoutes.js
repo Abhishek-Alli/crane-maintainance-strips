@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const { query } = require('../config/database');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, requireAdmin } = require('../middleware/auth');
 
 router.use(authenticate);
 
-// GET all, optionally filtered by module_code
+// Authenticated users can list permission items (for Create User UI / filters)
 router.get('/', async (req, res) => {
   try {
     const { module_code } = req.query;
@@ -18,7 +18,7 @@ router.get('/', async (req, res) => {
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
-router.post('/', async (req, res) => {
+router.post('/', requireAdmin, async (req, res) => {
   try {
     const { module_code, item_key, item_label } = req.body;
     if (!module_code || !item_key || !item_label)
@@ -38,7 +38,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireAdmin, async (req, res) => {
   try {
     const { item_label, display_order, is_active } = req.body;
     const { rows } = await query(
@@ -49,7 +49,7 @@ router.put('/:id', async (req, res) => {
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireAdmin, async (req, res) => {
   try {
     await query('DELETE FROM app_permission_lists WHERE id=$1', [req.params.id]);
     res.json({ success: true });

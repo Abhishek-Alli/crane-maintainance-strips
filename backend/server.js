@@ -50,16 +50,19 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Uploaded images (public read)
+// Uploaded images — auth required (Bearer header or ?access_token=)
 const path = require('path');
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+const { authenticate } = require('./middleware/auth');
+app.use('/uploads', authenticate, express.static(path.join(__dirname, 'uploads'), {
+  fallthrough: false,
+  index: false,
+}));
 
 // Health Check
 app.get('/health', (req, res) => {
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
-    uptime: process.uptime()
   });
 });
 
@@ -88,20 +91,11 @@ app.use('/api/hsm', hsmRoutes);
 app.use('/api/modules', modulesRoutes);
 app.use('/api/permission-lists', permissionListsRoutes);
 
-// Root Endpoint
+// Root Endpoint — minimal public info
 app.get('/', (req, res) => {
   res.json({
-    message: 'Crane Maintenance Inspection System API',
-    version: '3.0.0',
-    endpoints: {
-      auth: '/api/auth',
-      users: '/api/users',
-      forms: '/api/forms',
-      inspections: '/api/inspections',
-      cranes: '/api/cranes',
-      reports: '/api/reports',
-      health: '/health'
-    }
+    message: 'Crane Maintenance API',
+    status: 'ok',
   });
 });
 

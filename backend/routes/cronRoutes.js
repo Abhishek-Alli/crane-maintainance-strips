@@ -1,5 +1,4 @@
-// Cron Routes – HTTP endpoints triggered by Vercel Cron
-// These replace node-cron when running on Vercel serverless
+// Cron Routes – HTTP endpoints triggered by Vercel Cron / external scheduler
 
 const express = require('express');
 const router = express.Router();
@@ -7,14 +6,23 @@ const { maintenanceDueAlert, dailyInspectionSummary, hbmChecksheetDailySummary }
 
 const CRON_SECRET = process.env.CRON_SECRET;
 
-// Verify request comes from Vercel Cron (or allow in dev)
 function verifyCron(req, res, next) {
-  if (process.env.NODE_ENV === 'development') return next();
-  if (CRON_SECRET && req.headers.authorization === `Bearer ${CRON_SECRET}`) return next();
+  // Never open in production without secret
+  if (!CRON_SECRET) {
+    console.error('CRON_SECRET is not set — cron HTTP endpoints are disabled');
+    return res.status(503).json({ success: false, message: 'Cron endpoints not configured' });
+  }
+  if (req.headers.authorization === `Bearer ${CRON_SECRET}`) return next();
+  // Optional local testing only when explicitly enabled
+  if (
+    process.env.NODE_ENV === 'development' &&
+    process.env.CRON_ALLOW_DEV === 'true'
+  ) {
+    return next();
+  }
   return res.status(401).json({ success: false, message: 'Unauthorized' });
 }
 
-// GET /api/cron/maintenance-alert – triggered daily at 9 AM IST
 router.get('/maintenance-alert', verifyCron, async (req, res) => {
   try {
     await maintenanceDueAlert();
@@ -25,7 +33,6 @@ router.get('/maintenance-alert', verifyCron, async (req, res) => {
   }
 });
 
-// GET /api/cron/daily-summary – triggered daily at 6 PM IST
 router.get('/daily-summary', verifyCron, async (req, res) => {
   try {
     await dailyInspectionSummary();
@@ -36,7 +43,6 @@ router.get('/daily-summary', verifyCron, async (req, res) => {
   }
 });
 
-// GET /api/cron/hbm-checksheet-summary – triggered daily at 8 PM IST
 router.get('/hbm-checksheet-summary', verifyCron, async (req, res) => {
   try {
     await hbmChecksheetDailySummary();
