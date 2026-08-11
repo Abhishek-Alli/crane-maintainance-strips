@@ -85,6 +85,23 @@ import PtmAdminConfig from './components/ptm/PtmAdminConfig';
 
 // HSM Components
 import HsmDashboard from './components/hsm/HsmDashboard';
+import HsmBreakdownAnalysisForm from './components/hsm/BreakdownAnalysisForm';
+import HsmBreakdownAnalysisHistory from './components/hsm/BreakdownAnalysisHistory';
+import HsmBreakdownAnalysisView from './components/hsm/BreakdownAnalysisView';
+import RollChangeActivityForm from './components/hsm/RollChangeActivityForm';
+import RollChangeActivityHistory from './components/hsm/RollChangeActivityHistory';
+import RollChangeActivityView from './components/hsm/RollChangeActivityView';
+import DelayReportForm from './components/hsm/DelayReportForm';
+import DelayReportHistory from './components/hsm/DelayReportHistory';
+import DelayReportView from './components/hsm/DelayReportView';
+import HsmInsights from './components/hsm/HsmInsights';
+
+// SMS Components
+import SmsDashboard from './components/sms/SmsDashboard';
+import BreakdownAnalysisForm from './components/sms/BreakdownAnalysisForm';
+import BreakdownAnalysisHistory from './components/sms/BreakdownAnalysisHistory';
+import BreakdownAnalysisView from './components/sms/BreakdownAnalysisView';
+
 // import FabricationReport from "./components/fabrication/FabricationReport";
 import Dashboard from "./components/Dashboard";
 
@@ -158,10 +175,12 @@ function App() {
   const userLoginType = user?.loginType || user?.user_type || 'CRANE_MAINTENANCE';
   const isHBMUser = userLoginType === 'HBM_CHECKSHEETS';
   const isHSMUser = userLoginType === 'HSM_CHECKSHEETS';
+  const isSMSUser = userLoginType === 'SMS_CHECKSHEETS' || userLoginType === 'SMS';
   const isAdminUser = user?.role === 'ADMIN' || user?.user_type === 'ADMIN';
   const isOnHBMRoute = location.pathname.startsWith('/hbm');
   const isOnHSMRoute = location.pathname.startsWith('/hsm');
   const isOnPTMRoute = location.pathname.startsWith('/ptm');
+  const isOnSMSRoute = location.pathname.startsWith('/sms');
   const isOnAdminRoute = ['/create-user', '/telegram-settings', '/fabrication', '/admin/'].some(r => location.pathname.startsWith(r));
 
   // Don't show nav on login page or admin routes (AdminLayout supplies its own top bar)
@@ -172,6 +191,7 @@ function App() {
     if (isAdminUser) return '/admin/dashboard';
     if (isHBMUser) return '/hbm/dashboard';
     if (isHSMUser) return '/hsm/dashboard';
+    if (isSMSUser) return '/sms/dashboard';
     return '/';
   };
 
@@ -180,14 +200,14 @@ function App() {
     isAdminUser || hbmAllowedSheets === null || (Array.isArray(hbmAllowedSheets) && hbmAllowedSheets.includes(key));
 
   // Nav colors based on module
-  const navBg        = isOnAdminRoute ? 'bg-slate-900'         : isOnHBMRoute ? 'bg-emerald-600'       : isOnHSMRoute ? 'bg-indigo-600'       : isOnPTMRoute ? 'bg-blue-700'       : 'bg-blue-600';
-  const navHover     = isOnAdminRoute ? 'hover:bg-slate-700'   : isOnHBMRoute ? 'hover:bg-emerald-500'  : isOnHSMRoute ? 'hover:bg-indigo-500'  : isOnPTMRoute ? 'hover:bg-blue-600' : 'hover:bg-blue-500';
-  const navActive    = isOnAdminRoute ? 'bg-slate-700'         : isOnHBMRoute ? 'bg-emerald-700'        : isOnHSMRoute ? 'bg-indigo-700'        : isOnPTMRoute ? 'bg-blue-800'       : 'bg-blue-700';
-  const navBadgeBg   = isOnAdminRoute ? 'bg-violet-600'        : isOnHBMRoute ? 'bg-emerald-500'        : isOnHSMRoute ? 'bg-indigo-500'        : isOnPTMRoute ? 'bg-blue-600'       : 'bg-blue-500';
-  const navBorderColor = isOnAdminRoute ? 'border-slate-700'   : isOnHBMRoute ? 'border-emerald-500'    : isOnHSMRoute ? 'border-indigo-500'    : isOnPTMRoute ? 'border-blue-600'   : 'border-blue-500';
-  const navInfoBg    = isOnAdminRoute ? 'bg-slate-800'         : isOnHBMRoute ? 'bg-emerald-700'        : isOnHSMRoute ? 'bg-indigo-700'        : isOnPTMRoute ? 'bg-blue-800'       : 'bg-blue-700';
-  const navInfoAvatarBg = isOnAdminRoute ? 'bg-violet-600'     : isOnHBMRoute ? 'bg-emerald-400'        : isOnHSMRoute ? 'bg-indigo-400'        : isOnPTMRoute ? 'bg-blue-500'       : 'bg-blue-400';
-  const navInfoSubText = isOnAdminRoute ? 'text-slate-400'     : isOnHBMRoute ? 'text-emerald-200'      : isOnHSMRoute ? 'text-indigo-200'      : isOnPTMRoute ? 'text-blue-200'     : 'text-blue-200';
+  const navBg        = isOnAdminRoute ? 'bg-slate-900'         : isOnHBMRoute ? 'bg-emerald-600'       : isOnHSMRoute ? 'bg-indigo-600'       : isOnPTMRoute ? 'bg-blue-700'       : isOnSMSRoute ? 'bg-amber-600'       : 'bg-blue-600';
+  const navHover     = isOnAdminRoute ? 'hover:bg-slate-700'   : isOnHBMRoute ? 'hover:bg-emerald-500'  : isOnHSMRoute ? 'hover:bg-indigo-500'  : isOnPTMRoute ? 'hover:bg-blue-600' : isOnSMSRoute ? 'hover:bg-amber-500'  : 'hover:bg-blue-500';
+  const navActive    = isOnAdminRoute ? 'bg-slate-700'         : isOnHBMRoute ? 'bg-emerald-700'        : isOnHSMRoute ? 'bg-indigo-700'        : isOnPTMRoute ? 'bg-blue-800'       : isOnSMSRoute ? 'bg-amber-700'        : 'bg-blue-700';
+  const navBadgeBg   = isOnAdminRoute ? 'bg-violet-600'        : isOnHBMRoute ? 'bg-emerald-500'        : isOnHSMRoute ? 'bg-indigo-500'        : isOnPTMRoute ? 'bg-blue-600'       : isOnSMSRoute ? 'bg-amber-500'        : 'bg-blue-500';
+  const navBorderColor = isOnAdminRoute ? 'border-slate-700'   : isOnHBMRoute ? 'border-emerald-500'    : isOnHSMRoute ? 'border-indigo-500'    : isOnPTMRoute ? 'border-blue-600'   : isOnSMSRoute ? 'border-amber-500'    : 'border-blue-500';
+  const navInfoBg    = isOnAdminRoute ? 'bg-slate-800'         : isOnHBMRoute ? 'bg-emerald-700'        : isOnHSMRoute ? 'bg-indigo-700'        : isOnPTMRoute ? 'bg-blue-800'       : isOnSMSRoute ? 'bg-amber-700'        : 'bg-blue-700';
+  const navInfoAvatarBg = isOnAdminRoute ? 'bg-violet-600'     : isOnHBMRoute ? 'bg-emerald-400'        : isOnHSMRoute ? 'bg-indigo-400'        : isOnPTMRoute ? 'bg-blue-500'       : isOnSMSRoute ? 'bg-amber-400'        : 'bg-blue-400';
+  const navInfoSubText = isOnAdminRoute ? 'text-slate-400'     : isOnHBMRoute ? 'text-emerald-200'      : isOnHSMRoute ? 'text-indigo-200'      : isOnPTMRoute ? 'text-blue-200'     : isOnSMSRoute ? 'text-amber-200'      : 'text-blue-200';
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
@@ -199,7 +219,7 @@ function App() {
           <div className="px-4 py-3">
             <div className="flex items-center justify-between">
               {/* Logo */}
-              <Link to={isOnAdminRoute ? '/create-user' : (isOnHBMRoute ? '/hbm/dashboard' : isOnHSMRoute ? '/hsm/dashboard' : isOnPTMRoute ? '/ptm/dashboard' : '/')} className="text-lg font-bold tracking-tight">
+              <Link to={isOnAdminRoute ? '/create-user' : (isOnHBMRoute ? '/hbm/dashboard' : isOnHSMRoute ? '/hsm/dashboard' : isOnPTMRoute ? '/ptm/dashboard' : isOnSMSRoute ? '/sms/dashboard' : '/')} className="text-lg font-bold tracking-tight">
                 {isOnAdminRoute ? (
                   <span className="flex items-center gap-2">
                     <svg className="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -207,14 +227,14 @@ function App() {
                     </svg>
                     Admin Panel
                   </span>
-                ) : isOnHBMRoute ? 'HBM Checksheets' : isOnHSMRoute ? 'HSM Checksheets' : isOnPTMRoute ? 'PTM Checksheets' : 'Crane Maintenance'}
+                ) : isOnHBMRoute ? 'HBM Checksheets' : isOnHSMRoute ? 'HSM Checksheets' : isOnPTMRoute ? 'PTM Checksheets' : isOnSMSRoute ? 'SMS Checksheets' : 'Crane Maintenance'}
               </Link>
 
               {/* Top-right controls */}
               <div className="flex items-center space-x-1">
                 {/* Monthly Insights Icon (HBM + Admin only) */}
                 {/* Maintenance Calendar icon — Crane route only */}
-                {!isOnHBMRoute && !isOnHSMRoute && !isOnAdminRoute && !isOnPTMRoute && (
+                {!isOnHBMRoute && !isOnHSMRoute && !isOnAdminRoute && !isOnPTMRoute && !isOnSMSRoute && (
                   <Link
                     to="/maintenance-calendar"
                     title="Maintenance Calendar"
@@ -227,7 +247,7 @@ function App() {
                 )}
 
                 {/* New Inspection icon — Crane route only */}
-                {!isOnHBMRoute && !isOnHSMRoute && !isOnAdminRoute && !isOnPTMRoute && (
+                {!isOnHBMRoute && !isOnHSMRoute && !isOnAdminRoute && !isOnPTMRoute && !isOnSMSRoute && (
                   <Link
                     to="/new-inspection"
                     title="New Inspection"
@@ -240,7 +260,7 @@ function App() {
                 )}
 
                 {/* Download / Reports icon — Crane route only */}
-                {!isOnHBMRoute && !isOnHSMRoute && !isOnAdminRoute && !isOnPTMRoute && (
+                {!isOnHBMRoute && !isOnHSMRoute && !isOnAdminRoute && !isOnPTMRoute && !isOnSMSRoute && (
                   <Link
                     to="/reports"
                     title="Reports & Download"
@@ -252,8 +272,8 @@ function App() {
                   </Link>
                 )}
 
-                {/* Admin Panel icon — HBM/HSM route, admin only */}
-                {(isOnHBMRoute || isOnHSMRoute || isOnPTMRoute) && isAdminUser && (
+                {/* Admin Panel icon — module routes, admin only */}
+                {(isOnHBMRoute || isOnHSMRoute || isOnPTMRoute || isOnSMSRoute) && isAdminUser && (
                   <Link
                     to="/create-user"
                     title="Admin Panel"
@@ -267,7 +287,7 @@ function App() {
 
                 {/* User Badge */}
                 <div className={`text-xs ${navBadgeBg} px-2 py-1 rounded font-medium`}>
-                  {isOnAdminRoute ? 'Admin' : (isOnHBMRoute ? 'HBM' : (isOnHSMRoute ? 'HSM' : (isOnPTMRoute ? 'PTM' : (user?.role === 'ADMIN' ? 'Admin' : 'Operator'))))}
+                  {isOnAdminRoute ? 'Admin' : (isOnHBMRoute ? 'HBM' : (isOnHSMRoute ? 'HSM' : (isOnPTMRoute ? 'PTM' : (isOnSMSRoute ? 'SMS' : (user?.role === 'ADMIN' ? 'Admin' : 'Operator')))))}
                 </div>
 
                 {/* Logout Icon (always visible) */}
@@ -282,8 +302,8 @@ function App() {
                   </svg>
                 </button>
 
-                {/* Hamburger — Admin always, others on admin route */}
-                {(isOnAdminRoute || isAdminUser) && (
+                {/* Hamburger — Admin always, or when inside a module that uses the menu */}
+                {(isOnAdminRoute || isAdminUser || isOnSMSRoute || isSMSUser || isOnHSMRoute || isHSMUser) && (
                   <button
                     onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                     className={`p-2 rounded-lg ${navHover} focus:outline-none focus:ring-2 focus:ring-white/30`}
@@ -315,7 +335,7 @@ function App() {
                     <div>
                       <p className="font-semibold">{user?.username || 'User'}</p>
                       <p className={`text-xs ${navInfoSubText}`}>
-                        {user?.role} | {isOnAdminRoute ? 'Admin Panel' : (isOnHBMRoute ? 'HBM Module' : (isOnHSMRoute ? 'HSM Module' : (isOnPTMRoute ? 'PTM Module' : 'Crane Module')))}
+                        {user?.role} | {isOnAdminRoute ? 'Admin Panel' : (isOnHBMRoute ? 'HBM Module' : (isOnHSMRoute ? 'HSM Module' : (isOnPTMRoute ? 'PTM Module' : (isOnSMSRoute ? 'SMS Module' : 'Crane Module'))))}
                       </p>
                     </div>
                   </div>
@@ -399,6 +419,15 @@ function App() {
                         </svg>
                         <span className="font-medium">PTM Checksheets</span>
                       </Link>
+                      <Link
+                        to="/sms/dashboard"
+                        className="flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors bg-amber-700 hover:bg-amber-600 text-white"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                        <span className="font-medium">SMS Checksheets</span>
+                      </Link>
                     </>
                   ) : isOnHBMRoute ? (
                     /* ========== HBM NAVIGATION ========== */
@@ -440,6 +469,72 @@ function App() {
                         </svg>
                         <span className="font-medium">Dashboard</span>
                       </Link>
+                      <Link
+                        to="/hsm/breakdown-analysis/new"
+                        className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/hsm/breakdown-analysis/new' ? navActive + ' text-white' : navHover}`}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M5.07 19H19a2 2 0 001.75-2.96l-7-12a2 2 0 00-3.5 0l-7 12A2 2 0 005.07 19z" />
+                        </svg>
+                        <span className="font-medium">Breakdown Analysis</span>
+                      </Link>
+                      <Link
+                        to="/hsm/breakdown-analysis/history"
+                        className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/hsm/breakdown-analysis/history' ? navActive + ' text-white' : navHover}`}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                        <span className="font-medium">BA History</span>
+                      </Link>
+                      <Link
+                        to="/hsm/roll-change-activity/new"
+                        className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/hsm/roll-change-activity/new' ? navActive + ' text-white' : navHover}`}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span className="font-medium">Roll Change</span>
+                      </Link>
+                      <Link
+                        to="/hsm/roll-change-activity/history"
+                        className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/hsm/roll-change-activity/history' ? navActive + ' text-white' : navHover}`}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span className="font-medium">RC History</span>
+                      </Link>
+                      <Link
+                        to="/hsm/delay-report/new"
+                        className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/hsm/delay-report/new' ? navActive + ' text-white' : navHover}`}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span className="font-medium">Delay Report</span>
+                      </Link>
+                      <Link
+                        to="/hsm/delay-report/history"
+                        className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/hsm/delay-report/history' ? navActive + ' text-white' : navHover}`}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                        <span className="font-medium">Delay History</span>
+                      </Link>
+                      {isAdminUser && (
+                        <Link
+                          to="/hsm/insights"
+                          className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/hsm/insights' ? navActive + ' text-white' : navHover}`}
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                          </svg>
+                          <span className="font-medium">Insights</span>
+                        </Link>
+                      )}
 
                       {isAdminUser && (
                         <>
@@ -482,6 +577,31 @@ function App() {
                             <span className="font-medium">Admin — Config</span>
                           </Link>
                           <div className="border-t border-blue-600 my-1" />
+                          <Link to="/create-user" className="flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors bg-slate-700 hover:bg-slate-600 text-white">
+                            <svg className="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                            <span className="font-medium">Admin Panel</span>
+                          </Link>
+                        </>
+                      )}
+                    </>
+                  ) : isOnSMSRoute ? (
+                    /* ========== SMS NAVIGATION ========== */
+                    <>
+                      <Link to="/sms/dashboard" className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/sms/dashboard' ? navActive + ' text-white' : navHover}`}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+                        <span className="font-medium">Dashboard</span>
+                      </Link>
+                      <Link to="/sms/breakdown-analysis/new" className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/sms/breakdown-analysis/new' ? navActive + ' text-white' : navHover}`}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M5.07 19H19a2 2 0 001.75-2.96l-7-12a2 2 0 00-3.5 0l-7 12A2 2 0 005.07 19z" /></svg>
+                        <span className="font-medium">Breakdown Analysis</span>
+                      </Link>
+                      <Link to="/sms/breakdown-analysis/history" className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/sms/breakdown-analysis/history' ? navActive + ' text-white' : navHover}`}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                        <span className="font-medium">History</span>
+                      </Link>
+                      {isAdminUser && (
+                        <>
+                          <div className="border-t border-amber-500 my-1" />
                           <Link to="/create-user" className="flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors bg-slate-700 hover:bg-slate-600 text-white">
                             <svg className="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
                             <span className="font-medium">Admin Panel</span>
@@ -562,6 +682,15 @@ function App() {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                             </svg>
                             <span className="font-medium">PTM Checksheets</span>
+                          </Link>
+                          <Link
+                            to="/sms/dashboard"
+                            className="flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors bg-amber-700 hover:bg-amber-600 text-white"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                            </svg>
+                            <span className="font-medium">SMS Checksheets</span>
                           </Link>
                           <Link
                             to="/create-user"
@@ -809,6 +938,162 @@ function App() {
               )
             }
           />
+          <Route
+            path="/hsm/breakdown-analysis/new"
+            element={
+              user && (isHSMUser || isAdminUser) ? (
+                <HsmBreakdownAnalysisForm />
+              ) : user ? (
+                <Navigate to="/hsm/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/hsm/breakdown-analysis/history"
+            element={
+              user && (isHSMUser || isAdminUser) ? (
+                <HsmBreakdownAnalysisHistory />
+              ) : user ? (
+                <Navigate to="/hsm/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/hsm/breakdown-analysis/:id/edit"
+            element={
+              user && (isHSMUser || isAdminUser) ? (
+                <HsmBreakdownAnalysisForm />
+              ) : user ? (
+                <Navigate to="/hsm/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/hsm/breakdown-analysis/:id"
+            element={
+              user && (isHSMUser || isAdminUser) ? (
+                <HsmBreakdownAnalysisView />
+              ) : user ? (
+                <Navigate to="/hsm/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/hsm/roll-change-activity/new"
+            element={
+              user && (isHSMUser || isAdminUser) ? (
+                <RollChangeActivityForm />
+              ) : user ? (
+                <Navigate to="/hsm/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/hsm/roll-change-activity/history"
+            element={
+              user && (isHSMUser || isAdminUser) ? (
+                <RollChangeActivityHistory />
+              ) : user ? (
+                <Navigate to="/hsm/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/hsm/roll-change-activity/:id/edit"
+            element={
+              user && (isHSMUser || isAdminUser) ? (
+                <RollChangeActivityForm />
+              ) : user ? (
+                <Navigate to="/hsm/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/hsm/roll-change-activity/:id"
+            element={
+              user && (isHSMUser || isAdminUser) ? (
+                <RollChangeActivityView />
+              ) : user ? (
+                <Navigate to="/hsm/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/hsm/delay-report/new"
+            element={
+              user && (isHSMUser || isAdminUser) ? (
+                <DelayReportForm />
+              ) : user ? (
+                <Navigate to="/hsm/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/hsm/delay-report/history"
+            element={
+              user && (isHSMUser || isAdminUser) ? (
+                <DelayReportHistory />
+              ) : user ? (
+                <Navigate to="/hsm/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/hsm/delay-report/:id/edit"
+            element={
+              user && (isHSMUser || isAdminUser) ? (
+                <DelayReportForm />
+              ) : user ? (
+                <Navigate to="/hsm/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/hsm/delay-report/:id"
+            element={
+              user && (isHSMUser || isAdminUser) ? (
+                <DelayReportView />
+              ) : user ? (
+                <Navigate to="/hsm/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/hsm/insights"
+            element={
+              user && isAdminUser ? (
+                <HsmInsights />
+              ) : user ? (
+                <Navigate to="/hsm/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
 
           {/* ========== PTM ROUTES ========== */}
           <Route
@@ -832,13 +1117,75 @@ function App() {
             element={user && isAdminUser ? <PtmAdminConfig /> : user ? <Navigate to="/" replace /> : <Navigate to="/login" replace />}
           />
 
+          {/* ========== SMS ROUTES ========== */}
+          <Route
+            path="/sms/dashboard"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <SmsDashboard />
+              ) : user ? (
+                <Navigate to="/" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/breakdown-analysis/new"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <BreakdownAnalysisForm />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/breakdown-analysis/history"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <BreakdownAnalysisHistory />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/breakdown-analysis/:id/edit"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <BreakdownAnalysisForm />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/breakdown-analysis/:id"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <BreakdownAnalysisView />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+
           {/* Catch all - redirect to appropriate home or login */}
           <Route path="*" element={<Navigate to={user ? getDefaultRoute() : '/login'} replace />} />
         </Routes>
       </main>
 
       {/* Footer - Only show on dashboard pages */}
-      {showNav && (location.pathname === '/' || location.pathname === '/hbm/dashboard' || location.pathname === '/hsm/dashboard' || location.pathname === '/ptm/dashboard') && (
+      {showNav && (location.pathname === '/' || location.pathname === '/hbm/dashboard' || location.pathname === '/hsm/dashboard' || location.pathname === '/ptm/dashboard' || location.pathname === '/sms/dashboard') && (
         <footer className="bg-gray-800 text-white py-4">
           <div className="px-4 text-center">
             <p className="text-xs text-gray-400">
@@ -848,6 +1195,8 @@ function App() {
                 ? 'HSM Checksheet System | SRJ Strips and Pipes Pvt Ltd'
                 : isOnPTMRoute
                 ? 'PTM Checksheet System | SRJ Strips and Pipes Pvt Ltd'
+                : isOnSMSRoute
+                ? 'SMS Checksheet System | SRJ Strips and Pipes Pvt Ltd'
                 : 'Crane Maintenance System | Department-Based Access Control'
               }
             </p>

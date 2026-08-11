@@ -13,7 +13,12 @@ const REPORT_LINKS_BY_PREFIX = {
     { to: '/ptm/checksheet/history', label: 'Checksheet History', desc: 'Browse and review PTM logs' },
   ],
   '/hsm': [
-    { to: '/hsm/dashboard', label: 'HSM Dashboard', desc: 'Reports appear here as checksheets are added' },
+    { to: '/hsm/breakdown-analysis/history', label: 'Breakdown Analysis History', desc: 'Browse RCA / 5-Why reports' },
+    { to: '/hsm/breakdown-analysis/new', label: 'New Breakdown Analysis', desc: 'Fill a new Breakdown Analysis Report' },
+  ],
+  '/sms': [
+    { to: '/sms/breakdown-analysis/history', label: 'Breakdown Analysis History', desc: 'Browse RCA / 5-Why reports' },
+    { to: '/sms/breakdown-analysis/new', label: 'New Breakdown Analysis', desc: 'Fill a new Breakdown Analysis Report' },
   ],
 };
 

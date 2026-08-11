@@ -27,6 +27,8 @@ const hbmRoutes = require('./routes/hbmRoutes');
 const pumphouseRoutes = require('./routes/pumphouseRoutes');
 const fabricationRoutes = require('./routes/fabricationRoutes');
 const ptmRoutes = require('./routes/ptmRoutes');
+const smsRoutes = require('./routes/smsRoutes');
+const hsmRoutes = require('./routes/hsmRoutes');
 const modulesRoutes = require('./routes/modulesRoutes');
 const permissionListsRoutes = require('./routes/permissionListsRoutes');
 
@@ -36,7 +38,9 @@ const app = express();
 const PORT = process.env.PORT || 5001;
 
 // Middleware
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
 app.use(compression());
 app.use(morgan('combined'));
 app.use(cors({
@@ -45,6 +49,10 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Uploaded images (public read)
+const path = require('path');
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Health Check
 app.get('/health', (req, res) => {
@@ -75,6 +83,8 @@ app.use('/api/hbm', hbmRoutes);
 app.use('/api/pumphouse', pumphouseRoutes);
 app.use('/api', fabricationRoutes);
 app.use('/api/ptm', ptmRoutes);
+app.use('/api/sms', smsRoutes);
+app.use('/api/hsm', hsmRoutes);
 app.use('/api/modules', modulesRoutes);
 app.use('/api/permission-lists', permissionListsRoutes);
 
@@ -106,6 +116,18 @@ app.use((req, res) => {
 // Global Error Handler
 app.use((err, req, res, next) => {
   console.error('Global error handler:', err);
+  if (err && err.name === 'MulterError') {
+    const message =
+      err.code === 'LIMIT_FILE_SIZE'
+        ? 'Image too large (max 5 MB)'
+        : err.code === 'LIMIT_FILE_COUNT'
+          ? 'Too many images (max 10)'
+          : err.message || 'Upload failed';
+    return res.status(400).json({ success: false, message });
+  }
+  if (err && /Only image files/i.test(err.message || '')) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
   res.status(err.status || 500).json({
     success: false,
     message: err.message || 'Internal server error'

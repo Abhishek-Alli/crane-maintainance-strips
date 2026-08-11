@@ -15,6 +15,16 @@ import axios from 'axios';
 const API_BASE_URL =
   process.env.REACT_APP_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5001/api' : '/api');
 
+export const UPLOAD_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, '') ||
+  (window.location.hostname === 'localhost' ? 'http://localhost:5001' : '');
+
+export function resolveUploadUrl(urlOrPath) {
+  if (!urlOrPath) return '';
+  if (/^https?:\/\//i.test(urlOrPath) || urlOrPath.startsWith('blob:')) return urlOrPath;
+  const path = urlOrPath.startsWith('/') ? urlOrPath : `/${urlOrPath}`;
+  return `${UPLOAD_BASE_URL}${path}`;
+}
+
 /* =============================
    AXIOS INSTANCE
 ============================= */
@@ -33,6 +43,12 @@ api.interceptors.request.use(
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+      // Let the browser set multipart boundary
+      if (config.headers) {
+        delete config.headers['Content-Type'];
+      }
     }
     return config;
   },
@@ -410,8 +426,55 @@ export const ptmAPI = {
 };
 
 /* =============================
-   EXPORT AXIOS INSTANCE
+   SMS API
 ============================= */
+export const smsAPI = {
+  getBreakdownAnalysisLogs: (params) => api.get('/sms/breakdown-analysis', { params }),
+  getBreakdownAnalysisById: (id) => api.get(`/sms/breakdown-analysis/${id}`),
+  createBreakdownAnalysis: (data) => api.post('/sms/breakdown-analysis', data),
+  updateBreakdownAnalysis: (id, data) => api.put(`/sms/breakdown-analysis/${id}`, data),
+  deleteBreakdownAnalysis: (id) => api.delete(`/sms/breakdown-analysis/${id}`),
+  downloadBreakdownAnalysisPDF: (id) =>
+    api.get(`/sms/breakdown-analysis/${id}/pdf`, { responseType: 'blob' }),
+};
+
+/* =============================
+   HSM API
+============================= */
+export const hsmAPI = {
+  getInsights: (params) => api.get('/hsm/insights', { params }),
+
+  getBreakdownAnalysisLogs: (params) => api.get('/hsm/breakdown-analysis', { params }),
+  getBreakdownAnalysisById: (id) => api.get(`/hsm/breakdown-analysis/${id}`),
+  createBreakdownAnalysis: (data) => api.post('/hsm/breakdown-analysis', data),
+  updateBreakdownAnalysis: (id, data) => api.put(`/hsm/breakdown-analysis/${id}`, data),
+  deleteBreakdownAnalysis: (id) => api.delete(`/hsm/breakdown-analysis/${id}`),
+  clearAllBreakdownAnalysis: () => api.delete('/hsm/breakdown-analysis/clear-all'),
+  downloadBreakdownAnalysisPDF: (id) =>
+    api.get(`/hsm/breakdown-analysis/${id}/pdf`, { responseType: 'blob' }),
+
+  getRollChangeActivityLogs: (params) => api.get('/hsm/roll-change-activity', { params }),
+  getRollChangeActivityById: (id) => api.get(`/hsm/roll-change-activity/${id}`),
+  createRollChangeActivity: (data) => api.post('/hsm/roll-change-activity', data),
+  updateRollChangeActivity: (id, data) => api.put(`/hsm/roll-change-activity/${id}`, data),
+  deleteRollChangeActivity: (id) => api.delete(`/hsm/roll-change-activity/${id}`),
+  clearAllRollChangeActivity: () => api.delete('/hsm/roll-change-activity/clear-all'),
+  downloadRollChangeActivityPDF: (id) =>
+    api.get(`/hsm/roll-change-activity/${id}/pdf`, { responseType: 'blob' }),
+
+  getDelayReportLogs: (params) => api.get('/hsm/delay-report', { params }),
+  getDelayReportById: (id) => api.get(`/hsm/delay-report/${id}`),
+  createDelayReport: (data) => api.post('/hsm/delay-report', data),
+  updateDelayReport: (id, data) => api.put(`/hsm/delay-report/${id}`, data),
+  deleteDelayReport: (id) => api.delete(`/hsm/delay-report/${id}`),
+  clearAllDelayReports: () => api.delete('/hsm/delay-report/clear-all'),
+  downloadDelayReportPDF: (id) =>
+    api.get(`/hsm/delay-report/${id}/pdf`, { responseType: 'blob' }),
+  downloadDelayReportTemplate: () =>
+    api.get('/hsm/delay-report/template', { responseType: 'blob' }),
+  importDelayReports: (formData) => api.post('/hsm/delay-report/import', formData),
+};
+
 /* =============================
    MODULES API
 ============================= */

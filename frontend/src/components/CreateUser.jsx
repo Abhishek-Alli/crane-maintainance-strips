@@ -500,6 +500,7 @@ const CreateUser = ({ user }) => {
         { code: 'HBM_CHECKSHEETS',  name: 'HBM Checksheets',  color: 'emerald' },
         { code: 'HSM_CHECKSHEETS',  name: 'HSM Checksheets',  color: 'indigo' },
         { code: 'PTM_CHECKSHEETS',  name: 'PTM Checksheets',  color: 'blue' },
+        { code: 'SMS_CHECKSHEETS',  name: 'SMS Checksheets',  color: 'amber' },
         { code: 'ADMIN',            name: 'Admin',             color: 'purple' },
       ]);
     });

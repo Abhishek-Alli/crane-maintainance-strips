@@ -23,7 +23,8 @@ async function run() {
         ('Crane Maintenance', 'CRANE_MAINTENANCE', 'blue',    '/',           1),
         ('HBM Checksheets',  'HBM_CHECKSHEETS',  'emerald', '/hbm',        2),
         ('HSM Checksheets',  'HSM_CHECKSHEETS',  'indigo',  '/hsm',        3),
-        ('PTM Checksheets',  'PTM_CHECKSHEETS',  'blue',    '/ptm',        4)
+        ('PTM Checksheets',  'PTM_CHECKSHEETS',  'blue',    '/ptm',        4),
+        ('SMS Checksheets',  'SMS_CHECKSHEETS',  'amber',   '/sms',        5)
     `);
     console.log('✓ Seeded default modules');
   }

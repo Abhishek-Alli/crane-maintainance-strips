@@ -28,6 +28,7 @@ const Login = ({ onLoginSuccess }) => {
           { code: 'HBM_CHECKSHEETS',  name: 'HBM Checksheets',  color: 'emerald', route_prefix: '/hbm' },
           { code: 'HSM_CHECKSHEETS',  name: 'HSM Checksheets',  color: 'indigo',  route_prefix: '/hsm' },
           { code: 'PTM_CHECKSHEETS',  name: 'PTM Checksheets',  color: 'blue',    route_prefix: '/ptm' },
+          { code: 'SMS_CHECKSHEETS',  name: 'SMS Checksheets',  color: 'amber',   route_prefix: '/sms' },
           ADMIN_OPTION,
         ]);
       });
@@ -75,6 +76,8 @@ const Login = ({ onLoginSuccess }) => {
     ? 'bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500'
     : selected?.color === 'indigo'
     ? 'bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500'
+    : selected?.color === 'amber'
+    ? 'bg-amber-600 hover:bg-amber-700 focus:ring-amber-500'
     : selected?.color === 'slate'
     ? 'bg-slate-700 hover:bg-slate-800 focus:ring-slate-500'
     : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500';
@@ -263,7 +266,7 @@ const Login = ({ onLoginSuccess }) => {
                   Signing in...
                 </>
               ) : (
-                `Sign In${selected ? ` — ${selected.label}` : ''}`
+                `Sign In${selected ? ` — ${selected.name}` : ''}`
               )}
             </button>
           </form>

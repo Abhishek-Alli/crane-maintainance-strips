@@ -275,6 +275,83 @@ const requireCraneMaintenance = (req, res, next) => {
   next();
 };
 
+/**
+ * Middleware: Require SMS user type
+ * Blocks users who are not ADMIN or SMS_CHECKSHEETS
+ */
+const requireSMS = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: 'Authentication required'
+    });
+  }
+
+  const userType = (req.user.user_type || 'CRANE_MAINTENANCE').toUpperCase();
+  const role = (req.user.role_name || req.user.role || '').toUpperCase();
+  const isSms =
+    userType === 'SMS_CHECKSHEETS' ||
+    userType === 'SMS';
+  if (role !== 'ADMIN' && userType !== 'ADMIN' && !isSms) {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied. SMS Checksheets module access required.'
+    });
+  }
+
+  next();
+};
+
+/**
+ * Middleware: Require HSM user type
+ * Blocks users who are not ADMIN or HSM_CHECKSHEETS
+ */
+const requireHSM = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: 'Authentication required'
+    });
+  }
+
+  const userType = (req.user.user_type || 'CRANE_MAINTENANCE').toUpperCase();
+  const role = (req.user.role_name || req.user.role || '').toUpperCase();
+  const isHsm =
+    userType === 'HSM_CHECKSHEETS' ||
+    userType === 'HSM';
+  if (role !== 'ADMIN' && userType !== 'ADMIN' && !isHsm) {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied. HSM Checksheets module access required.'
+    });
+  }
+
+  next();
+};
+
+/**
+ * Middleware: Require ADMIN role or user_type
+ */
+const requireAdmin = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: 'Authentication required'
+    });
+  }
+
+  const role = (req.user.role_name || req.user.role || '').toUpperCase();
+  const userType = (req.user.user_type || '').toUpperCase();
+  if (role !== 'ADMIN' && role !== 'SUPER_ADMIN' && userType !== 'ADMIN') {
+    return res.status(403).json({
+      success: false,
+      message: 'Admin access required'
+    });
+  }
+
+  next();
+};
+
 module.exports = {
   generateToken,
   verifyToken,
@@ -286,5 +363,8 @@ module.exports = {
   checkShedAccess,
   checkCraneAccess,
   requireHBM,
-  requireCraneMaintenance
+  requireCraneMaintenance,
+  requireSMS,
+  requireHSM,
+  requireAdmin
 };

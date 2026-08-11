@@ -1,6 +1,19 @@
 const { query } = require('../config/database');
 const { generateToken } = require('../middleware/auth');
 
+/** Normalize short/legacy module codes to canonical login types */
+function normalizeUserType(type) {
+  const t = (type || '').toUpperCase().trim();
+  const aliases = {
+    SMS: 'SMS_CHECKSHEETS',
+    HBM: 'HBM_CHECKSHEETS',
+    HSM: 'HSM_CHECKSHEETS',
+    PTM: 'PTM_CHECKSHEETS',
+    CRANE: 'CRANE_MAINTENANCE',
+  };
+  return aliases[t] || t;
+}
+
 class AuthController {
   /**
    * User login with username + password only
@@ -32,8 +45,16 @@ class AuthController {
         });
       }
 
-      const validUserTypes = ['ADMIN', 'CRANE_MAINTENANCE', 'HBM_CHECKSHEETS', 'HSM_CHECKSHEETS'];
-      if (!validUserTypes.includes(userType)) {
+      const loginType = normalizeUserType(userType);
+      const validUserTypes = [
+        'ADMIN',
+        'CRANE_MAINTENANCE',
+        'HBM_CHECKSHEETS',
+        'HSM_CHECKSHEETS',
+        'PTM_CHECKSHEETS',
+        'SMS_CHECKSHEETS',
+      ];
+      if (!validUserTypes.includes(loginType)) {
         return res.status(400).json({
           success: false,
           message: 'Invalid login type'
@@ -71,12 +92,13 @@ class AuthController {
         });
       }
 
-      // 3. Validate user_type matches
+      // 3. Validate user_type matches (normalize short codes like SMS → SMS_CHECKSHEETS)
       // ADMIN user_type can access any module
-      if (user.user_type !== 'ADMIN' && user.user_type !== userType) {
+      const accountType = normalizeUserType(user.user_type);
+      if (accountType !== 'ADMIN' && accountType !== loginType) {
         return res.status(403).json({
           success: false,
-          message: `You are not authorized for ${userType.replace(/_/g, ' ')} module. Your account is registered for ${(user.user_type || 'CRANE_MAINTENANCE').replace(/_/g, ' ')}.`
+          message: `You are not authorized for ${loginType.replace(/_/g, ' ')} module. Your account is registered for ${(user.user_type || 'CRANE_MAINTENANCE').replace(/_/g, ' ')}.`
         });
       }
 
@@ -92,7 +114,8 @@ class AuthController {
       const departments = deptResult.rows;
 
       // 5. SUCCESS - Generate token and return user data
-      const effectiveUserType = user.user_type || 'CRANE_MAINTENANCE';
+      // Prefer canonical module code so frontend routing (SMS_CHECKSHEETS) works
+      const effectiveUserType = accountType === 'ADMIN' ? 'ADMIN' : loginType;
       const token = generateToken({
         id: user.id,
         username: user.username,
@@ -100,11 +123,18 @@ class AuthController {
         user_type: effectiveUserType
       });
 
-      // Update last login timestamp
-      await query(
-        'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1',
-        [user.id]
-      );
+      // Update last login timestamp; also heal legacy short codes (SMS → SMS_CHECKSHEETS)
+      if (user.user_type && normalizeUserType(user.user_type) !== user.user_type && accountType === loginType) {
+        await query(
+          'UPDATE users SET last_login = CURRENT_TIMESTAMP, user_type = $2 WHERE id = $1',
+          [user.id, accountType]
+        );
+      } else {
+        await query(
+          'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1',
+          [user.id]
+        );
+      }
 
       res.json({
         success: true,
@@ -116,7 +146,7 @@ class AuthController {
             username: user.username,
             role: user.role,
             user_type: effectiveUserType,
-            loginType: userType,
+            loginType: loginType,
             departments: departments
           }
         }

@@ -46,7 +46,7 @@ export const PreviewStatusTable = ({ rows }) => (
 );
 
 // Main modal shell
-const ChecksheetPreviewModal = ({ isOpen, title, onEdit, onConfirm, submitting, children }) => {
+const ChecksheetPreviewModal = ({ isOpen, title, onEdit, onConfirm, submitting, children, confirmLabel }) => {
   if (!isOpen) return null;
 
   return (
@@ -94,7 +94,7 @@ const ChecksheetPreviewModal = ({ isOpen, title, onEdit, onConfirm, submitting, 
                 </svg>
                 Submitting...
               </span>
-            ) : 'Confirm & Submit'}
+            ) : (confirmLabel || 'Confirm & Submit')}
           </button>
         </div>
       </div>
