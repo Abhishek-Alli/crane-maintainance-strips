@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import { userAPI, permissionListsAPI } from '../services/api';
+import HodPermissionsPanel from './hod/HodPermissionsPanel';
 
 const COLOR_ACTIVE = {
   blue:    'bg-blue-50 border-blue-400 text-blue-800',
@@ -721,6 +722,13 @@ const CreateUser = ({ user }) => {
                 'Permissions',
                 () => openPanel(u.id, 'perms')
               )}
+              {u.user_type === 'HOD' && actionBtn(
+                panelOpen && expandedId?.panel === 'perms',
+                'bg-red-100 text-red-700 hover:bg-red-200',
+                'bg-red-600 text-white',
+                'HOD Access',
+                () => openPanel(u.id, 'perms')
+              )}
               {actionBtn(
                 panelOpen && expandedId?.panel === 'module',
                 'bg-blue-100 text-blue-700 hover:bg-blue-200',
@@ -753,6 +761,9 @@ const CreateUser = ({ user }) => {
               )}
               {expandedId?.panel === 'perms' && u.user_type === 'CRANE_MAINTENANCE' && (
                 <CranePermissionsPanel userId={u.id} onClose={closePanel} craneSections={craneSections} />
+              )}
+              {expandedId?.panel === 'perms' && u.user_type === 'HOD' && (
+                <HodPermissionsPanel userId={u.id} onClose={closePanel} />
               )}
               {expandedId?.panel === 'module' && (
                 <ChangeModulePanel userId={u.id} currentType={u.user_type}

@@ -372,6 +372,8 @@ export const userAPI = {
   updateCranePermissions: (id, data) => api.put(`/users/${id}/crane-permissions`, data),
   changePassword: (id, password) => api.put(`/users/${id}`, { password }),
   changeModule: (id, user_type) => api.put(`/users/${id}`, { user_type }),
+  getHodPermissions: (id) => api.get(`/users/${id}/hod-permissions`),
+  updateHodPermissions: (id, data) => api.put(`/users/${id}/hod-permissions`, data),
 };
 
 export const permissionListsAPI = {
@@ -490,6 +492,46 @@ export const hsmAPI = {
   downloadDelayReportTemplate: () =>
     api.get('/hsm/delay-report/template', { responseType: 'blob' }),
   importDelayReports: (formData) => api.post('/hsm/delay-report/import', formData),
+
+  getFmDailyChecklistLogs: (params) => api.get('/hsm/fm-daily-checklist', { params }),
+  getFmDailyChecklistById: (id) => api.get(`/hsm/fm-daily-checklist/${id}`),
+  createFmDailyChecklist: (data) => api.post('/hsm/fm-daily-checklist', data),
+  updateFmDailyChecklist: (id, data) => api.put(`/hsm/fm-daily-checklist/${id}`, data),
+  deleteFmDailyChecklist: (id) => api.delete(`/hsm/fm-daily-checklist/${id}`),
+  clearAllFmDailyChecklists: () => api.delete('/hsm/fm-daily-checklist/clear-all'),
+  downloadFmDailyChecklistPDF: (id) =>
+    api.get(`/hsm/fm-daily-checklist/${id}/pdf`, { responseType: 'blob' }),
+};
+
+/* =============================
+   HOD API
+============================= */
+export const hodAPI = {
+  getMyScope: () => api.get('/hod/scope'),
+  getSignoffs: (params) => api.get('/hod/signoffs', { params }),
+  upsertSignoff: (data) => api.post('/hod/signoff', data),
+
+  // Generic by sheet key — works for any sheet registered in hodRoutes
+  getLogs: (sheetKey, params) => api.get(`/hod/sheets/${sheetKey}`, { params }),
+  getById: (sheetKey, id) => api.get(`/hod/sheets/${sheetKey}/${id}`),
+  downloadPDF: (sheetKey, id) => api.get(`/hod/sheets/${sheetKey}/${id}/pdf`, { responseType: 'blob' }),
+
+  // HSM named helpers (kept for backward compat with HodDashboard pending counts)
+  getFmDailyLogs: (params) => api.get('/hod/sheets/fm-daily-checklist', { params }),
+  getFmDailyById: (id) => api.get(`/hod/sheets/fm-daily-checklist/${id}`),
+  downloadFmDailyPDF: (id) => api.get(`/hod/sheets/fm-daily-checklist/${id}/pdf`, { responseType: 'blob' }),
+
+  getDelayReportLogs: (params) => api.get('/hod/sheets/delay-report', { params }),
+  getDelayReportById: (id) => api.get(`/hod/sheets/delay-report/${id}`),
+  downloadDelayReportPDF: (id) => api.get(`/hod/sheets/delay-report/${id}/pdf`, { responseType: 'blob' }),
+
+  getBreakdownLogs: (params) => api.get('/hod/sheets/breakdown-analysis', { params }),
+  getBreakdownById: (id) => api.get(`/hod/sheets/breakdown-analysis/${id}`),
+  downloadBreakdownPDF: (id) => api.get(`/hod/sheets/breakdown-analysis/${id}/pdf`, { responseType: 'blob' }),
+
+  getRollChangeLogs: (params) => api.get('/hod/sheets/roll-change-activity', { params }),
+  getRollChangeById: (id) => api.get(`/hod/sheets/roll-change-activity/${id}`),
+  downloadRollChangePDF: (id) => api.get(`/hod/sheets/roll-change-activity/${id}/pdf`, { responseType: 'blob' }),
 };
 
 /* =============================
@@ -500,6 +542,15 @@ export const modulesAPI = {
   create: (data) => api.post('/modules', data),
   update: (id, data) => api.put(`/modules/${id}`, data),
   delete: (id) => api.delete(`/modules/${id}`),
+};
+
+export const notificationAPI = {
+  getAll:      ()           => api.get('/notifications'),
+  markRead:    (id)         => api.patch(`/notifications/${id}/read`),
+  markAllRead: ()           => api.patch('/notifications/read-all'),
+  saveToken:   (token)      => api.post('/notifications/token', { token }),
+  removeToken: (token)      => api.delete('/notifications/token', { data: { token } }),
+  send:        (data)       => api.post('/notifications/send', data),
 };
 
 export default api;

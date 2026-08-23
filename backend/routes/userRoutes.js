@@ -16,6 +16,7 @@ router.use(authenticate);
 // Own permissions (or admin reading another user)
 router.get('/:id/hbm-permissions', selfOrAdmin, UserController.getPermissions);
 router.get('/:id/crane-permissions', selfOrAdmin, UserController.getCranePermissions);
+router.get('/:id/hod-permissions', selfOrAdmin, UserController.getHodPermissions);
 
 router.use(authorize('ADMIN'));
 
@@ -23,6 +24,7 @@ router.get('/', UserController.getAll);
 router.post('/create', UserController.createUser);
 router.put('/:id/hbm-permissions', UserController.updatePermissions);
 router.put('/:id/crane-permissions', UserController.updateCranePermissions);
+router.put('/:id/hod-permissions', UserController.updateHodPermissions);
 router.get('/:id', UserController.getById);
 router.put('/:id', UserController.updateUser);
 router.delete('/:id', UserController.deleteUser);

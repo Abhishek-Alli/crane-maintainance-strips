@@ -53,6 +53,7 @@ class AuthController {
         'HSM_CHECKSHEETS',
         'PTM_CHECKSHEETS',
         'SMS_CHECKSHEETS',
+        'HOD',
       ];
       if (!validUserTypes.includes(loginType)) {
         return res.status(400).json({

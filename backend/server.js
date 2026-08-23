@@ -29,6 +29,8 @@ const fabricationRoutes = require('./routes/fabricationRoutes');
 const ptmRoutes = require('./routes/ptmRoutes');
 const smsRoutes = require('./routes/smsRoutes');
 const hsmRoutes = require('./routes/hsmRoutes');
+const hodRoutes = require('./routes/hodRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 const modulesRoutes = require('./routes/modulesRoutes');
 const permissionListsRoutes = require('./routes/permissionListsRoutes');
 
@@ -88,6 +90,8 @@ app.use('/api', fabricationRoutes);
 app.use('/api/ptm', ptmRoutes);
 app.use('/api/sms', smsRoutes);
 app.use('/api/hsm', hsmRoutes);
+app.use('/api/hod', hodRoutes);
+app.use('/api/notifications', notificationRoutes);
 app.use('/api/modules', modulesRoutes);
 app.use('/api/permission-lists', permissionListsRoutes);
 

@@ -316,6 +316,10 @@ function startCronJobs() {
   cron.schedule('0 18 * * *', () => {
     console.log('[CRON] Running 6 PM daily inspection summary...');
     dailyInspectionSummary();
+    // Push: remind HOD of pending reviews
+    const { notifyHodPendingReview, notifyOperatorsSheetsNotFilled } = require('../utils/notificationService');
+    notifyHodPendingReview();
+    notifyOperatorsSheetsNotFilled();
   }, { timezone: 'Asia/Kolkata' });
 
   cron.schedule('0 19 * * *', () => {
@@ -326,10 +330,23 @@ function startCronJobs() {
   }, { timezone: 'Asia/Kolkata' });
 
   // HBM 1-year data retention — runs daily at 2:30 AM IST
-  // This is a backend fallback; pg_cron in Supabase is the primary (see migration 011)
   cron.schedule('30 2 * * *', () => {
     console.log('[CRON] Running 2:30 AM HBM data cleanup...');
     hbmDataCleanup();
+  }, { timezone: 'Asia/Kolkata' });
+
+  // Notifications cleanup — delete notifications older than 10 days, runs daily at 3:00 AM IST
+  cron.schedule('0 3 * * *', async () => {
+    console.log('[CRON] Running 3:00 AM notifications cleanup...');
+    try {
+      const { query } = require('../config/database');
+      const result = await query(
+        `DELETE FROM notifications WHERE created_at < NOW() - INTERVAL '10 days'`
+      );
+      console.log(`[CRON] Deleted ${result.rowCount} old notifications`);
+    } catch (err) {
+      console.error('[CRON] Notifications cleanup error:', err.message);
+    }
   }, { timezone: 'Asia/Kolkata' });
 
   console.log('  Cron Jobs:');
@@ -337,6 +354,7 @@ function startCronJobs() {
   console.log('    - Daily Inspection Summary   → 06:00 PM IST');
   console.log('    - HBM Daily Status Summary   → 07:00 PM IST');
   console.log('    - HBM Data Cleanup (1yr)     → 02:30 AM IST');
+  console.log('    - Notifications Cleanup (10d)→ 03:00 AM IST');
 }
 
 module.exports = { startCronJobs, maintenanceDueAlert, dailyInspectionSummary, hbmChecksheetDailySummary, hbmDataCleanup };

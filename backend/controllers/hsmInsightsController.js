@@ -1,6 +1,6 @@
 const { query } = require('../config/database');
 
-const PAGE_KEYS = ['breakdown-analysis', 'roll-change-activity', 'delay-report'];
+const PAGE_KEYS = ['breakdown-analysis', 'roll-change-activity', 'delay-report', 'fm-daily-checklist'];
 
 function parsePages(raw) {
   if (!raw || String(raw).trim() === '' || String(raw).trim() === 'all') {
@@ -257,6 +257,56 @@ async function rollChangeInsights(dateFrom, dateTo) {
   };
 }
 
+async function fmDailyInsights(dateFrom, dateTo) {
+  const [summary, byShift, daily, notOk] = await Promise.all([
+    query(
+      `SELECT
+         COUNT(*)::int AS total,
+         COUNT(DISTINCT report_date)::int AS unique_days
+       FROM hsm_fm_daily_checklists
+       WHERE report_date >= $1::date AND report_date <= $2::date`,
+      [dateFrom, dateTo]
+    ),
+    query(
+      `SELECT shift, COUNT(*)::int AS count
+       FROM hsm_fm_daily_checklists
+       WHERE report_date >= $1::date AND report_date <= $2::date
+       GROUP BY shift
+       ORDER BY shift`,
+      [dateFrom, dateTo]
+    ),
+    query(
+      `SELECT report_date::text AS day, COUNT(*)::int AS count
+       FROM hsm_fm_daily_checklists
+       WHERE report_date >= $1::date AND report_date <= $2::date
+       GROUP BY report_date
+       ORDER BY report_date`,
+      [dateFrom, dateTo]
+    ),
+    query(
+      `SELECT COUNT(*)::int AS sheets_with_not_ok
+       FROM hsm_fm_daily_checklists
+       WHERE report_date >= $1::date AND report_date <= $2::date
+         AND checklist_items::text LIKE '%"status": "NOT_OK"%'`,
+      [dateFrom, dateTo]
+    ),
+  ]);
+
+  const s = summary.rows[0] || {};
+  return {
+    key: 'fm-daily-checklist',
+    label: 'FM Daily Check List',
+    history_path: '/hsm/fm-daily-checklist/history',
+    summary: {
+      total: s.total || 0,
+      unique_days: s.unique_days || 0,
+      sheets_with_not_ok: notOk.rows[0]?.sheets_with_not_ok || 0,
+    },
+    by_shift: byShift.rows,
+    daily: daily.rows,
+  };
+}
+
 class HsmInsightsController {
   static async getInsights(req, res) {
     try {
@@ -269,6 +319,7 @@ class HsmInsightsController {
         'delay-report': delayInsights,
         'breakdown-analysis': breakdownInsights,
         'roll-change-activity': rollChangeInsights,
+        'fm-daily-checklist': fmDailyInsights,
       };
 
       const sections = await Promise.all(pages.map((key) => builders[key](dateFrom, dateTo)));
@@ -283,6 +334,7 @@ class HsmInsightsController {
             { key: 'breakdown-analysis', label: 'Breakdown Analysis' },
             { key: 'roll-change-activity', label: 'Roll Change Activity' },
             { key: 'delay-report', label: 'Delay Report' },
+            { key: 'fm-daily-checklist', label: 'FM Daily Check List' },
           ],
           sections,
         },

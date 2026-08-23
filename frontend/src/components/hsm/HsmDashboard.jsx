@@ -20,6 +20,7 @@ export default function HsmDashboard() {
   const [baRecent, setBaRecent] = useState([]);
   const [rcRecent, setRcRecent] = useState([]);
   const [delayRecent, setDelayRecent] = useState([]);
+  const [fmRecent, setFmRecent] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const isAdminUser = (() => {
@@ -36,11 +37,13 @@ export default function HsmDashboard() {
       hsmAPI.getBreakdownAnalysisLogs({ limit: 5 }).catch(() => ({ data: [] })),
       hsmAPI.getRollChangeActivityLogs({ limit: 5 }).catch(() => ({ data: [] })),
       hsmAPI.getDelayReportLogs({ limit: 5 }).catch(() => ({ data: [] })),
+      hsmAPI.getFmDailyChecklistLogs({ limit: 5 }).catch(() => ({ data: [] })),
     ])
-      .then(([ba, rc, delay]) => {
+      .then(([ba, rc, delay, fm]) => {
         setBaRecent(ba?.data || []);
         setRcRecent(rc?.data || []);
         setDelayRecent(delay?.data || []);
+        setFmRecent(fm?.data || []);
       })
       .catch(() => toast.error('Failed to load recent reports'))
       .finally(() => setLoading(false));
@@ -84,6 +87,17 @@ export default function HsmDashboard() {
       label: 'Delay Report History',
       sub: 'Past delay reports',
     },
+    {
+      to: '/hsm/fm-daily-checklist/new',
+      label: 'FM Daily Check List',
+      sub: 'Guide gap · pressures · clamps · OK / NOT OK',
+      primary: true,
+    },
+    {
+      to: '/hsm/fm-daily-checklist/history',
+      label: 'FM Daily Check List History',
+      sub: 'Past FM daily checklists',
+    },
     ...(isAdminUser
       ? [{
           to: '/hsm/insights',
@@ -123,7 +137,7 @@ export default function HsmDashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-5">
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="font-bold text-gray-900 text-sm">Recent Breakdown Analysis</h2>
@@ -220,6 +234,40 @@ export default function HsmDashboard() {
                       <p className="text-xs text-gray-500 mt-0.5">{formatDate(log.report_date)}</p>
                     </div>
                     <p className="text-xs font-semibold text-indigo-700">{formatDowntime(log.total_minutes)}</p>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="font-bold text-gray-900 text-sm">Recent FM Daily</h2>
+              <Link to="/hsm/fm-daily-checklist/history" className="text-xs font-semibold text-indigo-700 hover:opacity-80">
+                View all →
+              </Link>
+            </div>
+            {loading ? (
+              <div className="p-10 flex justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
+              </div>
+            ) : fmRecent.length === 0 ? (
+              <div className="p-8 text-center text-gray-400 text-sm">No checklists yet.</div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {fmRecent.map((log) => (
+                  <Link
+                    key={log.id}
+                    to={`/hsm/fm-daily-checklist/${log.id}`}
+                    className="flex items-center justify-between px-5 py-3.5 hover:bg-indigo-50/50 transition-colors"
+                  >
+                    <div>
+                      <p className="font-semibold text-gray-900 text-sm">
+                        Shift {log.shift}{log.shift_engineer ? ` · ${log.shift_engineer}` : ''}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5">{formatDate(log.report_date)}</p>
+                    </div>
+                    <p className="text-xs font-semibold text-indigo-700">View</p>
                   </Link>
                 ))}
               </div>

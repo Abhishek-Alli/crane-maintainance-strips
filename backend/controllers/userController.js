@@ -441,6 +441,51 @@ class UserController {
   }
 
   /**
+   * Get HOD review scope for a user
+   * GET /api/users/:id/hod-permissions
+   */
+  static async getHodPermissions(req, res) {
+    try {
+      const { id } = req.params;
+      const result = await query(
+        `SELECT allowed_scope FROM hod_user_permissions WHERE user_id = $1`,
+        [id]
+      );
+      if (result.rows.length === 0) {
+        return res.json({ success: true, data: { allowed_scope: null } });
+      }
+      res.json({ success: true, data: result.rows[0] });
+    } catch (error) {
+      console.error('Get HOD permissions error:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch HOD permissions' });
+    }
+  }
+
+  /**
+   * Update HOD review scope for a user
+   * PUT /api/users/:id/hod-permissions
+   * Body: { allowed_scope: null | { "HSM_CHECKSHEETS": ["fm-daily-checklist", ...] } }
+   */
+  static async updateHodPermissions(req, res) {
+    try {
+      const { id } = req.params;
+      const { allowed_scope } = req.body;
+      await query(
+        `INSERT INTO hod_user_permissions (user_id, allowed_scope, updated_at)
+         VALUES ($1, $2::jsonb, NOW())
+         ON CONFLICT (user_id) DO UPDATE SET
+           allowed_scope = EXCLUDED.allowed_scope,
+           updated_at    = NOW()`,
+        [id, allowed_scope == null ? null : JSON.stringify(allowed_scope)]
+      );
+      res.json({ success: true, message: 'HOD permissions updated' });
+    } catch (error) {
+      console.error('Update HOD permissions error:', error);
+      res.status(500).json({ success: false, message: 'Failed to update HOD permissions' });
+    }
+  }
+
+  /**
    * Delete user (Admin only)
    * DELETE /api/users/:id
    */

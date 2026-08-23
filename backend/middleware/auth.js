@@ -349,6 +349,30 @@ const requireHSM = (req, res, next) => {
 };
 
 /**
+ * Middleware: Require HOD user type
+ * Blocks users who are not ADMIN or HOD
+ */
+const requireHOD = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: 'Authentication required'
+    });
+  }
+
+  const userType = (req.user.user_type || '').toUpperCase();
+  const role = (req.user.role_name || req.user.role || '').toUpperCase();
+  if (role !== 'ADMIN' && userType !== 'ADMIN' && userType !== 'HOD') {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied. HOD module access required.'
+    });
+  }
+
+  next();
+};
+
+/**
  * Middleware: Require ADMIN role or user_type
  */
 const requireAdmin = (req, res, next) => {
@@ -385,5 +409,6 @@ module.exports = {
   requireCraneMaintenance,
   requireSMS,
   requireHSM,
+  requireHOD,
   requireAdmin
 };

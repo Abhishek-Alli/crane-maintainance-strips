@@ -9,6 +9,7 @@ const PAGE_OPTIONS = [
   { key: 'breakdown-analysis', label: 'Breakdown Analysis' },
   { key: 'roll-change-activity', label: 'Roll Change Activity' },
   { key: 'delay-report', label: 'Delay Report' },
+  { key: 'fm-daily-checklist', label: 'FM Daily Check List' },
 ];
 
 function defaultMonthRange() {
@@ -215,10 +216,39 @@ function RollChangeSection({ data }) {
   );
 }
 
+function FmDailySection({ data }) {
+  const s = data.summary || {};
+  return (
+    <section className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
+        <div>
+          <h3 className="font-bold text-gray-900">{data.label}</h3>
+          <p className="text-xs text-gray-500 mt-0.5">Shift · sheets with NOT OK items</p>
+        </div>
+        <Link to={data.history_path} className="text-xs font-semibold text-indigo-700 hover:opacity-80 shrink-0">
+          History →
+        </Link>
+      </div>
+      <div className="p-5 space-y-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <Stat label="Checklists" value={s.total} />
+          <Stat label="Days" value={s.unique_days} />
+          <Stat label="Sheets with NOT OK" value={s.sheets_with_not_ok} />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <RankList title="By shift" rows={data.by_shift || []} labelKey="shift" />
+          <DailyBars rows={data.daily || []} />
+        </div>
+      </div>
+    </section>
+  );
+}
+
 const SECTION_RENDER = {
   'delay-report': DelaySection,
   'breakdown-analysis': BreakdownSection,
   'roll-change-activity': RollChangeSection,
+  'fm-daily-checklist': FmDailySection,
 };
 
 export default function HsmInsights() {

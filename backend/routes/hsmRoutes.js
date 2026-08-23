@@ -5,6 +5,7 @@ const { rollChangeImageUpload, excelMemoryUpload } = require('../middleware/uplo
 const HsmController = require('../controllers/hsmController');
 const HsmDelayController = require('../controllers/hsmDelayController');
 const HsmInsightsController = require('../controllers/hsmInsightsController');
+const HsmFmDailyController = require('../controllers/hsmFmDailyController');
 
 router.use(authenticate);
 router.use(requireHSM);
@@ -36,5 +37,13 @@ router.get('/delay-report/:id', HsmDelayController.getById);
 router.post('/delay-report', HsmDelayController.create);
 router.put('/delay-report/:id', HsmDelayController.update);
 router.delete('/delay-report/:id', HsmDelayController.remove);
+
+router.delete('/fm-daily-checklist/clear-all', requireAdmin, HsmFmDailyController.clearAll);
+router.get('/fm-daily-checklist', HsmFmDailyController.getLogs);
+router.get('/fm-daily-checklist/:id/pdf', HsmFmDailyController.downloadPDF);
+router.get('/fm-daily-checklist/:id', HsmFmDailyController.getById);
+router.post('/fm-daily-checklist', HsmFmDailyController.create);
+router.put('/fm-daily-checklist/:id', HsmFmDailyController.update);
+router.delete('/fm-daily-checklist/:id', HsmFmDailyController.remove);
 
 module.exports = router;

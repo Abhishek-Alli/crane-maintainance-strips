@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { userAPI } from './services/api';
+import { userAPI, hodAPI } from './services/api';
+import useNotifications from './hooks/useNotifications';
 // import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -21,6 +22,7 @@ import AdminDashboard from './components/admin/AdminDashboard';
 import AdminModules from './components/admin/AdminModules';
 import AdminConfig from './components/admin/AdminConfig';
 import AdminDownloadReports from './components/admin/AdminDownloadReports';
+import SendNotification from './components/admin/SendNotification';
 
 // HBM Components
 import HbmDashboard from './components/hbm/HbmDashboard';
@@ -94,7 +96,16 @@ import RollChangeActivityView from './components/hsm/RollChangeActivityView';
 import DelayReportForm from './components/hsm/DelayReportForm';
 import DelayReportHistory from './components/hsm/DelayReportHistory';
 import DelayReportView from './components/hsm/DelayReportView';
+import FmDailyChecklistForm from './components/hsm/FmDailyChecklistForm';
+import FmDailyChecklistHistory from './components/hsm/FmDailyChecklistHistory';
+import FmDailyChecklistView from './components/hsm/FmDailyChecklistView';
 import HsmInsights from './components/hsm/HsmInsights';
+
+// HOD Components
+import HodDashboard from './components/hod/HodDashboard';
+import NotificationPanel from './components/shared/NotificationPanel';
+import HodSheetList from './components/hod/HodSheetList';
+import HodSheetView from './components/hod/HodSheetView';
 
 // SMS Components
 import SmsDashboard from './components/sms/SmsDashboard';
@@ -116,7 +127,9 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [hbmAllowedSheets, setHbmAllowedSheets] = useState(null); // null = all allowed
+  const [hodNavModules, setHodNavModules] = useState([]); // [{moduleLabel, sheets:[{key,label}]}]
   const location = useLocation();
+  const { removeToken } = useNotifications(user);
 
   // Close mobile menu when route changes
   useEffect(() => {
@@ -141,6 +154,7 @@ function App() {
   }, []);
 
   const handleLogout = () => {
+    removeToken();
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
@@ -163,6 +177,28 @@ function App() {
       .catch(() => setHbmAllowedSheets(null));
   }, [user]);
 
+  // Fetch HOD scope for sidebar nav when a HOD (or admin) user logs in
+  useEffect(() => {
+    if (!user) { setHodNavModules([]); return; }
+    const loginType = user.loginType || user.user_type;
+    const isAdmin = user.role === 'ADMIN' || user.user_type === 'ADMIN';
+    if (loginType !== 'HOD' && !isAdmin) return;
+    hodAPI.getMyScope()
+      .then(res => {
+        const data = res.data?.data;
+        if (!data) return;
+        if (data.is_admin) { setHodNavModules([]); return; } // admin → dashboard only
+        const navMods = (data.modules || [])
+          .filter(m => m.sheets && m.sheets.length > 0)
+          .map(m => ({
+            moduleLabel: m.module_code.replace('_CHECKSHEETS', ''),
+            sheets: m.sheets.map(s => ({ key: s.key, label: s.label || s.key })),
+          }));
+        setHodNavModules(navMods);
+      })
+      .catch(() => setHodNavModules([]));
+  }, [user]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
@@ -176,11 +212,13 @@ function App() {
   const isHBMUser = userLoginType === 'HBM_CHECKSHEETS';
   const isHSMUser = userLoginType === 'HSM_CHECKSHEETS';
   const isSMSUser = userLoginType === 'SMS_CHECKSHEETS' || userLoginType === 'SMS';
+  const isHODUser = userLoginType === 'HOD';
   const isAdminUser = user?.role === 'ADMIN' || user?.user_type === 'ADMIN';
   const isOnHBMRoute = location.pathname.startsWith('/hbm');
   const isOnHSMRoute = location.pathname.startsWith('/hsm');
   const isOnPTMRoute = location.pathname.startsWith('/ptm');
   const isOnSMSRoute = location.pathname.startsWith('/sms');
+  const isOnHODRoute = location.pathname.startsWith('/hod');
   const isOnAdminRoute = ['/create-user', '/telegram-settings', '/fabrication', '/admin/'].some(r => location.pathname.startsWith(r));
 
   // Don't show nav on login page or admin routes (AdminLayout supplies its own top bar)
@@ -192,6 +230,7 @@ function App() {
     if (isHBMUser) return '/hbm/dashboard';
     if (isHSMUser) return '/hsm/dashboard';
     if (isSMSUser) return '/sms/dashboard';
+    if (isHODUser) return '/hod/dashboard';
     return '/';
   };
 
@@ -200,14 +239,14 @@ function App() {
     isAdminUser || hbmAllowedSheets === null || (Array.isArray(hbmAllowedSheets) && hbmAllowedSheets.includes(key));
 
   // Nav colors based on module
-  const navBg        = isOnAdminRoute ? 'bg-slate-900'         : isOnHBMRoute ? 'bg-emerald-600'       : isOnHSMRoute ? 'bg-indigo-600'       : isOnPTMRoute ? 'bg-blue-700'       : isOnSMSRoute ? 'bg-amber-600'       : 'bg-blue-600';
-  const navHover     = isOnAdminRoute ? 'hover:bg-slate-700'   : isOnHBMRoute ? 'hover:bg-emerald-500'  : isOnHSMRoute ? 'hover:bg-indigo-500'  : isOnPTMRoute ? 'hover:bg-blue-600' : isOnSMSRoute ? 'hover:bg-amber-500'  : 'hover:bg-blue-500';
-  const navActive    = isOnAdminRoute ? 'bg-slate-700'         : isOnHBMRoute ? 'bg-emerald-700'        : isOnHSMRoute ? 'bg-indigo-700'        : isOnPTMRoute ? 'bg-blue-800'       : isOnSMSRoute ? 'bg-amber-700'        : 'bg-blue-700';
-  const navBadgeBg   = isOnAdminRoute ? 'bg-violet-600'        : isOnHBMRoute ? 'bg-emerald-500'        : isOnHSMRoute ? 'bg-indigo-500'        : isOnPTMRoute ? 'bg-blue-600'       : isOnSMSRoute ? 'bg-amber-500'        : 'bg-blue-500';
-  const navBorderColor = isOnAdminRoute ? 'border-slate-700'   : isOnHBMRoute ? 'border-emerald-500'    : isOnHSMRoute ? 'border-indigo-500'    : isOnPTMRoute ? 'border-blue-600'   : isOnSMSRoute ? 'border-amber-500'    : 'border-blue-500';
-  const navInfoBg    = isOnAdminRoute ? 'bg-slate-800'         : isOnHBMRoute ? 'bg-emerald-700'        : isOnHSMRoute ? 'bg-indigo-700'        : isOnPTMRoute ? 'bg-blue-800'       : isOnSMSRoute ? 'bg-amber-700'        : 'bg-blue-700';
-  const navInfoAvatarBg = isOnAdminRoute ? 'bg-violet-600'     : isOnHBMRoute ? 'bg-emerald-400'        : isOnHSMRoute ? 'bg-indigo-400'        : isOnPTMRoute ? 'bg-blue-500'       : isOnSMSRoute ? 'bg-amber-400'        : 'bg-blue-400';
-  const navInfoSubText = isOnAdminRoute ? 'text-slate-400'     : isOnHBMRoute ? 'text-emerald-200'      : isOnHSMRoute ? 'text-indigo-200'      : isOnPTMRoute ? 'text-blue-200'     : isOnSMSRoute ? 'text-amber-200'      : 'text-blue-200';
+  const navBg        = isOnAdminRoute ? 'bg-slate-900'         : isOnHBMRoute ? 'bg-emerald-600'       : isOnHSMRoute ? 'bg-indigo-600'       : isOnPTMRoute ? 'bg-blue-700'       : isOnSMSRoute ? 'bg-amber-600'       : isOnHODRoute ? 'bg-red-700'        : 'bg-blue-600';
+  const navHover     = isOnAdminRoute ? 'hover:bg-slate-700'   : isOnHBMRoute ? 'hover:bg-emerald-500'  : isOnHSMRoute ? 'hover:bg-indigo-500'  : isOnPTMRoute ? 'hover:bg-blue-600' : isOnSMSRoute ? 'hover:bg-amber-500'  : isOnHODRoute ? 'hover:bg-red-600'  : 'hover:bg-blue-500';
+  const navActive    = isOnAdminRoute ? 'bg-slate-700'         : isOnHBMRoute ? 'bg-emerald-700'        : isOnHSMRoute ? 'bg-indigo-700'        : isOnPTMRoute ? 'bg-blue-800'       : isOnSMSRoute ? 'bg-amber-700'        : isOnHODRoute ? 'bg-red-800'        : 'bg-blue-700';
+  const navBadgeBg   = isOnAdminRoute ? 'bg-violet-600'        : isOnHBMRoute ? 'bg-emerald-500'        : isOnHSMRoute ? 'bg-indigo-500'        : isOnPTMRoute ? 'bg-blue-600'       : isOnSMSRoute ? 'bg-amber-500'        : isOnHODRoute ? 'bg-red-600'        : 'bg-blue-500';
+  const navBorderColor = isOnAdminRoute ? 'border-slate-700'   : isOnHBMRoute ? 'border-emerald-500'    : isOnHSMRoute ? 'border-indigo-500'    : isOnPTMRoute ? 'border-blue-600'   : isOnSMSRoute ? 'border-amber-500'    : isOnHODRoute ? 'border-red-500'    : 'border-blue-500';
+  const navInfoBg    = isOnAdminRoute ? 'bg-slate-800'         : isOnHBMRoute ? 'bg-emerald-700'        : isOnHSMRoute ? 'bg-indigo-700'        : isOnPTMRoute ? 'bg-blue-800'       : isOnSMSRoute ? 'bg-amber-700'        : isOnHODRoute ? 'bg-red-800'        : 'bg-blue-700';
+  const navInfoAvatarBg = isOnAdminRoute ? 'bg-violet-600'     : isOnHBMRoute ? 'bg-emerald-400'        : isOnHSMRoute ? 'bg-indigo-400'        : isOnPTMRoute ? 'bg-blue-500'       : isOnSMSRoute ? 'bg-amber-400'        : isOnHODRoute ? 'bg-red-500'        : 'bg-blue-400';
+  const navInfoSubText = isOnAdminRoute ? 'text-slate-400'     : isOnHBMRoute ? 'text-emerald-200'      : isOnHSMRoute ? 'text-indigo-200'      : isOnPTMRoute ? 'text-blue-200'     : isOnSMSRoute ? 'text-amber-200'      : isOnHODRoute ? 'text-red-200'      : 'text-blue-200';
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
@@ -219,7 +258,7 @@ function App() {
           <div className="px-4 py-3">
             <div className="flex items-center justify-between">
               {/* Logo */}
-              <Link to={isOnAdminRoute ? '/create-user' : (isOnHBMRoute ? '/hbm/dashboard' : isOnHSMRoute ? '/hsm/dashboard' : isOnPTMRoute ? '/ptm/dashboard' : isOnSMSRoute ? '/sms/dashboard' : '/')} className="text-lg font-bold tracking-tight">
+              <Link to={isOnAdminRoute ? '/create-user' : (isOnHBMRoute ? '/hbm/dashboard' : isOnHSMRoute ? '/hsm/dashboard' : isOnPTMRoute ? '/ptm/dashboard' : isOnSMSRoute ? '/sms/dashboard' : isOnHODRoute ? '/hod/dashboard' : '/')} className="text-lg font-bold tracking-tight">
                 {isOnAdminRoute ? (
                   <span className="flex items-center gap-2">
                     <svg className="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -227,14 +266,14 @@ function App() {
                     </svg>
                     Admin Panel
                   </span>
-                ) : isOnHBMRoute ? 'HBM Checksheets' : isOnHSMRoute ? 'HSM Checksheets' : isOnPTMRoute ? 'PTM Checksheets' : isOnSMSRoute ? 'SMS Checksheets' : 'Crane Maintenance'}
+                ) : isOnHBMRoute ? 'HBM Checksheets' : isOnHSMRoute ? 'HSM Checksheets' : isOnPTMRoute ? 'PTM Checksheets' : isOnSMSRoute ? 'SMS Checksheets' : isOnHODRoute ? 'HOD Review' : 'Crane Maintenance'}
               </Link>
 
               {/* Top-right controls */}
               <div className="flex items-center space-x-1">
                 {/* Monthly Insights Icon (HBM + Admin only) */}
                 {/* Maintenance Calendar icon — Crane route only */}
-                {!isOnHBMRoute && !isOnHSMRoute && !isOnAdminRoute && !isOnPTMRoute && !isOnSMSRoute && (
+                {!isOnHBMRoute && !isOnHSMRoute && !isOnAdminRoute && !isOnPTMRoute && !isOnSMSRoute && !isOnHODRoute && (
                   <Link
                     to="/maintenance-calendar"
                     title="Maintenance Calendar"
@@ -247,7 +286,7 @@ function App() {
                 )}
 
                 {/* New Inspection icon — Crane route only */}
-                {!isOnHBMRoute && !isOnHSMRoute && !isOnAdminRoute && !isOnPTMRoute && !isOnSMSRoute && (
+                {!isOnHBMRoute && !isOnHSMRoute && !isOnAdminRoute && !isOnPTMRoute && !isOnSMSRoute && !isOnHODRoute && (
                   <Link
                     to="/new-inspection"
                     title="New Inspection"
@@ -260,7 +299,7 @@ function App() {
                 )}
 
                 {/* Download / Reports icon — Crane route only */}
-                {!isOnHBMRoute && !isOnHSMRoute && !isOnAdminRoute && !isOnPTMRoute && !isOnSMSRoute && (
+                {!isOnHBMRoute && !isOnHSMRoute && !isOnAdminRoute && !isOnPTMRoute && !isOnSMSRoute && !isOnHODRoute && (
                   <Link
                     to="/reports"
                     title="Reports & Download"
@@ -285,9 +324,12 @@ function App() {
                   </Link>
                 )}
 
+                {/* Notifications bell */}
+                {user && <NotificationPanel navHover={navHover} navActive={navActive} />}
+
                 {/* User Badge */}
                 <div className={`text-xs ${navBadgeBg} px-2 py-1 rounded font-medium`}>
-                  {isOnAdminRoute ? 'Admin' : (isOnHBMRoute ? 'HBM' : (isOnHSMRoute ? 'HSM' : (isOnPTMRoute ? 'PTM' : (isOnSMSRoute ? 'SMS' : (user?.role === 'ADMIN' ? 'Admin' : 'Operator')))))}
+                  {isOnAdminRoute ? 'Admin' : (isOnHBMRoute ? 'HBM' : (isOnHSMRoute ? 'HSM' : (isOnPTMRoute ? 'PTM' : (isOnSMSRoute ? 'SMS' : (isOnHODRoute ? 'HOD' : (user?.role === 'ADMIN' ? 'Admin' : 'Operator'))))))}
                 </div>
 
                 {/* Logout Icon (always visible) */}
@@ -303,7 +345,7 @@ function App() {
                 </button>
 
                 {/* Hamburger — Admin always, or when inside a module that uses the menu */}
-                {(isOnAdminRoute || isAdminUser || isOnSMSRoute || isSMSUser || isOnHSMRoute || isHSMUser) && (
+                {(isOnAdminRoute || isAdminUser || isOnSMSRoute || isSMSUser || isOnHSMRoute || isHSMUser || isOnHODRoute || isHODUser) && (
                   <button
                     onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                     className={`p-2 rounded-lg ${navHover} focus:outline-none focus:ring-2 focus:ring-white/30`}
@@ -335,7 +377,7 @@ function App() {
                     <div>
                       <p className="font-semibold">{user?.username || 'User'}</p>
                       <p className={`text-xs ${navInfoSubText}`}>
-                        {user?.role} | {isOnAdminRoute ? 'Admin Panel' : (isOnHBMRoute ? 'HBM Module' : (isOnHSMRoute ? 'HSM Module' : (isOnPTMRoute ? 'PTM Module' : (isOnSMSRoute ? 'SMS Module' : 'Crane Module'))))}
+                        {isOnHODRoute ? 'HOD' : user?.role} | {isOnAdminRoute ? 'Admin Panel' : (isOnHBMRoute ? 'HBM Module' : (isOnHSMRoute ? 'HSM Module' : (isOnPTMRoute ? 'PTM Module' : (isOnSMSRoute ? 'SMS Module' : (isOnHODRoute ? 'HOD Review' : 'Crane Module')))))}
                       </p>
                     </div>
                   </div>
@@ -427,6 +469,15 @@ function App() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                         </svg>
                         <span className="font-medium">SMS Checksheets</span>
+                      </Link>
+                      <Link
+                        to="/hod/dashboard"
+                        className="flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors bg-red-700 hover:bg-red-600 text-white"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span className="font-medium">HOD Review</span>
                       </Link>
                     </>
                   ) : isOnHBMRoute ? (
@@ -524,6 +575,24 @@ function App() {
                         </svg>
                         <span className="font-medium">Delay History</span>
                       </Link>
+                      <Link
+                        to="/hsm/fm-daily-checklist/new"
+                        className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/hsm/fm-daily-checklist/new' ? navActive + ' text-white' : navHover}`}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                        </svg>
+                        <span className="font-medium">FM Daily</span>
+                      </Link>
+                      <Link
+                        to="/hsm/fm-daily-checklist/history"
+                        className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/hsm/fm-daily-checklist/history' ? navActive + ' text-white' : navHover}`}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                        <span className="font-medium">FM History</span>
+                      </Link>
                       {isAdminUser && (
                         <Link
                           to="/hsm/insights"
@@ -581,6 +650,41 @@ function App() {
                             <svg className="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
                             <span className="font-medium">Admin Panel</span>
                           </Link>
+                        </>
+                      )}
+                    </>
+                  ) : isOnHODRoute ? (
+                    /* ========== HOD NAVIGATION ========== */
+                    <>
+                      <Link
+                        to="/hod/dashboard"
+                        className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/hod/dashboard' ? navActive + ' text-white' : navHover}`}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                        </svg>
+                        <span className="font-medium">Dashboard</span>
+                      </Link>
+                      {hodNavModules.length > 0 && (
+                        <>
+                          <div className="border-t border-red-600 my-1" />
+                          {hodNavModules.map(({ moduleLabel, sheets }) => (
+                            <div key={moduleLabel}>
+                              <p className="px-3 pt-1 pb-1 text-xs font-semibold text-red-200 uppercase tracking-widest">{moduleLabel}</p>
+                              {sheets.map(({ key, label }) => (
+                                <Link
+                                  key={key}
+                                  to={`/hod/sheets/${key}`}
+                                  className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === `/hod/sheets/${key}` ? navActive + ' text-white' : navHover}`}
+                                >
+                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                  </svg>
+                                  <span className="font-medium">{label}</span>
+                                </Link>
+                              ))}
+                            </div>
+                          ))}
                         </>
                       )}
                     </>
@@ -693,6 +797,15 @@ function App() {
                             <span className="font-medium">SMS Checksheets</span>
                           </Link>
                           <Link
+                            to="/hod/dashboard"
+                            className="flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors bg-red-700 hover:bg-red-600 text-white"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span className="font-medium">HOD Review</span>
+                          </Link>
+                          <Link
                             to="/create-user"
                             className="flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors bg-slate-700 hover:bg-slate-600 text-white"
                           >
@@ -791,6 +904,10 @@ function App() {
               element={user && isAdminUser ? <TelegramSettings /> : user ? <Navigate to="/" replace /> : <Navigate to="/login" replace />}
             />
             {/* Legacy aliases → new Admin IA */}
+            <Route
+              path="/admin/send-notification"
+              element={user && isAdminUser ? <SendNotification /> : user ? <Navigate to="/" replace /> : <Navigate to="/login" replace />}
+            />
             <Route path="/admin/config" element={<Navigate to="/admin/share-access" replace />} />
             <Route
               path="/create-user"
@@ -1083,6 +1200,54 @@ function App() {
             }
           />
           <Route
+            path="/hsm/fm-daily-checklist/new"
+            element={
+              user && (isHSMUser || isAdminUser) ? (
+                <FmDailyChecklistForm />
+              ) : user ? (
+                <Navigate to="/hsm/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/hsm/fm-daily-checklist/history"
+            element={
+              user && (isHSMUser || isAdminUser) ? (
+                <FmDailyChecklistHistory />
+              ) : user ? (
+                <Navigate to="/hsm/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/hsm/fm-daily-checklist/:id/edit"
+            element={
+              user && (isHSMUser || isAdminUser) ? (
+                <FmDailyChecklistForm />
+              ) : user ? (
+                <Navigate to="/hsm/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/hsm/fm-daily-checklist/:id"
+            element={
+              user && (isHSMUser || isAdminUser) ? (
+                <FmDailyChecklistView />
+              ) : user ? (
+                <Navigate to="/hsm/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
             path="/hsm/insights"
             element={
               user && isAdminUser ? (
@@ -1179,13 +1344,27 @@ function App() {
             }
           />
 
+          {/* ========== HOD ROUTES ========== */}
+          <Route
+            path="/hod/dashboard"
+            element={user && (isHODUser || isAdminUser) ? <HodDashboard /> : user ? <Navigate to="/" replace /> : <Navigate to="/login" replace />}
+          />
+          <Route
+            path="/hod/sheets/:sheetKey"
+            element={user && (isHODUser || isAdminUser) ? <HodSheetList /> : user ? <Navigate to="/" replace /> : <Navigate to="/login" replace />}
+          />
+          <Route
+            path="/hod/sheets/:sheetKey/:id"
+            element={user && (isHODUser || isAdminUser) ? <HodSheetView /> : user ? <Navigate to="/" replace /> : <Navigate to="/login" replace />}
+          />
+
           {/* Catch all - redirect to appropriate home or login */}
           <Route path="*" element={<Navigate to={user ? getDefaultRoute() : '/login'} replace />} />
         </Routes>
       </main>
 
       {/* Footer - Only show on dashboard pages */}
-      {showNav && (location.pathname === '/' || location.pathname === '/hbm/dashboard' || location.pathname === '/hsm/dashboard' || location.pathname === '/ptm/dashboard' || location.pathname === '/sms/dashboard') && (
+      {showNav && (location.pathname === '/' || location.pathname === '/hbm/dashboard' || location.pathname === '/hsm/dashboard' || location.pathname === '/ptm/dashboard' || location.pathname === '/sms/dashboard' || location.pathname === '/hod/dashboard') && (
         <footer className="bg-gray-800 text-white py-4">
           <div className="px-4 text-center">
             <p className="text-xs text-gray-400">
@@ -1197,6 +1376,8 @@ function App() {
                 ? 'PTM Checksheet System | SRJ Strips and Pipes Pvt Ltd'
                 : isOnSMSRoute
                 ? 'SMS Checksheet System | SRJ Strips and Pipes Pvt Ltd'
+                : isOnHODRoute
+                ? 'HOD Review | SRJ Strips and Pipes Pvt Ltd'
                 : 'Crane Maintenance System | Department-Based Access Control'
               }
             </p>
