@@ -19,6 +19,7 @@ const GROUP_ORDER = [
   'DCW CT Fan-1', 'DCW CT Fan-2', 'DCW CT Fan-3',
   'LAMINAR CT Fan-1', 'LAMINAR CT Fan-2', 'LAMINAR CT Fan-3',
   'LC SPRAY PUMP-1', 'LC SPRAY PUMP-2',
+  'Compressor-1',
   'Compressor-2',
   'TMT CT',
 ];
@@ -66,6 +67,7 @@ const THRESHOLDS = {
   'LAMINAR CT Fan-3':  { kw: 15,  amp: 38,  rpm: 285  },
   'LC SPRAY PUMP-1':   { kw: 90,  amp: 149, rpm: 1480 },
   'LC SPRAY PUMP-2':   { kw: 90,  amp: 149, rpm: 1480 },
+  'Compressor-1':      { kw: 160, amp: 277, rpm: 1489 },
   'Compressor-2':      { kw: 160, amp: 277, rpm: 1489 },
   'TMT CT':            { kw: 15,  amp: 32,  rpm: 410  },
 };

@@ -112,6 +112,7 @@ const PUMP_GROUPS = [
   {
     key: 'COMPRESSOR', label: 'Compressor', color: 'bg-gray-700', textColor: 'text-gray-700', borderColor: 'border-gray-300',
     pumps: [
+      { name: 'Compressor-1', kw_max: 160, amp_max: 277, rpm_max: 1489 },
       { name: 'Compressor-2', kw_max: 160, amp_max: 277, rpm_max: 1489 },
       { name: 'Compressor-3', kw_max: 160, amp_max: 277, rpm_max: 1489 },
       { name: 'Compressor-4', kw_max: 160, amp_max: 277, rpm_max: 1489 },
