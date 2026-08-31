@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
 import ChecksheetPreviewModal, { PreviewSection, PreviewGrid } from './ChecksheetPreviewModal';
@@ -113,6 +113,10 @@ const SectionFooter = ({ label, data, onChange }) => (
 // ─── Main Component ───────────────────────────────────────────────────────────
 const RollingStandForm = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const editData = location.state?.editData;
+  const editId = location.state?.editId;
+  const isEdit = !!editId;
 
   const [header, setHeader] = useState({
     log_date: new Date().toLocaleDateString('en-CA'),
@@ -128,6 +132,18 @@ const RollingStandForm = () => {
 
   const [submitting, setSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+
+  useEffect(() => {
+    if (!isEdit || !editData) return;
+    setHeader({ log_date: editData.log_date?.slice(0, 10) || new Date().toLocaleDateString('en-CA'), log_time: editData.log_time?.slice(0, 5) || '', shift: editData.shift || 'DAY' });
+    if (editData.items) {
+      const vals = {};
+      editData.items.forEach(item => { vals[`${item.block_name}__${item.item_name}`] = { status: item.status, remark: item.remark || '', action_taken: item.action_taken || '' }; });
+      setItemValues(vals);
+    }
+    setSec1Footer({ remark: editData.sec1_remark || '', result: editData.sec1_result || '', checked_by: editData.sec1_checked_by || '' });
+    setSec2Footer({ remark: editData.sec2_remark || '', result: editData.sec2_result || '', checked_by: editData.sec2_checked_by || '' });
+  }, []); // eslint-disable-line
 
   const handleItemChange = (key, val) => {
     setItemValues(prev => ({ ...prev, [key]: val }));
@@ -189,14 +205,10 @@ const RollingStandForm = () => {
     try { items = buildItems(); } catch { return; }
     setSubmitting(true);
     try {
-      await hbmAPI.createRollingStandLog({
-        log_date: header.log_date, log_time: header.log_time, shift: header.shift,
-        sec1_remark: sec1Footer.remark || null, sec1_result: sec1Footer.result || null, sec1_checked_by: sec1Footer.checked_by || null,
-        sec2_remark: sec2Footer.remark || null, sec2_result: sec2Footer.result || null, sec2_checked_by: sec2Footer.checked_by || null,
-        items,
-      });
-      toast.success('Rolling Stand checksheet submitted!');
-      navigate('/hbm/dashboard');
+      const payload = { log_date: header.log_date, log_time: header.log_time, shift: header.shift, sec1_remark: sec1Footer.remark || null, sec1_result: sec1Footer.result || null, sec1_checked_by: sec1Footer.checked_by || null, sec2_remark: sec2Footer.remark || null, sec2_result: sec2Footer.result || null, sec2_checked_by: sec2Footer.checked_by || null, items };
+      if (isEdit) { await hbmAPI.updateHbmLog('rolling-stand', editId, payload); } else { await hbmAPI.createRollingStandLog(payload); }
+      toast.success(isEdit ? 'Rolling Stand checksheet updated!' : 'Rolling Stand checksheet submitted!');
+      navigate(isEdit ? `/hbm/rolling-stand/${editId}` : '/hbm/dashboard');
     } catch (error) {
       toast.error(error?.response?.data?.message || 'Failed to submit');
     } finally {

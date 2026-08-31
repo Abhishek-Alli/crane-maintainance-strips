@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
 import ChecksheetPreviewModal, { PreviewSection, PreviewGrid } from './ChecksheetPreviewModal';
@@ -339,6 +339,10 @@ const SectionResult = ({ label, value, onChange }) => (
 // ─── Main Component ───────────────────────────────────────────────────────────
 const PumpHouseForm = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const editData = location.state?.editData;
+  const editId = location.state?.editId;
+  const isEdit = !!editId;
 
   const [header, setHeader] = useState({
     log_date: new Date().toLocaleDateString('en-CA'),
@@ -356,6 +360,22 @@ const PumpHouseForm = () => {
 
   const [submitting, setSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+
+  useEffect(() => {
+    if (!isEdit || !editData) return;
+    setHeader({ log_date: editData.log_date?.slice(0, 10) || new Date().toLocaleDateString('en-CA'), checked_by: editData.checked_by || '' });
+    if (editData.items) {
+      const vals = {}, remarks = {};
+      editData.items.forEach(item => {
+        vals[`${item.section_name}__${item.block_name}__${item.item_name}`] = { status: item.status, remark: item.remark || '', action_taken: item.action_taken || '' };
+        if (item.block_remark) remarks[`${item.section_name}__${item.block_name}`] = item.block_remark;
+      });
+      setItemValues(vals); setBlockRemarks(remarks);
+    }
+    const secRes = {};
+    for (let i = 1; i <= 12; i++) { const k = `SECTION-${i}`; secRes[k] = editData[`sec${i}_result`] || ''; }
+    setSectionResults(secRes);
+  }, []); // eslint-disable-line
 
   const handleItemChange = (key, val) =>
     setItemValues(prev => ({ ...prev, [key]: val }));
@@ -410,25 +430,10 @@ const PumpHouseForm = () => {
     try { items = buildItems(); } catch { return; }
     setSubmitting(true);
     try {
-      await hbmAPI.createPumpHouseLog({
-        log_date:     header.log_date,
-        checked_by:   header.checked_by || null,
-        sec1_result:  sectionResults['SECTION-1']  || null,
-        sec2_result:  sectionResults['SECTION-2']  || null,
-        sec3_result:  sectionResults['SECTION-3']  || null,
-        sec4_result:  sectionResults['SECTION-4']  || null,
-        sec5_result:  sectionResults['SECTION-5']  || null,
-        sec6_result:  sectionResults['SECTION-6']  || null,
-        sec7_result:  sectionResults['SECTION-7']  || null,
-        sec8_result:  sectionResults['SECTION-8']  || null,
-        sec9_result:  sectionResults['SECTION-9']  || null,
-        sec10_result: sectionResults['SECTION-10'] || null,
-        sec11_result: sectionResults['SECTION-11'] || null,
-        sec12_result: sectionResults['SECTION-12'] || null,
-        items,
-      });
-      toast.success('Pumphouse checksheet submitted!');
-      navigate('/hbm/pumphouse/history');
+      const payload = { log_date: header.log_date, checked_by: header.checked_by || null, sec1_result: sectionResults['SECTION-1'] || null, sec2_result: sectionResults['SECTION-2'] || null, sec3_result: sectionResults['SECTION-3'] || null, sec4_result: sectionResults['SECTION-4'] || null, sec5_result: sectionResults['SECTION-5'] || null, sec6_result: sectionResults['SECTION-6'] || null, sec7_result: sectionResults['SECTION-7'] || null, sec8_result: sectionResults['SECTION-8'] || null, sec9_result: sectionResults['SECTION-9'] || null, sec10_result: sectionResults['SECTION-10'] || null, sec11_result: sectionResults['SECTION-11'] || null, sec12_result: sectionResults['SECTION-12'] || null, items };
+      if (isEdit) { await hbmAPI.updateHbmLog('pumphouse', editId, payload); } else { await hbmAPI.createPumpHouseLog(payload); }
+      toast.success(isEdit ? 'Pumphouse checksheet updated!' : 'Pumphouse checksheet submitted!');
+      navigate(isEdit ? `/hbm/pumphouse/${editId}` : '/hbm/pumphouse/history');
     } catch (error) {
       toast.error(error?.response?.data?.message || 'Failed to submit');
     } finally {

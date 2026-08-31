@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
 import ResendTelegramButton from './ResendTelegramButton';
 
 const PhMaintView = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [log, setLog]       = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -31,6 +32,7 @@ const PhMaintView = () => {
     return <div className="p-8 text-center text-gray-400">Log not found.</div>;
   }
 
+  const canEdit = log.created_at && (Date.now() - new Date(log.created_at).getTime()) < 24 * 60 * 60 * 1000;
   const items = log.items || [];
 
   return (
@@ -50,6 +52,18 @@ const PhMaintView = () => {
             <p className="text-sm text-gray-500">{formatDate(log.log_date)}</p>
           </div>
           <ResendTelegramButton type="ph-maint" id={log.id} />
+          {canEdit && (
+            <button
+              onClick={() => navigate('/hbm/ph-maint/new', { state: { editData: log, editId: log.id } })}
+              className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-lg transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              Edit
+            </button>
+          )}
+          
         </div>
 
         {/* Log Info */}

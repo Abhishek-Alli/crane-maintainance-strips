@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
 import ChecksheetPreviewModal, { PreviewSection, PreviewGrid } from './ChecksheetPreviewModal';
@@ -105,6 +105,10 @@ const NumInput = ({ label, value, onChange, hint, status, step = '0.01', unit })
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 const DcMotorAirflowForm = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const editData = location.state?.editData;
+  const editId = location.state?.editId;
+  const isEdit = !!editId;
 
   const [header, setHeader] = useState({
     log_date:   new Date().toLocaleDateString('en-CA'),
@@ -128,6 +132,21 @@ const DcMotorAirflowForm = () => {
   const [openStands, setOpenStands] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+
+  useEffect(() => {
+    if (!isEdit || !editData) return;
+    setHeader({ log_date: editData.log_date?.slice(0, 10) || new Date().toLocaleDateString('en-CA'), shift_eng: editData.shift_eng || '', reading_by: editData.reading_by || '' });
+    setRemark(editData.remark || '');
+    if (editData.mill_status) setMillStatus(editData.mill_status);
+    if (editData.entries) {
+      const vals = {}, statuses = {};
+      editData.entries.forEach(e => {
+        statuses[e.stand_name] = e.stand_status || 'ON';
+        vals[e.stand_name] = { dc_motor_kw: e.dc_motor_kw ?? '', blower_kw_rating: e.blower_kw_rating ?? '', running_kpa: e.running_kpa ?? '', air_flow_condition: e.air_flow_condition || '', dc_motor_temp: e.dc_motor_temp ?? '', de_bearing_temp: e.de_bearing_temp ?? '', nde_bearing_temp: e.nde_bearing_temp ?? '', blower_motor_temp: e.blower_motor_temp ?? '', motor_center_vib: e.motor_center_vib ?? '', encoder_side_vib: e.encoder_side_vib ?? '', blower_vib: e.blower_vib ?? '' };
+      });
+      setValues(vals); setStandStatus2(statuses);
+    }
+  }, []); // eslint-disable-line
 
   const toggleStandOnOff = (stand, status) => {
     setStandStatus2(prev => ({ ...prev, [stand]: status }));
@@ -209,16 +228,10 @@ const DcMotorAirflowForm = () => {
   const handleConfirmSubmit = async () => {
     setSubmitting(true);
     try {
-      await hbmAPI.createDcMotorAirflowLog({
-        log_date:    header.log_date,
-        shift_eng:   header.shift_eng  || null,
-        reading_by:  header.reading_by || null,
-        remark:      remark || null,
-        mill_status: millStatus,
-        entries:     buildEntries(),
-      });
-      toast.success('DC Motor Airflow sheet submitted!');
-      navigate('/hbm/dc-motor-airflow/history');
+      const payload = { log_date: header.log_date, shift_eng: header.shift_eng || null, reading_by: header.reading_by || null, remark: remark || null, mill_status: millStatus, entries: buildEntries() };
+      if (isEdit) { await hbmAPI.updateHbmLog('dc-motor-airflow', editId, payload); } else { await hbmAPI.createDcMotorAirflowLog(payload); }
+      toast.success(isEdit ? 'DC Motor Airflow sheet updated!' : 'DC Motor Airflow sheet submitted!');
+      navigate(isEdit ? `/hbm/dc-motor-airflow/${editId}` : '/hbm/dc-motor-airflow/history');
     } catch (error) {
       toast.error(error?.response?.data?.message || 'Failed to submit');
     } finally {

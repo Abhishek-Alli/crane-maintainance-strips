@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
 
@@ -145,12 +145,34 @@ const calcSummary = (slots) => {
 
 const BreakdownReportForm = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const editData = location.state?.editData;
+  const editId = location.state?.editId;
+  const isEdit = !!editId;
+
   const [logDate, setLogDate] = useState(new Date().toLocaleDateString('en-CA'));
   const [size, setSize]       = useState('');
   const [customSize, setCustomSize] = useState('');
   const [slots, setSlots]     = useState(initSlots);
   const [openSlots, setOpenSlots] = useState({});
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!isEdit || !editData) return;
+    setLogDate(editData.log_date?.slice(0, 10) || new Date().toLocaleDateString('en-CA'));
+    if (editData.size) {
+      if (SIZE_OPTIONS.includes(editData.size)) { setSize(editData.size); }
+      else { setSize('Custom'); setCustomSize(editData.size); }
+    }
+    if (Array.isArray(editData.slots) && editData.slots.length > 0) {
+      const filled = initSlots().map(defSlot => {
+        const match = editData.slots.find(s => s.slot_label === defSlot.slot_label);
+        if (!match) return defSlot;
+        return { ...defSlot, miss_roll: match.miss_roll ?? '', miss_roll_18: match.miss_roll_18 ?? '', entries: Array.isArray(match.entries) && match.entries.length > 0 ? match.entries.map(e => ({ breakdown_type: e.breakdown_type || '', breakdown_minutes: e.breakdown_minutes ?? '', breakdown_reason: e.breakdown_reason || '' })) : [emptyEntry()] };
+      });
+      setSlots(filled);
+    }
+  }, []); // eslint-disable-line
 
   const toggleSlot = (i) => setOpenSlots(prev => ({ ...prev, [i]: !prev[i] }));
 
@@ -192,9 +214,9 @@ const BreakdownReportForm = () => {
           entries: s.entries.filter(e => e.breakdown_type),
         })),
       };
-      await hbmAPI.createBreakdownLog(payload);
-      toast.success('Breakdown report submitted successfully!');
-      navigate('/hbm/breakdown/history');
+      if (isEdit) { await hbmAPI.updateHbmLog('breakdown', editId, payload); } else { await hbmAPI.createBreakdownLog(payload); }
+      toast.success(isEdit ? 'Breakdown report updated!' : 'Breakdown report submitted successfully!');
+      navigate(isEdit ? `/hbm/breakdown/${editId}` : '/hbm/breakdown/history');
     } catch (err) {
       console.error(err);
       toast.error('Failed to submit breakdown report');

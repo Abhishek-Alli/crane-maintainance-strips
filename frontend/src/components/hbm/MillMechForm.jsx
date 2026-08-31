@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
 import ChecksheetPreviewModal, { PreviewSection, PreviewGrid } from './ChecksheetPreviewModal';
@@ -171,6 +171,10 @@ const SectionFooter = ({ label, data, onChange }) => (
 // ─── Main Component ───────────────────────────────────────────────────────────
 const MillMechForm = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const editData = location.state?.editData;
+  const editId = location.state?.editId;
+  const isEdit = !!editId;
 
   const [header, setHeader] = useState({
     log_date: new Date().toLocaleDateString('en-CA'),
@@ -192,6 +196,18 @@ const MillMechForm = () => {
 
   const [submitting, setSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+
+  useEffect(() => {
+    if (!isEdit || !editData) return;
+    setHeader({ log_date: editData.log_date?.slice(0, 10) || header.log_date, log_time: editData.log_time?.slice(0, 5) || header.log_time, shift: editData.shift || header.shift });
+    if (editData.items) {
+      const vals = {};
+      editData.items.forEach(item => { vals[`${item.block_name}__${item.item_name}`] = { status: item.status, remark: item.remark || '', action_taken: item.action_taken || '' }; });
+      setItemValues(vals);
+    }
+    const secs = ['SECTION-1','SECTION-2','SECTION-3','SECTION-4','SECTION-5'];
+    const fm = {}; secs.forEach(s => { const n = s.replace('SECTION-',''); fm[s] = { remark: editData[`sec${n}_remark`] || '', result: editData[`sec${n}_result`] || '', checked_by: editData[`sec${n}_checked_by`] || '' }; }); setFooters(fm);
+  }, []); // eslint-disable-line
 
   const handleItemChange = (key, val) => setItemValues(prev => ({ ...prev, [key]: val }));
   const toggleBlock = (block) => setOpenBlocks(prev => ({ ...prev, [block]: !prev[block] }));
@@ -239,7 +255,7 @@ const MillMechForm = () => {
     try { items = buildItems(); } catch { return; }
     setSubmitting(true);
     try {
-      await hbmAPI.createMillMechLog({
+      const payload = {
         log_date: header.log_date, log_time: header.log_time, shift: header.shift,
         sec1_remark: footers['SECTION-1'].remark || null, sec1_result: footers['SECTION-1'].result || null, sec1_checked_by: footers['SECTION-1'].checked_by || null,
         sec2_remark: footers['SECTION-2'].remark || null, sec2_result: footers['SECTION-2'].result || null, sec2_checked_by: footers['SECTION-2'].checked_by || null,
@@ -247,9 +263,10 @@ const MillMechForm = () => {
         sec4_remark: footers['SECTION-4'].remark || null, sec4_result: footers['SECTION-4'].result || null, sec4_checked_by: footers['SECTION-4'].checked_by || null,
         sec5_remark: footers['SECTION-5'].remark || null, sec5_result: footers['SECTION-5'].result || null, sec5_checked_by: footers['SECTION-5'].checked_by || null,
         items,
-      });
-      toast.success('Mill Mechanical checksheet submitted!');
-      navigate('/hbm/dashboard');
+      };
+      if (isEdit) { await hbmAPI.updateHbmLog('mill-mech', editId, payload); } else { await hbmAPI.createMillMechLog(payload); }
+      toast.success(isEdit ? 'Mill Mechanical checksheet updated!' : 'Mill Mechanical checksheet submitted!');
+      navigate(isEdit ? `/hbm/mill-mech/${editId}` : '/hbm/dashboard');
     } catch (error) {
       toast.error(error?.response?.data?.message || 'Failed to submit');
     } finally {

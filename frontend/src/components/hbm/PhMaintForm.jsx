@@ -1,16 +1,28 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
 import ChecksheetPreviewModal, { PreviewSection } from './ChecksheetPreviewModal';
 
 const PhMaintForm = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const editData = location.state?.editData;
+  const editId = location.state?.editId;
+  const isEdit = !!editId;
 
   const [logDate, setLogDate] = useState(new Date().toLocaleDateString('en-CA'));
   const [items, setItems]     = useState(['', '', '']);
   const [submitting, setSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+
+  useEffect(() => {
+    if (!isEdit || !editData) return;
+    setLogDate(editData.log_date?.slice(0, 10) || new Date().toLocaleDateString('en-CA'));
+    if (Array.isArray(editData.items) && editData.items.length > 0) {
+      setItems(editData.items.map(i => i.item_text || ''));
+    }
+  }, []); // eslint-disable-line
 
   const handleItemChange = (idx, val) =>
     setItems(prev => prev.map((v, i) => (i === idx ? val : v)));
@@ -35,9 +47,9 @@ const PhMaintForm = () => {
   const handleConfirmSubmit = async () => {
     setSubmitting(true);
     try {
-      await hbmAPI.createPhMaintLog({ log_date: logDate, items: validItems() });
-      toast.success('Pump House Maintenance sheet submitted!');
-      navigate('/hbm/ph-maint/history');
+      if (isEdit) { await hbmAPI.updateHbmLog('ph-maint', editId, { log_date: logDate, items: validItems() }); } else { await hbmAPI.createPhMaintLog({ log_date: logDate, items: validItems() }); }
+      toast.success(isEdit ? 'Pump House Maintenance sheet updated!' : 'Pump House Maintenance sheet submitted!');
+      navigate(isEdit ? `/hbm/ph-maint/${editId}` : '/hbm/ph-maint/history');
     } catch (error) {
       toast.error(error?.response?.data?.message || 'Failed to submit');
     } finally {

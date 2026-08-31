@@ -128,6 +128,9 @@ router.post('/send-daily-notifications', requireAdmin, HbmController.sendDailyNo
 // Send daily status summary (filled / prev date / not filled) — Admin only
 router.post('/send-status-summary', requireAdmin, HbmController.sendStatusSummary);
 
+// Update a log entry (original filler or admin, within 24 hours)
+router.put('/:type/:id', HbmController.updateHbmLog);
+
 // Delete a log entry (admin only)
 router.delete('/:type/:id', HbmController.deleteHbmLog);
 

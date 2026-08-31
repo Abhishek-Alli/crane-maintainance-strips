@@ -72,8 +72,9 @@ const BeforeRollingView = () => {
       </div>
     );
   }
-
   if (!log) return null;
+
+  const canEdit = log.created_at && (Date.now() - new Date(log.created_at).getTime()) < 24 * 60 * 60 * 1000;
 
   const grouped = {};
   log.items?.forEach(item => {
@@ -103,6 +104,17 @@ const BeforeRollingView = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {canEdit && (
+              <button
+                onClick={() => navigate(`/hbm/before-rolling/new`, { state: { editData: log, editId: log.id } })}
+                className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-lg transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Edit
+              </button>
+            )}
             <ResendTelegramButton type="before-rolling" id={log.id} />
             <button onClick={handleDownloadPDF} disabled={downloading}
               className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors">

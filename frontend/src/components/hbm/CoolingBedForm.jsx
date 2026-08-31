@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
 import ChecksheetPreviewModal, { PreviewSection, PreviewGrid } from './ChecksheetPreviewModal';
@@ -178,6 +178,10 @@ const SectionFooter = ({ label, data, onChange }) => (
 // ─── Main Component ───────────────────────────────────────────────────────────
 const CoolingBedForm = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const editData = location.state?.editData;
+  const editId = location.state?.editId;
+  const isEdit = !!editId;
 
   const [header, setHeader] = useState({
     log_date: new Date().toLocaleDateString('en-CA'),
@@ -200,6 +204,32 @@ const CoolingBedForm = () => {
 
   const [submitting, setSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+
+  useEffect(() => {
+    if (isEdit && editData) {
+      setHeader({
+        log_date: editData.log_date ? editData.log_date.slice(0, 10) : new Date().toLocaleDateString('en-CA'),
+        log_time: editData.log_time ? editData.log_time.slice(0, 5) : new Date().toTimeString().slice(0, 5),
+        shift: editData.shift || 'DAY',
+      });
+      setFooters({
+        'SECTION-1': { remark: editData.sec1_remark || '', result: editData.sec1_result || '', checked_by: editData.sec1_checked_by || '' },
+        'SECTION-2': { remark: editData.sec2_remark || '', result: editData.sec2_result || '', checked_by: editData.sec2_checked_by || '' },
+        'SECTION-3': { remark: editData.sec3_remark || '', result: editData.sec3_result || '', checked_by: editData.sec3_checked_by || '' },
+        'SECTION-4': { remark: editData.sec4_remark || '', result: editData.sec4_result || '', checked_by: editData.sec4_checked_by || '' },
+        'SECTION-5': { remark: editData.sec5_remark || '', result: editData.sec5_result || '', checked_by: editData.sec5_checked_by || '' },
+        'SECTION-6': { remark: editData.sec6_remark || '', result: editData.sec6_result || '', checked_by: editData.sec6_checked_by || '' },
+      });
+      if (editData.items && Array.isArray(editData.items)) {
+        const vals = {};
+        editData.items.forEach(item => {
+          const key = `${item.block_name}__${item.item_name}`;
+          vals[key] = { status: item.status, remark: item.remark || '', action_taken: item.action_taken || '' };
+        });
+        setItemValues(vals);
+      }
+    }
+  }, []); // eslint-disable-line
 
   const handleItemChange = (key, val) => setItemValues(prev => ({ ...prev, [key]: val }));
   const toggleBlock = (block) => setOpenBlocks(prev => ({ ...prev, [block]: !prev[block] }));
@@ -256,7 +286,7 @@ const CoolingBedForm = () => {
     try { items = buildItems(); } catch { return; }
     setSubmitting(true);
     try {
-      await hbmAPI.createCoolingBedLog({
+      const payload = {
         log_date: header.log_date, log_time: header.log_time, shift: header.shift,
         sec1_remark: footers['SECTION-1'].remark || null, sec1_result: footers['SECTION-1'].result || null, sec1_checked_by: footers['SECTION-1'].checked_by || null,
         sec2_remark: footers['SECTION-2'].remark || null, sec2_result: footers['SECTION-2'].result || null, sec2_checked_by: footers['SECTION-2'].checked_by || null,
@@ -265,8 +295,14 @@ const CoolingBedForm = () => {
         sec5_remark: footers['SECTION-5'].remark || null, sec5_result: footers['SECTION-5'].result || null, sec5_checked_by: footers['SECTION-5'].checked_by || null,
         sec6_remark: footers['SECTION-6'].remark || null, sec6_result: footers['SECTION-6'].result || null, sec6_checked_by: footers['SECTION-6'].checked_by || null,
         items,
-      });
-      toast.success('Cooling Bed checksheet submitted!');
+      };
+      if (isEdit) {
+        await hbmAPI.updateHbmLog('cooling-bed', editId, payload);
+        toast.success('Cooling Bed checksheet updated!');
+      } else {
+        await hbmAPI.createCoolingBedLog(payload);
+        toast.success('Cooling Bed checksheet submitted!');
+      }
       navigate('/hbm/dashboard');
     } catch (error) {
       toast.error(error?.response?.data?.message || 'Failed to submit');
@@ -289,7 +325,7 @@ const CoolingBedForm = () => {
             </svg>
           </button>
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Cooling Bed Checksheet</h1>
+            <h1 className="text-xl font-bold text-gray-900">{isEdit ? 'Edit Cooling Bed Log' : 'Cooling Bed Checksheet'}</h1>
             <p className="text-sm text-gray-500">Daily checksheet — saved to database</p>
           </div>
         </div>
@@ -382,7 +418,7 @@ const CoolingBedForm = () => {
           <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 mt-5 shadow-lg rounded-t-xl">
             <button type="submit"
               className="w-full py-3 bg-emerald-600 text-white rounded-lg font-bold text-base hover:bg-emerald-700 transition-colors">
-              Preview & Submit
+              {isEdit ? 'Preview & Update' : 'Preview & Submit'}
             </button>
           </div>
 

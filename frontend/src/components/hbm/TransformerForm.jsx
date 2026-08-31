@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
 import ChecksheetPreviewModal, { PreviewSection, PreviewGrid, PreviewStatusTable } from './ChecksheetPreviewModal';
@@ -163,6 +163,10 @@ const TransformerUnit = ({ unitName, value, onChange, isOpen, onToggle, color })
 
 const TransformerForm = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const editData = location.state?.editData;
+  const editId = location.state?.editId;
+  const isEdit = !!editId;
 
   const [logDate, setLogDate]     = useState(new Date().toLocaleDateString('en-CA'));
   const [sec1, setSec1]           = useState({ '8 MVA DC': initSec1('8 MVA DC'), '4 MVA DC': initSec1('4 MVA DC') });
@@ -173,6 +177,28 @@ const TransformerForm = () => {
   const [openUnits, setOpenUnits] = useState({ '8 MVA DC': true, '4 MVA DC': false });
   const [submitting, setSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+
+  useEffect(() => {
+    if (!isEdit || !editData) return;
+    setLogDate(editData.log_date?.slice(0, 10) || new Date().toLocaleDateString('en-CA'));
+    setSec2Remark(editData.sec2_remark || '');
+    setSec3Remark(editData.sec3_remark || '');
+    if (Array.isArray(editData.sec1)) {
+      const s1 = {};
+      editData.sec1.forEach(row => { s1[row.unit_name] = { ...initSec1(row.unit_name), ...row }; });
+      setSec1(prev => ({ ...prev, ...s1 }));
+    }
+    if (Array.isArray(editData.sec2)) {
+      const s2 = {};
+      editData.sec2.forEach(row => { s2[row.unit_name] = { today: row.today_tap_count ?? '', yesterday: row.yesterday_tap_count ?? '' }; });
+      setSec2(prev => ({ ...prev, ...s2 }));
+    }
+    if (Array.isArray(editData.sec3)) {
+      const s3 = {};
+      editData.sec3.forEach(row => { s3[row.unit_name] = { kwhT: row.today_kwh ?? '', kwhY: row.yesterday_kwh ?? '', kvahT: row.today_kvah ?? '', kvahY: row.yesterday_kvah ?? '' }; });
+      setSec3(prev => ({ ...prev, ...s3 }));
+    }
+  }, []); // eslint-disable-line
 
   const updateSec1 = (unit, key, val) =>
     setSec1(prev => ({ ...prev, [unit]: { ...prev[unit], [key]: val } }));
@@ -215,9 +241,9 @@ const TransformerForm = () => {
     const payload = buildPayload();
     setSubmitting(true);
     try {
-      await hbmAPI.createTransformerLog(payload);
-      toast.success('Transformer checksheet submitted!');
-      navigate('/hbm/transformer/history');
+      if (isEdit) { await hbmAPI.updateHbmLog('transformer', editId, payload); } else { await hbmAPI.createTransformerLog(payload); }
+      toast.success(isEdit ? 'Transformer checksheet updated!' : 'Transformer checksheet submitted!');
+      navigate(isEdit ? `/hbm/transformer/${editId}` : '/hbm/transformer/history');
     } catch (error) {
       toast.error(error?.response?.data?.message || 'Failed to submit');
     } finally {

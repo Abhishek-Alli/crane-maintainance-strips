@@ -338,6 +338,9 @@ export const hbmAPI = {
   downloadPDF: (type, id) =>
     api.get(`/hbm/pdf/${type}/${id}`, { responseType: 'blob' }),
 
+  // Update a log entry (original filler or admin, within 24 hours)
+  updateHbmLog: (type, id, data) => api.put(`/hbm/${type}/${id}`, data),
+
   // Delete a log entry (admin only)
   deleteLog: (type, id) => api.delete(`/hbm/${type}/${id}`),
 

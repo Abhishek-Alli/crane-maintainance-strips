@@ -4448,4 +4448,302 @@ function hbmDrawRow(doc, x, y, c1, c2, c3, c4, h, t1, t2, t3, t4, isHeader) {
   doc.fillColor('#000000');
 }
 
+  static async updateHbmLog(req, res) {
+    const TYPE_MAP = {
+      'dc-motor':         { logTable: 'hbm_dc_motor_logs',         childTable: 'hbm_dc_motor_items' },
+      'cooling-bed':      { logTable: 'hbm_cooling_bed_logs',      childTable: 'hbm_cooling_bed_items' },
+      'mill-mech':        { logTable: 'hbm_mill_mech_logs',        childTable: 'hbm_mill_mech_items' },
+      'rolling-stand':    { logTable: 'hbm_rolling_stand_logs',    childTable: 'hbm_rolling_stand_items' },
+      'pumphouse':        { logTable: 'hbm_pumphouse_logs',        childTable: 'hbm_pumphouse_items' },
+      'bar-bundle':       { logTable: 'hbm_bar_bundle_logs',       childTable: 'hbm_bar_bundle_items' },
+      'before-rolling':   { logTable: 'hbm_before_rolling_logs',   childTable: 'hbm_before_rolling_items' },
+      'pump-param':       { logTable: 'hbm_pump_param_logs',       childTable: 'hbm_pump_param_entries' },
+      'transformer':      { logTable: 'hbm_transformer_logs',      childTable: null },
+      'ph-maint':         { logTable: 'hbm_ph_maint_logs',         childTable: null },
+      'water-param':      { logTable: 'hbm_water_param_logs',      childTable: 'hbm_water_param_entries' },
+      'oil-level':        { logTable: 'hbm_oil_level_logs',        childTable: 'hbm_oil_level_entries' },
+      'dc-motor-airflow': { logTable: 'hbm_dc_motor_airflow_logs', childTable: 'hbm_dc_motor_airflow_entries' },
+      'roughing-gb-temp': { logTable: 'hbm_roughing_gb_temp_logs', childTable: 'hbm_roughing_gb_temp_stands' },
+      'breakdown':        { logTable: 'hbm_breakdown_logs',        childTable: null },
+    };
+
+    try {
+      const { type, id } = req.params;
+      const meta = TYPE_MAP[type];
+      if (!meta) return res.status(400).json({ success: false, message: 'Invalid log type' });
+
+      // Fetch original log
+      const logResult = await query(
+        `SELECT * FROM ${meta.logTable} WHERE id = $1`,
+        [id]
+      );
+      if (logResult.rows.length === 0)
+        return res.status(404).json({ success: false, message: 'Log not found' });
+
+      const original = logResult.rows[0];
+
+      // Check 24-hour window
+      const ageCheck = await query(
+        `SELECT created_at > NOW() - INTERVAL '24 hours' AS within_24h FROM ${meta.logTable} WHERE id = $1`,
+        [id]
+      );
+      if (!ageCheck.rows[0].within_24h)
+        return res.status(403).json({ success: false, message: 'Record can only be edited within 24 hours of creation' });
+
+      // Check permission: original filler or admin
+      const isAdmin = req.user.user_type === 'ADMIN';
+      if (!isAdmin && original.filled_by !== req.user.id)
+        return res.status(403).json({ success: false, message: 'You can only edit your own records' });
+
+      const n = (v) => (v != null && v !== '' ? v : null);
+      const s = (v) => (v && String(v).trim() ? String(v).trim() : null);
+
+      await transaction(async (client) => {
+        if (type === 'dc-motor') {
+          const { log_date, log_time, shift, heat_start, heat_end, remarks, items } = req.body;
+          await client.query(
+            `UPDATE hbm_dc_motor_logs SET log_date=$1, log_time=$2, shift=$3, heat_start=$4, heat_end=$5, remarks=$6, updated_at=NOW() WHERE id=$7`,
+            [log_date, log_time, shift, n(heat_start), n(heat_end), n(remarks), id]
+          );
+          await client.query(`DELETE FROM hbm_dc_motor_items WHERE log_id=$1`, [id]);
+          for (const item of (items || [])) {
+            await client.query(
+              `INSERT INTO hbm_dc_motor_items (log_id, block_name, section_name, item_name, status, remark, action_taken) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+              [id, item.block_name, item.section_name, item.item_name, item.status, n(item.remark), n(item.action_taken)]
+            );
+          }
+        } else if (type === 'cooling-bed') {
+          const { log_date, log_time, shift, sec1_remark, sec1_result, sec1_checked_by, sec2_remark, sec2_result, sec2_checked_by, sec3_remark, sec3_result, sec3_checked_by, sec4_remark, sec4_result, sec4_checked_by, sec5_remark, sec5_result, sec5_checked_by, sec6_remark, sec6_result, sec6_checked_by, items } = req.body;
+          await client.query(
+            `UPDATE hbm_cooling_bed_logs SET log_date=$1, log_time=$2, shift=$3, sec1_remark=$4, sec1_result=$5, sec1_checked_by=$6, sec2_remark=$7, sec2_result=$8, sec2_checked_by=$9, sec3_remark=$10, sec3_result=$11, sec3_checked_by=$12, sec4_remark=$13, sec4_result=$14, sec4_checked_by=$15, sec5_remark=$16, sec5_result=$17, sec5_checked_by=$18, sec6_remark=$19, sec6_result=$20, sec6_checked_by=$21, updated_at=NOW() WHERE id=$22`,
+            [log_date, log_time, shift, n(sec1_remark), n(sec1_result), n(sec1_checked_by), n(sec2_remark), n(sec2_result), n(sec2_checked_by), n(sec3_remark), n(sec3_result), n(sec3_checked_by), n(sec4_remark), n(sec4_result), n(sec4_checked_by), n(sec5_remark), n(sec5_result), n(sec5_checked_by), n(sec6_remark), n(sec6_result), n(sec6_checked_by), id]
+          );
+          await client.query(`DELETE FROM hbm_cooling_bed_items WHERE log_id=$1`, [id]);
+          for (const item of (items || [])) {
+            await client.query(
+              `INSERT INTO hbm_cooling_bed_items (log_id, block_name, section_name, item_name, status, remark, action_taken) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+              [id, item.block_name, item.section_name, item.item_name, item.status, n(item.remark), n(item.action_taken)]
+            );
+          }
+        } else if (type === 'mill-mech') {
+          const { log_date, log_time, shift, sec1_remark, sec1_result, sec1_checked_by, sec2_remark, sec2_result, sec2_checked_by, sec3_remark, sec3_result, sec3_checked_by, sec4_remark, sec4_result, sec4_checked_by, sec5_remark, sec5_result, sec5_checked_by, items } = req.body;
+          await client.query(
+            `UPDATE hbm_mill_mech_logs SET log_date=$1, log_time=$2, shift=$3, sec1_remark=$4, sec1_result=$5, sec1_checked_by=$6, sec2_remark=$7, sec2_result=$8, sec2_checked_by=$9, sec3_remark=$10, sec3_result=$11, sec3_checked_by=$12, sec4_remark=$13, sec4_result=$14, sec4_checked_by=$15, sec5_remark=$16, sec5_result=$17, sec5_checked_by=$18, updated_at=NOW() WHERE id=$19`,
+            [log_date, log_time, shift, n(sec1_remark), n(sec1_result), n(sec1_checked_by), n(sec2_remark), n(sec2_result), n(sec2_checked_by), n(sec3_remark), n(sec3_result), n(sec3_checked_by), n(sec4_remark), n(sec4_result), n(sec4_checked_by), n(sec5_remark), n(sec5_result), n(sec5_checked_by), id]
+          );
+          await client.query(`DELETE FROM hbm_mill_mech_items WHERE log_id=$1`, [id]);
+          for (const item of (items || [])) {
+            await client.query(
+              `INSERT INTO hbm_mill_mech_items (log_id, section_name, block_name, item_name, status, remark, action_taken) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+              [id, item.section_name, item.block_name, item.item_name, item.status, n(item.remark), n(item.action_taken)]
+            );
+          }
+        } else if (type === 'rolling-stand') {
+          const { log_date, log_time, shift, sec1_remark, sec1_result, sec1_checked_by, sec2_remark, sec2_result, sec2_checked_by, items } = req.body;
+          await client.query(
+            `UPDATE hbm_rolling_stand_logs SET log_date=$1, log_time=$2, shift=$3, sec1_remark=$4, sec1_result=$5, sec1_checked_by=$6, sec2_remark=$7, sec2_result=$8, sec2_checked_by=$9, updated_at=NOW() WHERE id=$10`,
+            [log_date, log_time, shift, n(sec1_remark), n(sec1_result), n(sec1_checked_by), n(sec2_remark), n(sec2_result), n(sec2_checked_by), id]
+          );
+          await client.query(`DELETE FROM hbm_rolling_stand_items WHERE log_id=$1`, [id]);
+          for (const item of (items || [])) {
+            await client.query(
+              `INSERT INTO hbm_rolling_stand_items (log_id, section_name, block_name, item_name, status, remark, action_taken) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+              [id, item.section_name, item.block_name, item.item_name, item.status, n(item.remark), n(item.action_taken)]
+            );
+          }
+        } else if (type === 'pumphouse') {
+          const { log_date, checked_by, sec1_result, sec2_result, sec3_result, sec4_result, sec5_result, sec6_result, sec7_result, sec8_result, sec9_result, sec10_result, sec11_result, sec12_result, items } = req.body;
+          await client.query(
+            `UPDATE hbm_pumphouse_logs SET log_date=$1, checked_by=$2, sec1_result=$3, sec2_result=$4, sec3_result=$5, sec4_result=$6, sec5_result=$7, sec6_result=$8, sec7_result=$9, sec8_result=$10, sec9_result=$11, sec10_result=$12, sec11_result=$13, sec12_result=$14, updated_at=NOW() WHERE id=$15`,
+            [log_date, n(checked_by), n(sec1_result), n(sec2_result), n(sec3_result), n(sec4_result), n(sec5_result), n(sec6_result), n(sec7_result), n(sec8_result), n(sec9_result), n(sec10_result), n(sec11_result), n(sec12_result), id]
+          );
+          await client.query(`DELETE FROM hbm_pumphouse_items WHERE log_id=$1`, [id]);
+          for (const item of (items || [])) {
+            await client.query(
+              `INSERT INTO hbm_pumphouse_items (log_id, section_name, block_name, item_name, status, remark, action_taken, block_remark) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+              [id, item.section_name, item.block_name, item.item_name, item.status, n(item.remark), n(item.action_taken), n(item.block_remark)]
+            );
+          }
+        } else if (type === 'bar-bundle') {
+          const { log_date, checked_by, sec1_result, sec2_result, sec3_result, sec4_result, items } = req.body;
+          await client.query(
+            `UPDATE hbm_bar_bundle_logs SET log_date=$1, checked_by=$2, sec1_result=$3, sec2_result=$4, sec3_result=$5, sec4_result=$6, updated_at=NOW() WHERE id=$7`,
+            [log_date, n(checked_by), n(sec1_result), n(sec2_result), n(sec3_result), n(sec4_result), id]
+          );
+          await client.query(`DELETE FROM hbm_bar_bundle_items WHERE log_id=$1`, [id]);
+          for (const item of (items || [])) {
+            await client.query(
+              `INSERT INTO hbm_bar_bundle_items (log_id, section_name, block_name, item_name, status, remark, action_taken, block_remark) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+              [id, item.section_name, item.block_name, item.item_name, item.status, n(item.remark), n(item.action_taken), n(item.block_remark)]
+            );
+          }
+        } else if (type === 'before-rolling') {
+          const { log_date, checked_by, mill_shift_incharge, mechanical_engineer, sec1_result, sec2_result, sec3_result, sec4_result, items } = req.body;
+          await client.query(
+            `UPDATE hbm_before_rolling_logs SET log_date=$1, checked_by=$2, mill_shift_incharge=$3, mechanical_engineer=$4, sec1_result=$5, sec2_result=$6, sec3_result=$7, sec4_result=$8, updated_at=NOW() WHERE id=$9`,
+            [log_date, n(checked_by), n(mill_shift_incharge), n(mechanical_engineer), n(sec1_result), n(sec2_result), n(sec3_result), n(sec4_result), id]
+          );
+          await client.query(`DELETE FROM hbm_before_rolling_items WHERE log_id=$1`, [id]);
+          for (const item of (items || [])) {
+            await client.query(
+              `INSERT INTO hbm_before_rolling_items (log_id, section_name, block_name, item_name, item_value, status, remark, action_taken, block_remark) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+              [id, item.section_name, item.block_name, item.item_name, n(item.item_value), item.status, n(item.remark), n(item.action_taken), n(item.block_remark)]
+            );
+          }
+        } else if (type === 'pump-param') {
+          const { log_date, size_value, entries, sec2_items } = req.body;
+          await client.query(
+            `UPDATE hbm_pump_param_logs SET log_date=$1, size_value=$2, updated_at=NOW() WHERE id=$3`,
+            [log_date, n(size_value), id]
+          );
+          await client.query(`DELETE FROM hbm_pump_param_entries WHERE log_id=$1`, [id]);
+          await client.query(`DELETE FROM hbm_pump_param_sec2 WHERE log_id=$1`, [id]);
+          for (const entry of (entries || [])) {
+            await client.query(
+              `INSERT INTO hbm_pump_param_entries (log_id, pump_name, drive_details, status, kw, amp, rpm, pressure, load_pct, kwh_diff) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+              [id, entry.pump_name, n(entry.drive_details), n(entry.status), n(entry.kw), n(entry.amp), n(entry.rpm), n(entry.pressure), n(entry.load_pct), n(entry.kwh_diff)]
+            );
+          }
+          for (const item of (sec2_items || [])) {
+            await client.query(
+              `INSERT INTO hbm_pump_param_sec2 (log_id, item_name, value_text, item_status) VALUES ($1,$2,$3,$4)`,
+              [id, item.item_name, n(item.value_text), n(item.item_status)]
+            );
+          }
+        } else if (type === 'transformer') {
+          const { log_date, sec2_remark, sec3_remark, sec1, sec2, sec3 } = req.body;
+          await client.query(
+            `UPDATE hbm_transformer_logs SET log_date=$1, sec2_remark=$2, sec3_remark=$3, updated_at=NOW() WHERE id=$4`,
+            [log_date, s(sec2_remark), s(sec3_remark), id]
+          );
+          await client.query(`DELETE FROM hbm_transformer_sec1 WHERE log_id=$1`, [id]);
+          await client.query(`DELETE FROM hbm_transformer_sec2 WHERE log_id=$1`, [id]);
+          await client.query(`DELETE FROM hbm_transformer_sec3 WHERE log_id=$1`, [id]);
+          for (const u of (sec1 || [])) {
+            await client.query(
+              `INSERT INTO hbm_transformer_sec1 (log_id,unit_name,rated_current,ct_ratio,bar_size,ht_current,ht_volt,tap_count_diff,tap_position,wind_temperature,oil_temperature,main_tank_oil_level,oltc_oil_level,silica_gel_color,cleaning,electric_inspection,mech_inspection,relay_condition,meter_condition,indicator,announce_meter,oil_leakage,tnc_operation,dc_supply) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)`,
+              [id, u.unit_name, n(u.rated_current), s(u.ct_ratio), s(u.bar_size), n(u.ht_current), n(u.ht_volt), n(u.tap_count_diff), n(u.tap_position), n(u.wind_temperature), n(u.oil_temperature), n(u.main_tank_oil_level), n(u.oltc_oil_level), s(u.silica_gel_color), s(u.cleaning), s(u.electric_inspection), s(u.mech_inspection), s(u.relay_condition), s(u.meter_condition), s(u.indicator), s(u.announce_meter), s(u.oil_leakage), s(u.tnc_operation), s(u.dc_supply)]
+            );
+          }
+          for (const u of (sec2 || [])) {
+            await client.query(
+              `INSERT INTO hbm_transformer_sec2 (log_id, unit_name, today_tap_count, yesterday_tap_count, difference) VALUES ($1,$2,$3,$4,$5)`,
+              [id, u.unit_name, n(u.today_tap_count), n(u.yesterday_tap_count), n(u.difference)]
+            );
+          }
+          for (const u of (sec3 || [])) {
+            await client.query(
+              `INSERT INTO hbm_transformer_sec3 (log_id, unit_name, today_kwh, yesterday_kwh, diff_kwh, today_kvah, yesterday_kvah, diff_kvah) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+              [id, u.unit_name, n(u.today_kwh), n(u.yesterday_kwh), n(u.diff_kwh), n(u.today_kvah), n(u.yesterday_kvah), n(u.diff_kvah)]
+            );
+          }
+        } else if (type === 'ph-maint') {
+          const { log_date, items } = req.body;
+          await client.query(
+            `UPDATE hbm_ph_maint_logs SET log_date=$1, updated_at=NOW() WHERE id=$2`,
+            [log_date, id]
+          );
+          await client.query(`DELETE FROM hbm_ph_maint_items WHERE log_id=$1`, [id]);
+          const validItems = (items || []).filter(i => i.item_text && i.item_text.trim());
+          for (let idx = 0; idx < validItems.length; idx++) {
+            await client.query(
+              `INSERT INTO hbm_ph_maint_items (log_id, item_no, item_text) VALUES ($1,$2,$3)`,
+              [id, idx + 1, validItems[idx].item_text.trim()]
+            );
+          }
+        } else if (type === 'water-param') {
+          const { log_date, remark, entries } = req.body;
+          await client.query(
+            `UPDATE hbm_water_param_logs SET log_date=$1, remark=$2, updated_at=NOW() WHERE id=$3`,
+            [log_date, n(remark), id]
+          );
+          await client.query(`DELETE FROM hbm_water_param_entries WHERE log_id=$1`, [id]);
+          for (const entry of (entries || [])) {
+            await client.query(
+              `INSERT INTO hbm_water_param_entries (log_id, water_source, source_status, tds, tds_status, hardness, hardness_status, ph, ph_status, temperature, temp_status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+              [id, entry.water_source, n(entry.source_status), n(entry.tds), n(entry.tds_status), n(entry.hardness), n(entry.hardness_status), n(entry.ph), n(entry.ph_status), n(entry.temperature), n(entry.temp_status)]
+            );
+          }
+        } else if (type === 'oil-level') {
+          const { log_date, shift_eng, reading_by, remark, entries } = req.body;
+          await client.query(
+            `UPDATE hbm_oil_level_logs SET log_date=$1, shift_eng=$2, reading_by=$3, remark=$4, updated_at=NOW() WHERE id=$5`,
+            [log_date, n(shift_eng), n(reading_by), n(remark), id]
+          );
+          await client.query(`DELETE FROM hbm_oil_level_entries WHERE log_id=$1`, [id]);
+          for (const entry of (entries || [])) {
+            await client.query(
+              `INSERT INTO hbm_oil_level_entries (log_id, tank_name, oil_level, oil_status, pressure, temperature) VALUES ($1,$2,$3,$4,$5,$6)`,
+              [id, entry.tank_name, n(entry.oil_level), n(entry.oil_status), n(entry.pressure), n(entry.temperature)]
+            );
+          }
+        } else if (type === 'dc-motor-airflow') {
+          const { log_date, shift_eng, reading_by, remark, entries, mill_status } = req.body;
+          const millStatus = mill_status === 'OFF' ? 'OFF' : 'ON';
+          await client.query(
+            `UPDATE hbm_dc_motor_airflow_logs SET log_date=$1, shift_eng=$2, reading_by=$3, remark=$4, mill_status=$5, updated_at=NOW() WHERE id=$6`,
+            [log_date, n(shift_eng), n(reading_by), n(remark), millStatus, id]
+          );
+          await client.query(`DELETE FROM hbm_dc_motor_airflow_entries WHERE log_id=$1`, [id]);
+          if (millStatus === 'ON') {
+            for (const e of (entries || [])) {
+              await client.query(
+                `INSERT INTO hbm_dc_motor_airflow_entries (log_id, stand_name, dc_motor_kw, blower_kw_rating, running_kpa, kpa_status, air_flow_condition, dc_motor_temp, dc_motor_temp_status, de_bearing_temp, de_bearing_temp_status, nde_bearing_temp, nde_bearing_temp_status, blower_motor_temp, blower_motor_temp_status, motor_center_vib, motor_center_vib_status, encoder_side_vib, encoder_side_vib_status, blower_vib, blower_vib_status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)`,
+                [id, e.stand_name, n(e.dc_motor_kw), n(e.blower_kw_rating), n(e.running_kpa), n(e.kpa_status), n(e.air_flow_condition), n(e.dc_motor_temp), n(e.dc_motor_temp_status), n(e.de_bearing_temp), n(e.de_bearing_temp_status), n(e.nde_bearing_temp), n(e.nde_bearing_temp_status), n(e.blower_motor_temp), n(e.blower_motor_temp_status), n(e.motor_center_vib), n(e.motor_center_vib_status), n(e.encoder_side_vib), n(e.encoder_side_vib_status), n(e.blower_vib), n(e.blower_vib_status)]
+              );
+            }
+          }
+        } else if (type === 'roughing-gb-temp') {
+          const { log_date, shift_eng, temp_taken_by, s1_flywheel_de, s1_flywheel_nde, s1_reduction_de, s1_reduction_nde, s1_reduction_output, s1_pinion_de_top, s1_pinion_de_mid, s1_pinion_de_bot, s1_pinion_nde_top, s1_pinion_nde_mid, s1_pinion_nde_bot, s1_stand_de_top, s1_stand_de_mid, s1_stand_de_bot, s1_stand_nde_top, s1_stand_nde_mid, s1_stand_nde_bot, sec1_remark, sec2_remark, sec3_remark, stands } = req.body;
+          await client.query(
+            `UPDATE hbm_roughing_gb_temp_logs SET log_date=$1, shift_eng=$2, temp_taken_by=$3, s1_flywheel_de=$4, s1_flywheel_nde=$5, s1_reduction_de=$6, s1_reduction_nde=$7, s1_reduction_output=$8, s1_pinion_de_top=$9, s1_pinion_de_mid=$10, s1_pinion_de_bot=$11, s1_pinion_nde_top=$12, s1_pinion_nde_mid=$13, s1_pinion_nde_bot=$14, s1_stand_de_top=$15, s1_stand_de_mid=$16, s1_stand_de_bot=$17, s1_stand_nde_top=$18, s1_stand_nde_mid=$19, s1_stand_nde_bot=$20, sec1_remark=$21, sec2_remark=$22, sec3_remark=$23, updated_at=NOW() WHERE id=$24`,
+            [log_date, n(shift_eng), n(temp_taken_by), n(s1_flywheel_de), n(s1_flywheel_nde), n(s1_reduction_de), n(s1_reduction_nde), n(s1_reduction_output), n(s1_pinion_de_top), n(s1_pinion_de_mid), n(s1_pinion_de_bot), n(s1_pinion_nde_top), n(s1_pinion_nde_mid), n(s1_pinion_nde_bot), n(s1_stand_de_top), n(s1_stand_de_mid), n(s1_stand_de_bot), n(s1_stand_nde_top), n(s1_stand_nde_mid), n(s1_stand_nde_bot), n(sec1_remark), n(sec2_remark), n(sec3_remark), id]
+          );
+          await client.query(`DELETE FROM hbm_roughing_gb_temp_stands WHERE log_id=$1`, [id]);
+          for (const st of (stands || [])) {
+            const hasData = [st.gb_de, st.gb_inter, st.gb_output_top, st.gb_output_bot, st.gb_gearbox, st.s_de_top, st.s_de_bot, st.s_nde_top, st.s_nde_bot].some(x => x != null && x !== '');
+            if (!hasData) continue;
+            await client.query(
+              `INSERT INTO hbm_roughing_gb_temp_stands (log_id, stand_name, gb_de, gb_inter, gb_output_top, gb_output_bot, gb_gearbox, s_de_top, s_de_bot, s_nde_top, s_nde_bot) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+              [id, st.stand_name, n(st.gb_de), n(st.gb_inter), n(st.gb_output_top), n(st.gb_output_bot), n(st.gb_gearbox), n(st.s_de_top), n(st.s_de_bot), n(st.s_nde_top), n(st.s_nde_bot)]
+            );
+          }
+        } else if (type === 'breakdown') {
+          const { log_date, size, slots } = req.body;
+          await client.query(
+            `UPDATE hbm_breakdown_logs SET log_date=$1, size=$2, updated_at=NOW() WHERE id=$3`,
+            [log_date, size, id]
+          );
+          // Delete existing slots and entries (cascade)
+          const existingSlots = await client.query(`SELECT id FROM hbm_breakdown_slots WHERE log_id=$1`, [id]);
+          for (const slot of existingSlots.rows) {
+            await client.query(`DELETE FROM hbm_breakdown_entries WHERE slot_id=$1`, [slot.id]);
+          }
+          await client.query(`DELETE FROM hbm_breakdown_slots WHERE log_id=$1`, [id]);
+          for (const slot of (slots || [])) {
+            const slotResult = await client.query(
+              `INSERT INTO hbm_breakdown_slots (log_id, slot_label, slot_order, miss_roll, miss_roll_18) VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+              [id, slot.slot_label, slot.slot_order, n(slot.miss_roll) ? parseInt(slot.miss_roll) : null, n(slot.miss_roll_18) ? parseInt(slot.miss_roll_18) : null]
+            );
+            const slotId = slotResult.rows[0].id;
+            for (const entry of (slot.entries || [])) {
+              if (!entry.breakdown_type) continue;
+              await client.query(
+                `INSERT INTO hbm_breakdown_entries (slot_id, breakdown_type, breakdown_minutes, breakdown_reason) VALUES ($1,$2,$3,$4)`,
+                [slotId, entry.breakdown_type, n(entry.breakdown_minutes) ? parseInt(entry.breakdown_minutes) : null, entry.breakdown_reason ? entry.breakdown_reason.trim() : null]
+              );
+            }
+          }
+        }
+      });
+
+      res.json({ success: true, message: 'Log updated successfully' });
+    } catch (error) {
+      console.error('Update HBM log error:', error);
+      res.status(500).json({ success: false, message: 'Failed to update log', error: error.message });
+    }
+  }
+
+}
+
 module.exports = HbmController;

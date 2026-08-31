@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
 import ChecksheetPreviewModal, { PreviewSection, PreviewGrid } from './ChecksheetPreviewModal';
@@ -32,6 +32,10 @@ const SectionDivider = ({ title }) => (
 // ─── Main Component ───────────────────────────────────────────────────────────
 const RoughingGbTempForm = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const editData = location.state?.editData;
+  const editId = location.state?.editId;
+  const isEdit = !!editId;
 
   const [header, setHeader] = useState({
     log_date:      new Date().toLocaleDateString('en-CA'),
@@ -58,6 +62,25 @@ const RoughingGbTempForm = () => {
   const [sec3Remark, setSec3Remark] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+
+  useEffect(() => {
+    if (!isEdit || !editData) return;
+    setHeader({ log_date: editData.log_date?.slice(0, 10) || new Date().toLocaleDateString('en-CA'), shift_eng: editData.shift_eng || '', temp_taken_by: editData.temp_taken_by || '' });
+    setSec1Remark(editData.sec1_remark || '');
+    setSec2Remark(editData.sec2_remark || '');
+    setSec3Remark(editData.sec3_remark || '');
+    const s1Fields = ['flywheel_de','flywheel_nde','reduction_de','reduction_nde','reduction_output','pinion_de_top','pinion_de_mid','pinion_de_bot','pinion_nde_top','pinion_nde_mid','pinion_nde_bot','stand_de_top','stand_de_mid','stand_de_bot','stand_nde_top','stand_nde_mid','stand_nde_bot'];
+    const s1Init = {};
+    s1Fields.forEach(f => { if (editData[`s1_${f}`] != null) s1Init[f] = editData[`s1_${f}`]; });
+    setS1(s1Init);
+    if (Array.isArray(editData.stands)) {
+      const standsInit = {};
+      editData.stands.forEach(row => {
+        standsInit[row.stand_name] = { gb_de: row.gb_de ?? '', gb_inter: row.gb_inter ?? '', gb_output_top: row.gb_output_top ?? '', gb_output_bot: row.gb_output_bot ?? '', gb_gearbox: row.gb_gearbox ?? '', s_de_top: row.s_de_top ?? '', s_de_bot: row.s_de_bot ?? '', s_nde_top: row.s_nde_top ?? '', s_nde_bot: row.s_nde_bot ?? '' };
+      });
+      setStands(standsInit);
+    }
+  }, []); // eslint-disable-line
 
   const n = (v) => (v !== '' && v != null ? v : null);
 
@@ -99,9 +122,10 @@ const RoughingGbTempForm = () => {
   const handleConfirmSubmit = async () => {
     setSubmitting(true);
     try {
-      await hbmAPI.createRoughingGbTempLog(buildPayload());
-      toast.success('Roughing GB Temp sheet submitted!');
-      navigate('/hbm/roughing-gb-temp/history');
+      if (isEdit) { await hbmAPI.updateHbmLog('roughing-gb-temp', editId, buildPayload()); }
+      else { await hbmAPI.createRoughingGbTempLog(buildPayload()); }
+      toast.success(isEdit ? 'Roughing GB Temp sheet updated!' : 'Roughing GB Temp sheet submitted!');
+      navigate(isEdit ? `/hbm/roughing-gb-temp/${editId}` : '/hbm/roughing-gb-temp/history');
     } catch (error) {
       toast.error(error?.response?.data?.message || 'Failed to submit');
     } finally {

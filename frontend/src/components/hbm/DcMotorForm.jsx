@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
 import ChecksheetPreviewModal, { PreviewSection, PreviewGrid } from './ChecksheetPreviewModal';
@@ -128,6 +128,11 @@ const ItemRow = ({ block, section, item, value, onChange }) => {
 // ─── Main Component ────────────────────────────────────────────────────────
 const DcMotorForm = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const editData = location.state?.editData;
+  const editId = location.state?.editId;
+  const isEdit = !!editId;
+
   const [header, setHeader] = useState({
     log_date: new Date().toLocaleDateString('en-CA'),
     log_time: new Date().toTimeString().slice(0, 5),
@@ -140,6 +145,27 @@ const DcMotorForm = () => {
   const [itemValues, setItemValues] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+
+  useEffect(() => {
+    if (isEdit && editData) {
+      setHeader({
+        log_date: editData.log_date ? editData.log_date.slice(0, 10) : new Date().toLocaleDateString('en-CA'),
+        log_time: editData.log_time ? editData.log_time.slice(0, 5) : new Date().toTimeString().slice(0, 5),
+        shift: editData.shift || 'DAY',
+        heat_start: editData.heat_start || '',
+        heat_end: editData.heat_end || '',
+        remarks: editData.remarks || '',
+      });
+      if (editData.items && Array.isArray(editData.items)) {
+        const vals = {};
+        editData.items.forEach(item => {
+          const key = `${item.block_name}__${item.section_name}__${item.item_name}`;
+          vals[key] = { status: item.status, remark: item.remark || '', action_taken: item.action_taken || '' };
+        });
+        setItemValues(vals);
+      }
+    }
+  }, []); // eslint-disable-line
 
   const toggleBlock = (block) => {
     setOpenBlocks(prev => ({ ...prev, [block]: !prev[block] }));
@@ -178,8 +204,14 @@ const DcMotorForm = () => {
     try { items = buildItems(); } catch { return; }
     setSubmitting(true);
     try {
-      await hbmAPI.createDcMotorLog({ log_date: header.log_date, log_time: header.log_time, shift: header.shift, heat_start: header.heat_start || null, heat_end: header.heat_end || null, remarks: header.remarks || null, items });
-      toast.success('DC Motor checksheet submitted successfully!');
+      const payload = { log_date: header.log_date, log_time: header.log_time, shift: header.shift, heat_start: header.heat_start || null, heat_end: header.heat_end || null, remarks: header.remarks || null, items };
+      if (isEdit) {
+        await hbmAPI.updateHbmLog('dc-motor', editId, payload);
+        toast.success('DC Motor checksheet updated successfully!');
+      } else {
+        await hbmAPI.createDcMotorLog(payload);
+        toast.success('DC Motor checksheet submitted successfully!');
+      }
       navigate('/hbm/dashboard');
     } catch (error) {
       toast.error(error?.response?.data?.message || 'Failed to submit');
@@ -218,8 +250,8 @@ const DcMotorForm = () => {
             </svg>
           </button>
           <div>
-            <h1 className="text-xl font-bold text-gray-900">DC Motor Maintenance</h1>
-            <p className="text-sm text-gray-500">Daily checksheet — saved to database</p>
+            <h1 className="text-xl font-bold text-gray-900">{isEdit ? 'Edit DC Motor Log' : 'DC Motor Maintenance'}</h1>
+            <p className="text-sm text-gray-500">{isEdit ? 'Update existing checksheet' : 'Daily checksheet — saved to database'}</p>
           </div>
         </div>
 
@@ -333,7 +365,7 @@ const DcMotorForm = () => {
           <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 mt-5 shadow-lg rounded-t-xl">
             <button type="submit"
               className="w-full py-3 bg-emerald-600 text-white rounded-lg font-bold text-base hover:bg-emerald-700 transition-colors">
-              Preview & Submit
+              {isEdit ? 'Preview & Update' : 'Preview & Submit'}
             </button>
           </div>
 

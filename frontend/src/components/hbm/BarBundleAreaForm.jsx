@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
 import ChecksheetPreviewModal, { PreviewSection, PreviewGrid } from './ChecksheetPreviewModal';
@@ -159,6 +159,10 @@ const SectionResult = ({ label, value, onChange }) => (
 // ─── Main Component ───────────────────────────────────────────────────────────
 const BarBundleAreaForm = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const editData = location.state?.editData;
+  const editId = location.state?.editId;
+  const isEdit = !!editId;
 
   const [header, setHeader] = useState({
     log_date: new Date().toLocaleDateString('en-CA'),
@@ -173,6 +177,22 @@ const BarBundleAreaForm = () => {
   );
   const [submitting, setSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+
+  useEffect(() => {
+    if (!isEdit || !editData) return;
+    setHeader({ log_date: editData.log_date?.slice(0, 10) || new Date().toLocaleDateString('en-CA'), checked_by: editData.checked_by || '' });
+    if (editData.items) {
+      const vals = {}, remarks = {};
+      editData.items.forEach(item => {
+        vals[`${item.section_name}__${item.block_name}__${item.item_name}`] = { status: item.status, remark: item.remark || '', action_taken: item.action_taken || '' };
+        if (item.block_remark) remarks[`${item.section_name}__${item.block_name}`] = item.block_remark;
+      });
+      setItemValues(vals); setBlockRemarks(remarks);
+    }
+    const secRes = {};
+    for (let i = 1; i <= 4; i++) { const k = `SECTION-${i}`; secRes[k] = editData[`sec${i}_result`] || ''; }
+    setSectionResults(secRes);
+  }, []); // eslint-disable-line
 
   const handleItemChange = (key, val) => setItemValues(prev => ({ ...prev, [key]: val }));
   const handleBlockRemark = (key, val) => setBlockRemarks(prev => ({ ...prev, [key]: val }));
@@ -222,14 +242,10 @@ const BarBundleAreaForm = () => {
     try { items = buildItems(); } catch { return; }
     setSubmitting(true);
     try {
-      await hbmAPI.createBarBundleLog({
-        log_date: header.log_date, checked_by: header.checked_by || null,
-        sec1_result: sectionResults['SECTION-1'] || null, sec2_result: sectionResults['SECTION-2'] || null,
-        sec3_result: sectionResults['SECTION-3'] || null, sec4_result: sectionResults['SECTION-4'] || null,
-        items,
-      });
-      toast.success('Bar Bundle Area checksheet submitted!');
-      navigate('/hbm/bar-bundle/history');
+      const payload = { log_date: header.log_date, checked_by: header.checked_by || null, sec1_result: sectionResults['SECTION-1'] || null, sec2_result: sectionResults['SECTION-2'] || null, sec3_result: sectionResults['SECTION-3'] || null, sec4_result: sectionResults['SECTION-4'] || null, items };
+      if (isEdit) { await hbmAPI.updateHbmLog('bar-bundle', editId, payload); } else { await hbmAPI.createBarBundleLog(payload); }
+      toast.success(isEdit ? 'Bar Bundle Area checksheet updated!' : 'Bar Bundle Area checksheet submitted!');
+      navigate(isEdit ? `/hbm/bar-bundle/${editId}` : '/hbm/bar-bundle/history');
     } catch (error) {
       toast.error(error?.message || 'Failed to submit');
     } finally {

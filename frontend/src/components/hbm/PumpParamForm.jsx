@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
 import ChecksheetPreviewModal, { PreviewSection, PreviewGrid } from './ChecksheetPreviewModal';
@@ -299,6 +299,10 @@ const PumpEntry = ({ pump, value, onChange, showPressure = true }) => {
 
 const PumpParamForm = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const editData = location.state?.editData;
+  const editId = location.state?.editId;
+  const isEdit = !!editId;
 
   const [header, setHeader] = useState({
     log_date:   new Date().toLocaleDateString('en-CA'),
@@ -310,6 +314,21 @@ const PumpParamForm = () => {
   const [openGroups, setOpenGroups]   = useState({});
   const [submitting, setSubmitting]   = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+
+  useEffect(() => {
+    if (!isEdit || !editData) return;
+    setHeader({ log_date: editData.log_date?.slice(0, 10) || new Date().toLocaleDateString('en-CA'), size_value: editData.size_value || '' });
+    if (editData.entries) {
+      const vals = {};
+      editData.entries.forEach(e => { vals[e.pump_name] = { status: e.status, drive_details: e.drive_details || '', kw: e.kw ?? '', amp: e.amp ?? '', rpm: e.rpm ?? '', pressure: e.pressure ?? '', load_pct: e.load_pct ?? '', kwh_diff: e.kwh_diff ?? '' }; });
+      setPumpValues(vals);
+    }
+    if (editData.sec2_items) {
+      const s2 = {};
+      editData.sec2_items.forEach(i => { s2[i.item_name] = { value_text: i.value_text || '', item_status: i.item_status || '' }; });
+      setSec2Values(s2);
+    }
+  }, []); // eslint-disable-line
 
   const handlePumpChange = (pumpName, val) =>
     setPumpValues(prev => ({ ...prev, [pumpName]: val }));
@@ -393,9 +412,10 @@ const PumpParamForm = () => {
     const { entries, sec2_items } = buildPayload();
     setSubmitting(true);
     try {
-      await hbmAPI.createPumpParamLog({ log_date: header.log_date, size_value: header.size_value || null, entries, sec2_items });
-      toast.success('Pump Parameter Report submitted!');
-      navigate('/hbm/pump-param/history');
+      const payload = { log_date: header.log_date, size_value: header.size_value || null, entries, sec2_items };
+      if (isEdit) { await hbmAPI.updateHbmLog('pump-param', editId, payload); } else { await hbmAPI.createPumpParamLog(payload); }
+      toast.success(isEdit ? 'Pump Parameter Report updated!' : 'Pump Parameter Report submitted!');
+      navigate(isEdit ? `/hbm/pump-param/${editId}` : '/hbm/pump-param/history');
     } catch (error) {
       toast.error(error?.response?.data?.message || 'Failed to submit');
     } finally {

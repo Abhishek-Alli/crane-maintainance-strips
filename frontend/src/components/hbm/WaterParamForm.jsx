@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
 import ChecksheetPreviewModal, { PreviewSection, PreviewGrid } from './ChecksheetPreviewModal';
@@ -224,12 +224,31 @@ const SourceRow = ({ source, value, onChange }) => {
 
 const WaterParamForm = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const editData = location.state?.editData;
+  const editId = location.state?.editId;
+  const isEdit = !!editId;
 
   const [logDate, setLogDate] = useState(new Date().toLocaleDateString('en-CA'));
   const [remark, setRemark]   = useState('');
   const [values, setValues]   = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+
+  useEffect(() => {
+    if (!isEdit || !editData) return;
+    setLogDate(editData.log_date?.slice(0, 10) || new Date().toLocaleDateString('en-CA'));
+    setRemark(editData.remark || '');
+    if (editData.entries) {
+      const vals = {};
+      editData.entries.forEach(e => {
+        const src = WATER_SOURCES.find(s => s.label === e.water_source);
+        if (!src) return;
+        vals[src.key] = { source_status: e.source_status || 'ON', tds: e.tds ?? '', tds_status: e.tds_status || '', hardness: e.hardness ?? '', hardness_status: e.hardness_status || '', ph: e.ph ?? '', ph_status: e.ph_status || '', temperature: e.temperature ?? '', temp_status: e.temp_status || '' };
+      });
+      setValues(vals);
+    }
+  }, []); // eslint-disable-line
 
   const handleChange = (key, val) =>
     setValues(prev => ({ ...prev, [key]: val }));
@@ -272,9 +291,10 @@ const WaterParamForm = () => {
   const handleConfirmSubmit = async () => {
     setSubmitting(true);
     try {
-      await hbmAPI.createWaterParamLog({ log_date: logDate, remark: remark || null, entries: buildEntries() });
-      toast.success('Water Parameter report submitted!');
-      navigate('/hbm/water-param/history');
+      const payload = { log_date: logDate, remark: remark || null, entries: buildEntries() };
+      if (isEdit) { await hbmAPI.updateHbmLog('water-param', editId, payload); } else { await hbmAPI.createWaterParamLog(payload); }
+      toast.success(isEdit ? 'Water Parameter report updated!' : 'Water Parameter report submitted!');
+      navigate(isEdit ? `/hbm/water-param/${editId}` : '/hbm/water-param/history');
     } catch (error) {
       toast.error(error?.response?.data?.message || 'Failed to submit');
     } finally {

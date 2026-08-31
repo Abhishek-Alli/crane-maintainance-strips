@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { hbmAPI } from '../../services/api';
 import ChecksheetPreviewModal, { PreviewSection, PreviewGrid } from './ChecksheetPreviewModal';
@@ -33,6 +33,10 @@ const statusBadge = (status) => {
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 const OilLevelForm = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const editData = location.state?.editData;
+  const editId = location.state?.editId;
+  const isEdit = !!editId;
 
   const [header, setHeader] = useState({
     log_date:   new Date().toLocaleDateString('en-CA'),
@@ -44,6 +48,21 @@ const OilLevelForm = () => {
   const [remark, setRemark]     = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+
+  useEffect(() => {
+    if (!isEdit || !editData) return;
+    setHeader({ log_date: editData.log_date?.slice(0, 10) || new Date().toLocaleDateString('en-CA'), shift_eng: editData.shift_eng || '', reading_by: editData.reading_by || '' });
+    setRemark(editData.remark || '');
+    if (editData.entries) {
+      const vals = {};
+      editData.entries.forEach(e => {
+        const tank = TANKS.find(t => t.label === e.tank_name);
+        if (!tank) return;
+        vals[tank.key] = { oil_level: e.oil_level ?? '', pressure: e.pressure ?? '', temperature: e.temperature ?? '' };
+      });
+      setValues(vals);
+    }
+  }, []); // eslint-disable-line
 
   const handleChange = (key, field, val) =>
     setValues(prev => ({ ...prev, [key]: { ...(prev[key] || {}), [field]: val } }));
@@ -69,15 +88,10 @@ const OilLevelForm = () => {
 
     setSubmitting(true);
     try {
-      await hbmAPI.createOilLevelLog({
-        log_date:   header.log_date,
-        shift_eng:  header.shift_eng || null,
-        reading_by: header.reading_by || null,
-        remark:     remark || null,
-        entries,
-      });
-      toast.success('Daily Oil Level Sheet submitted!');
-      navigate('/hbm/oil-level/history');
+      const payload = { log_date: header.log_date, shift_eng: header.shift_eng || null, reading_by: header.reading_by || null, remark: remark || null, entries };
+      if (isEdit) { await hbmAPI.updateHbmLog('oil-level', editId, payload); } else { await hbmAPI.createOilLevelLog(payload); }
+      toast.success(isEdit ? 'Oil Level Sheet updated!' : 'Daily Oil Level Sheet submitted!');
+      navigate(isEdit ? `/hbm/oil-level/${editId}` : '/hbm/oil-level/history');
     } catch (error) {
       toast.error(error?.response?.data?.message || 'Failed to submit');
     } finally {
