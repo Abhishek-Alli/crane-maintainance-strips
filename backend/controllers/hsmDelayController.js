@@ -1,8 +1,17 @@
 const fs = require('fs');
 const path = require('path');
 const PDFDocument = require('pdfkit');
-const { query } = require('../config/database');
+const { query, transaction } = require('../config/database');
 const { isWithinEditWindow, editWindowDeniedMessage } = require('../utils/editWindow');
+const { absoluteUploadPath, unlinkUpload } = require('../middleware/upload');
+const {
+  parseMultipartBody,
+  cleanupUploadedFiles,
+  makeImageSaver,
+  mapImageRows,
+} = require('../utils/hsmImageHelpers');
+
+const saveDelayReportImages = makeImageSaver('hsm_delay_report_images', 'hsm-delay-report');
 
 const LOGO_PATH = path.join(__dirname, '../assets/srj-logo.png');
 
@@ -127,13 +136,16 @@ class HsmDelayController {
   static async getById(req, res) {
     try {
       const { id } = req.params;
-      const result = await query(
-        `SELECT l.*, u.username AS filled_by_name
-         FROM hsm_delay_reports l
-         JOIN users u ON l.filled_by = u.id
-         WHERE l.id = $1`,
-        [id]
-      );
+      const [result, imagesRes] = await Promise.all([
+        query(
+          `SELECT l.*, u.username AS filled_by_name
+           FROM hsm_delay_reports l
+           JOIN users u ON l.filled_by = u.id
+           WHERE l.id = $1`,
+          [id]
+        ),
+        query(`SELECT * FROM hsm_delay_report_images WHERE log_id = $1 ORDER BY sort_order, id`, [id]),
+      ]);
       if (!result.rows.length) {
         return res.status(404).json({ success: false, message: 'Delay report not found' });
       }
@@ -143,6 +155,7 @@ class HsmDelayController {
         data: {
           ...row,
           can_modify: isWithinEditWindow(row.created_at),
+          images: mapImageRows(imagesRes.rows),
         },
       });
     } catch (error) {
@@ -194,74 +207,97 @@ class HsmDelayController {
   }
 
   static async create(req, res) {
+    const uploaded = req.files || [];
     try {
-      const b = req.body || {};
+      const b = parseMultipartBody(req);
       const err = HsmDelayController._validate(b);
-      if (err) return res.status(400).json({ success: false, message: err });
+      if (err) {
+        cleanupUploadedFiles(uploaded);
+        return res.status(400).json({ success: false, message: err });
+      }
 
       const fields = HsmDelayController._payloadFields(b);
-      const result = await query(
-        `INSERT INTO hsm_delay_reports (
-           report_date, shift, start_time, end_time, total_minutes, reason, agency,
-           hotout_source, hotout_thickness, hotout_width, hotout_length, hotout_pieces, hotout_mt, hotout_remark,
-           miss_thickness, miss_width, miss_length, miss_pieces, miss_mt, miss_location, miss_operator_name, miss_remark,
-           filled_by
-         ) VALUES (
-           $1,$2,$3,$4,$5,$6,$7,
-           $8,$9,$10,$11,$12,$13,$14,
-           $15,$16,$17,$18,$19,$20,$21,$22,
-           $23
-         ) RETURNING *`,
-        [...fields, req.user.id]
-      );
+      let log;
+      await transaction(async (client) => {
+        const result = await client.query(
+          `INSERT INTO hsm_delay_reports (
+             report_date, shift, start_time, end_time, total_minutes, reason, agency,
+             hotout_source, hotout_thickness, hotout_width, hotout_length, hotout_pieces, hotout_mt, hotout_remark,
+             miss_thickness, miss_width, miss_length, miss_pieces, miss_mt, miss_location, miss_operator_name, miss_remark,
+             filled_by
+           ) VALUES (
+             $1,$2,$3,$4,$5,$6,$7,
+             $8,$9,$10,$11,$12,$13,$14,
+             $15,$16,$17,$18,$19,$20,$21,$22,
+             $23
+           ) RETURNING *`,
+          [...fields, req.user.id]
+        );
+        log = result.rows[0];
+        await saveDelayReportImages(client, log.id, uploaded, null);
+      });
 
       res.status(201).json({
         success: true,
         message: 'Delay report submitted',
-        data: result.rows[0],
+        data: log,
       });
     } catch (error) {
+      cleanupUploadedFiles(uploaded);
       console.error('HSM Delay create error:', error);
       res.status(500).json({ success: false, message: 'Failed to submit delay report' });
     }
   }
 
   static async update(req, res) {
+    const uploaded = req.files || [];
     try {
       const { id } = req.params;
       const existing = await query(`SELECT * FROM hsm_delay_reports WHERE id = $1`, [id]);
       if (!existing.rows.length) {
+        cleanupUploadedFiles(uploaded);
         return res.status(404).json({ success: false, message: 'Delay report not found' });
       }
       if (!isWithinEditWindow(existing.rows[0].created_at)) {
+        cleanupUploadedFiles(uploaded);
         return res.status(403).json({ success: false, message: editWindowDeniedMessage() });
       }
 
-      const b = req.body || {};
+      const b = parseMultipartBody(req);
       const err = HsmDelayController._validate(b);
-      if (err) return res.status(400).json({ success: false, message: err });
+      if (err) {
+        cleanupUploadedFiles(uploaded);
+        return res.status(400).json({ success: false, message: err });
+      }
 
       const fields = HsmDelayController._payloadFields(b);
-      const result = await query(
-        `UPDATE hsm_delay_reports SET
-           report_date = $1, shift = $2, start_time = $3, end_time = $4, total_minutes = $5,
-           reason = $6, agency = $7,
-           hotout_source = $8, hotout_thickness = $9, hotout_width = $10, hotout_length = $11,
-           hotout_pieces = $12, hotout_mt = $13, hotout_remark = $14,
-           miss_thickness = $15, miss_width = $16, miss_length = $17, miss_pieces = $18,
-           miss_mt = $19, miss_location = $20, miss_operator_name = $21, miss_remark = $22,
-           updated_at = NOW()
-         WHERE id = $23
-         RETURNING *`,
-        [...fields, id]
-      );
+      const keepImageIds = Array.isArray(b.keep_image_ids) ? b.keep_image_ids : [];
+      let log;
+      await transaction(async (client) => {
+        const result = await client.query(
+          `UPDATE hsm_delay_reports SET
+             report_date = $1, shift = $2, start_time = $3, end_time = $4, total_minutes = $5,
+             reason = $6, agency = $7,
+             hotout_source = $8, hotout_thickness = $9, hotout_width = $10, hotout_length = $11,
+             hotout_pieces = $12, hotout_mt = $13, hotout_remark = $14,
+             miss_thickness = $15, miss_width = $16, miss_length = $17, miss_pieces = $18,
+             miss_mt = $19, miss_location = $20, miss_operator_name = $21, miss_remark = $22,
+             updated_at = NOW()
+           WHERE id = $23
+           RETURNING *`,
+          [...fields, id]
+        );
+        log = result.rows[0];
+        await saveDelayReportImages(client, log.id, uploaded, keepImageIds);
+      });
 
       res.json({
         success: true,
         message: 'Delay report updated',
-        data: result.rows[0],
+        data: log,
       });
     } catch (error) {
+      cleanupUploadedFiles(uploaded);
       console.error('HSM Delay update error:', error);
       res.status(500).json({ success: false, message: 'Failed to update delay report' });
     }
@@ -277,7 +313,9 @@ class HsmDelayController {
       if (!isWithinEditWindow(existing.rows[0].created_at)) {
         return res.status(403).json({ success: false, message: editWindowDeniedMessage() });
       }
+      const images = await query(`SELECT file_path FROM hsm_delay_report_images WHERE log_id = $1`, [id]);
       await query(`DELETE FROM hsm_delay_reports WHERE id = $1`, [id]);
+      images.rows.forEach((img) => unlinkUpload(img.file_path));
       res.json({ success: true, message: 'Delay report deleted' });
     } catch (error) {
       console.error('HSM Delay delete error:', error);
@@ -287,7 +325,9 @@ class HsmDelayController {
 
   static async clearAll(req, res) {
     try {
+      const images = await query(`SELECT file_path FROM hsm_delay_report_images`);
       const result = await query(`DELETE FROM hsm_delay_reports RETURNING id`);
+      images.rows.forEach((img) => unlinkUpload(img.file_path));
       res.json({
         success: true,
         message: `Deleted ${result.rowCount} delay report(s)`,
@@ -302,17 +342,21 @@ class HsmDelayController {
   static async downloadPDF(req, res) {
     const { id } = req.params;
     try {
-      const result = await query(
-        `SELECT l.*, u.username AS filled_by_name
-         FROM hsm_delay_reports l
-         JOIN users u ON l.filled_by = u.id
-         WHERE l.id = $1`,
-        [id]
-      );
+      const [result, imagesRes] = await Promise.all([
+        query(
+          `SELECT l.*, u.username AS filled_by_name
+           FROM hsm_delay_reports l
+           JOIN users u ON l.filled_by = u.id
+           WHERE l.id = $1`,
+          [id]
+        ),
+        query(`SELECT * FROM hsm_delay_report_images WHERE log_id = $1 ORDER BY sort_order, id`, [id]),
+      ]);
       if (!result.rows.length) {
         return res.status(404).json({ success: false, message: 'Delay report not found' });
       }
       const log = result.rows[0];
+      const drImages = imagesRes.rows;
 
       const margin = 22;
       const pageW = 551;
@@ -440,6 +484,52 @@ class HsmDelayController {
         ['Operator Name', log.miss_operator_name],
         ['Remark', log.miss_remark],
       ]);
+
+      const validDrImages = drImages.filter((img) => {
+        const abs = absoluteUploadPath(img.file_path);
+        return abs && fs.existsSync(abs);
+      });
+      if (validDrImages.length) {
+        const landMargin = 22;
+        const landW = 842 - landMargin * 2;
+        const landH = 595 - landMargin * 2;
+        const gap = 12;
+        const perPage = 4;
+        let pageBaseY = landMargin;
+
+        const startImagesPage = () => {
+          doc.addPage({ size: 'A4', layout: 'landscape' });
+          doc.y = landMargin;
+          doc.font('Helvetica-Bold').fontSize(14).fillColor('#4f46e5')
+            .text('Attached Images', landMargin, doc.y, { width: landW, lineBreak: false });
+          doc.y += 18;
+          doc.font('Helvetica').fontSize(10).fillColor('#6b7280')
+            .text(`${formatDateOnly(log.report_date)} · Shift ${log.shift || '—'}`, landMargin, doc.y, { width: landW, lineBreak: false });
+          doc.y += 14;
+          doc.moveTo(landMargin, doc.y).lineTo(landMargin + landW, doc.y).stroke('#4f46e5');
+          doc.y += 12;
+          doc.fillColor('#000000');
+          pageBaseY = doc.y;
+        };
+
+        validDrImages.forEach((img, i) => {
+          const slot = i % perPage;
+          if (slot === 0) startImagesPage();
+          const col = slot % 2;
+          const row = Math.floor(slot / 2);
+          const imgW = (landW - gap) / 2;
+          const imgH = ((landMargin + landH) - pageBaseY - gap) / 2;
+          const x = landMargin + col * (imgW + gap);
+          const y = pageBaseY + row * (imgH + gap);
+          const abs = absoluteUploadPath(img.file_path);
+          try {
+            doc.image(abs, x, y, { fit: [imgW, imgH], align: 'center', valign: 'center' });
+            doc.rect(x, y, imgW, imgH).stroke('#d6d3d1');
+          } catch (err) {
+            console.error('PDF image embed error:', err.message);
+          }
+        });
+      }
 
       doc.on('end', () => res.send(Buffer.concat(buffers)));
       doc.end();

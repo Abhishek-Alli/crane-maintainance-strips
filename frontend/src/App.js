@@ -99,6 +99,15 @@ import DelayReportView from './components/hsm/DelayReportView';
 import FmDailyChecklistForm from './components/hsm/FmDailyChecklistForm';
 import FmDailyChecklistHistory from './components/hsm/FmDailyChecklistHistory';
 import FmDailyChecklistView from './components/hsm/FmDailyChecklistView';
+import InductionDailyChecklistForm from './components/hsm/InductionDailyChecklistForm';
+import InductionDailyChecklistHistory from './components/hsm/InductionDailyChecklistHistory';
+import InductionDailyChecklistView from './components/hsm/InductionDailyChecklistView';
+import DcDailyChecklistForm from './components/hsm/DcDailyChecklistForm';
+import DcDailyChecklistHistory from './components/hsm/DcDailyChecklistHistory';
+import DcDailyChecklistView from './components/hsm/DcDailyChecklistView';
+import RmDailyChecklistForm from './components/hsm/RmDailyChecklistForm';
+import RmDailyChecklistHistory from './components/hsm/RmDailyChecklistHistory';
+import RmDailyChecklistView from './components/hsm/RmDailyChecklistView';
 import HsmInsights from './components/hsm/HsmInsights';
 
 // HOD Components
@@ -592,6 +601,60 @@ function App() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                         </svg>
                         <span className="font-medium">FM History</span>
+                      </Link>
+                      <Link
+                        to="/hsm/induction-daily-checklist/new"
+                        className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/hsm/induction-daily-checklist/new' ? navActive + ' text-white' : navHover}`}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                        </svg>
+                        <span className="font-medium">Induction Daily</span>
+                      </Link>
+                      <Link
+                        to="/hsm/induction-daily-checklist/history"
+                        className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/hsm/induction-daily-checklist/history' ? navActive + ' text-white' : navHover}`}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                        <span className="font-medium">Induction History</span>
+                      </Link>
+                      <Link
+                        to="/hsm/dc-daily-checklist/new"
+                        className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/hsm/dc-daily-checklist/new' ? navActive + ' text-white' : navHover}`}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                        </svg>
+                        <span className="font-medium">DC Daily</span>
+                      </Link>
+                      <Link
+                        to="/hsm/dc-daily-checklist/history"
+                        className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/hsm/dc-daily-checklist/history' ? navActive + ' text-white' : navHover}`}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                        <span className="font-medium">DC History</span>
+                      </Link>
+                      <Link
+                        to="/hsm/rm-daily-checklist/new"
+                        className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/hsm/rm-daily-checklist/new' ? navActive + ' text-white' : navHover}`}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                        </svg>
+                        <span className="font-medium">RM Daily</span>
+                      </Link>
+                      <Link
+                        to="/hsm/rm-daily-checklist/history"
+                        className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/hsm/rm-daily-checklist/history' ? navActive + ' text-white' : navHover}`}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                        <span className="font-medium">RM History</span>
                       </Link>
                       {isAdminUser && (
                         <Link
@@ -1240,6 +1303,150 @@ function App() {
             element={
               user && (isHSMUser || isAdminUser) ? (
                 <FmDailyChecklistView />
+              ) : user ? (
+                <Navigate to="/hsm/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/hsm/induction-daily-checklist/new"
+            element={
+              user && (isHSMUser || isAdminUser) ? (
+                <InductionDailyChecklistForm />
+              ) : user ? (
+                <Navigate to="/hsm/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/hsm/induction-daily-checklist/history"
+            element={
+              user && (isHSMUser || isAdminUser) ? (
+                <InductionDailyChecklistHistory />
+              ) : user ? (
+                <Navigate to="/hsm/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/hsm/induction-daily-checklist/:id/edit"
+            element={
+              user && (isHSMUser || isAdminUser) ? (
+                <InductionDailyChecklistForm />
+              ) : user ? (
+                <Navigate to="/hsm/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/hsm/induction-daily-checklist/:id"
+            element={
+              user && (isHSMUser || isAdminUser) ? (
+                <InductionDailyChecklistView />
+              ) : user ? (
+                <Navigate to="/hsm/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/hsm/dc-daily-checklist/new"
+            element={
+              user && (isHSMUser || isAdminUser) ? (
+                <DcDailyChecklistForm />
+              ) : user ? (
+                <Navigate to="/hsm/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/hsm/dc-daily-checklist/history"
+            element={
+              user && (isHSMUser || isAdminUser) ? (
+                <DcDailyChecklistHistory />
+              ) : user ? (
+                <Navigate to="/hsm/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/hsm/dc-daily-checklist/:id/edit"
+            element={
+              user && (isHSMUser || isAdminUser) ? (
+                <DcDailyChecklistForm />
+              ) : user ? (
+                <Navigate to="/hsm/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/hsm/dc-daily-checklist/:id"
+            element={
+              user && (isHSMUser || isAdminUser) ? (
+                <DcDailyChecklistView />
+              ) : user ? (
+                <Navigate to="/hsm/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/hsm/rm-daily-checklist/new"
+            element={
+              user && (isHSMUser || isAdminUser) ? (
+                <RmDailyChecklistForm />
+              ) : user ? (
+                <Navigate to="/hsm/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/hsm/rm-daily-checklist/history"
+            element={
+              user && (isHSMUser || isAdminUser) ? (
+                <RmDailyChecklistHistory />
+              ) : user ? (
+                <Navigate to="/hsm/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/hsm/rm-daily-checklist/:id/edit"
+            element={
+              user && (isHSMUser || isAdminUser) ? (
+                <RmDailyChecklistForm />
+              ) : user ? (
+                <Navigate to="/hsm/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/hsm/rm-daily-checklist/:id"
+            element={
+              user && (isHSMUser || isAdminUser) ? (
+                <RmDailyChecklistView />
               ) : user ? (
                 <Navigate to="/hsm/dashboard" replace />
               ) : (

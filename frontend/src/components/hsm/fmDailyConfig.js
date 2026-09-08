@@ -1,26 +1,97 @@
-export const FM_CHECK_ITEMS = [
-  { key: 'entry_guide_gap', label: 'Entry guide gap should be checked before start rolling' },
-  { key: 'exit_guide_gap', label: 'Exit guide gap should be checked before start rolling' },
-  { key: 'exit_top_bottom_stripper', label: 'Exit top bottom stripper should be check' },
-  { key: 'all_system_on', label: 'All system to be On' },
-  { key: 'hp_pressure', label: 'HP pressure to be checked' },
-  { key: 'lp_pressure', label: 'LP pressure to be checked' },
-  { key: 'hgc_cylinder_pressure', label: 'HGC cylinder pressure to be checked' },
-  { key: 'bending_balancing_pressure', label: 'Bending balancing pressure to be checked' },
-  { key: 'roll_cooling_on', label: 'Roll cooling to be on' },
-  { key: 'roll_gap_manual', label: 'Roll gap to checked manually' },
-  { key: 'air_pressure', label: 'Air pressure to be checked' },
-  { key: 'stand_axial_clamp', label: 'All stand axial clamp to be checked' },
-  { key: 'stand_spindle_clamp', label: 'All stand spindle clamp to be checked' },
-  { key: 'vertical_edger_gap', label: 'Vertical edger gap to be checked' },
-  { key: 'looper_angle', label: 'Looper angle to be checked' },
-  { key: 'entry_pinch_roll_gap', label: 'Entry pinch roll gap to be checked' },
-  { key: 'blower', label: 'Blower to be checked' },
-  { key: 'lubrication_system', label: 'Lubrication system to be checked' },
-  { key: 'work_roll_chuck_nut_lock', label: 'All stand both work roll chuck nut and lock status' },
-  { key: 'backup_roll_chuck_nut_lock', label: 'All stand both backup roll chuck nut and lock status' },
-  { key: 'simulation_3_4_times', label: '3 to 4 times simulation to be done' },
+export const FM_CHECK_SECTIONS = [
+  {
+    key: 'entry_guide_gap',
+    label: 'Entry guide gap should be checked before start rolling'
+  },
+  {
+    key: 'exit_guide_gap',
+    label: 'Exit guide gap should be checked before start rolling'
+  },
+  {
+    key: 'exit_top_bottom_stripper',
+    label: 'Exit top bottom stripper should be check',
+  },
+  {
+    key: 'all_system_on',
+    label: 'All system to be On',
+  },
+  {
+    key: 'hp_pressure',
+    label: 'HP pressure to be checked'
+  },
+  {
+    key: 'lp_pressure',
+    label: 'LP pressure to be checked'
+  },
+  {
+    key: 'hgc_cylinder_pressure',
+    label: 'HGC cylinder pressure to be checked'
+  },
+  {
+    key: 'bending_balancing_pressure',
+    label: 'Bending balancing pressure to be checked'
+  },
+  {
+    key: 'roll_cooling_on',
+    label: 'Roll cooling to be on'
+  },
+  {
+    key: 'roll_gap_manual',
+    label: 'Roll gap to checked manually'
+  },
+  {
+    key: 'air_pressure',
+    label: 'Air pressure to be checked'
+  },
+  {
+    key: 'stand_axial_clamp',
+    label: 'All stand axial clamp to be checked'
+  },
+  {
+    key: 'stand_spindle_clamp',
+    label: 'All stand spindle clamp to be checked'
+  },
+  {
+    key: 'vertical_edger_gap',
+    label: 'Vertical edger gap to be checked'
+  },
+  {
+    key: 'looper_angle',
+    label: 'Looper angle to be checked'
+  },
+  {
+    key: 'entry_pinch_roll_gap',
+    label: 'Entry pinch roll gap to be checked'
+  },
+  {
+    key: 'blower',
+    label: 'Blower to be checked'
+  },
+  {
+    key: 'lubrication_system',
+    label: 'Lubrication system to be checked'
+  },
+  {
+    key: 'work_roll_chuck_nut_lock',
+    label: 'All stand both work roll chuck nut and lock status',
+  },
+  {
+    key: 'backup_roll_chuck_nut_lock',
+    label: 'All stand both backup roll chuck nut and lock status',
+  },
+  {
+    key: 'simulation_3_4_times',
+    label: '3 to 4 times simulation to be done',
+  },
 ];
+
+/** Flat list of every fillable check, derived from FM_CHECK_SECTIONS (one per main point). */
+export const FM_CHECK_ITEMS = FM_CHECK_SECTIONS.map((section) => ({
+  key: section.key,
+  label: section.label,
+  sectionKey: section.key,
+  sectionLabel: section.label,
+}));
 
 export const FM_GUIDE_CENTERLINE_KEYS = [
   { key: 'DS', label: 'DS' },
@@ -36,10 +107,20 @@ export const FM_GUIDE_CENTERLINE_KEYS = [
   { key: 'all_looper', label: 'All Looper' },
 ];
 
+export function emptySectionValues() {
+  const section_values = {};
+  FM_CHECK_SECTIONS.forEach((section) => {
+    (section.valueFields || []).forEach((field) => {
+      section_values[`${section.key}_${field.key}`] = '';
+    });
+  });
+  return section_values;
+}
+
 export function emptyFmDailyForm() {
   const checklist_items = {};
   FM_CHECK_ITEMS.forEach(({ key }) => {
-    checklist_items[key] = { status: '', remark: '' };
+    checklist_items[key] = { status: '', remark: '', action_taken: '' };
   });
   const guide_centerline = {};
   FM_GUIDE_CENTERLINE_KEYS.forEach(({ key }) => {
@@ -55,6 +136,7 @@ export function emptyFmDailyForm() {
     shift_engineer: '',
     checklist_items,
     guide_centerline,
+    section_values: emptySectionValues(),
     note: '',
   };
 }

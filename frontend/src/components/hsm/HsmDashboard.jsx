@@ -98,6 +98,39 @@ export default function HsmDashboard() {
       label: 'FM Daily Check List History',
       sub: 'Past FM daily checklists',
     },
+    {
+      to: '/hsm/induction-daily-checklist/new',
+      label: 'Induction Daily Check List',
+      sub: 'Guide gap · rollers · heaters · OK / NOT OK',
+      primary: true,
+    },
+    {
+      to: '/hsm/induction-daily-checklist/history',
+      label: 'Induction Daily Check List History',
+      sub: 'Past induction daily checklists',
+    },
+    {
+      to: '/hsm/dc-daily-checklist/new',
+      label: 'DC Daily Check List',
+      sub: 'Guide gap · mandrel · WR gap · OK / NOT OK',
+      primary: true,
+    },
+    {
+      to: '/hsm/dc-daily-checklist/history',
+      label: 'DC Daily Check List History',
+      sub: 'Past DC daily checklists',
+    },
+    {
+      to: '/hsm/rm-daily-checklist/new',
+      label: 'RM Daily Check List',
+      sub: 'Guide gap · clamps · descaling · OK / NOT OK',
+      primary: true,
+    },
+    {
+      to: '/hsm/rm-daily-checklist/history',
+      label: 'RM Daily Check List History',
+      sub: 'Past RM daily checklists',
+    },
     ...(isAdminUser
       ? [{
           to: '/hsm/insights',

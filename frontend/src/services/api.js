@@ -424,8 +424,12 @@ export const ptmAPI = {
   getMonthlyRegister: (templateId, params) => api.get(`/ptm/monthly-register/${templateId}`, { params }),
   getBreakdownLogs: (params) => api.get('/ptm/breakdown', { params }),
   getBreakdownReasons: (q) => api.get('/ptm/breakdown-reasons', { params: { q } }),
+  getBreakdownAnalytics: (params) => api.get('/ptm/breakdown/analytics', { params }),
   getBreakdownLogById: (id) => api.get(`/ptm/breakdown/${id}`),
   createBreakdownLog: (data) => api.post('/ptm/breakdown', data),
+  downloadBreakdownImportTemplate: () =>
+    api.get('/ptm/breakdown/import-template', { responseType: 'blob' }),
+  importBreakdownExcel: (formData) => api.post('/ptm/breakdown/import', formData),
 
   // Config
   getMills: () => api.get('/ptm/config/mills'),
@@ -501,6 +505,33 @@ export const hsmAPI = {
   clearAllFmDailyChecklists: () => api.delete('/hsm/fm-daily-checklist/clear-all'),
   downloadFmDailyChecklistPDF: (id) =>
     api.get(`/hsm/fm-daily-checklist/${id}/pdf`, { responseType: 'blob' }),
+
+  getInductionDailyChecklistLogs: (params) => api.get('/hsm/induction-daily-checklist', { params }),
+  getInductionDailyChecklistById: (id) => api.get(`/hsm/induction-daily-checklist/${id}`),
+  createInductionDailyChecklist: (data) => api.post('/hsm/induction-daily-checklist', data),
+  updateInductionDailyChecklist: (id, data) => api.put(`/hsm/induction-daily-checklist/${id}`, data),
+  deleteInductionDailyChecklist: (id) => api.delete(`/hsm/induction-daily-checklist/${id}`),
+  clearAllInductionDailyChecklists: () => api.delete('/hsm/induction-daily-checklist/clear-all'),
+  downloadInductionDailyChecklistPDF: (id) =>
+    api.get(`/hsm/induction-daily-checklist/${id}/pdf`, { responseType: 'blob' }),
+
+  getDcDailyChecklistLogs: (params) => api.get('/hsm/dc-daily-checklist', { params }),
+  getDcDailyChecklistById: (id) => api.get(`/hsm/dc-daily-checklist/${id}`),
+  createDcDailyChecklist: (data) => api.post('/hsm/dc-daily-checklist', data),
+  updateDcDailyChecklist: (id, data) => api.put(`/hsm/dc-daily-checklist/${id}`, data),
+  deleteDcDailyChecklist: (id) => api.delete(`/hsm/dc-daily-checklist/${id}`),
+  clearAllDcDailyChecklists: () => api.delete('/hsm/dc-daily-checklist/clear-all'),
+  downloadDcDailyChecklistPDF: (id) =>
+    api.get(`/hsm/dc-daily-checklist/${id}/pdf`, { responseType: 'blob' }),
+
+  getRmDailyChecklistLogs: (params) => api.get('/hsm/rm-daily-checklist', { params }),
+  getRmDailyChecklistById: (id) => api.get(`/hsm/rm-daily-checklist/${id}`),
+  createRmDailyChecklist: (data) => api.post('/hsm/rm-daily-checklist', data),
+  updateRmDailyChecklist: (id, data) => api.put(`/hsm/rm-daily-checklist/${id}`, data),
+  deleteRmDailyChecklist: (id) => api.delete(`/hsm/rm-daily-checklist/${id}`),
+  clearAllRmDailyChecklists: () => api.delete('/hsm/rm-daily-checklist/clear-all'),
+  downloadRmDailyChecklistPDF: (id) =>
+    api.get(`/hsm/rm-daily-checklist/${id}/pdf`, { responseType: 'blob' }),
 };
 
 /* =============================

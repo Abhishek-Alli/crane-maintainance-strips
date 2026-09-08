@@ -71,15 +71,16 @@ export default function PtmDashboard() {
 
           {/* Recent Checksheets */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-            <div className="px-5 py-4 border-b border-gray-100">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="font-bold text-gray-900">Recent Checksheets</h2>
+              <Link to="/ptm/checksheet/history" className="text-xs text-blue-600 font-medium hover:underline">View All →</Link>
             </div>
             {recentLogs.length === 0 ? (
               <div className="p-8 text-center text-gray-400 text-sm">No checksheets filled yet</div>
             ) : (
               <div className="divide-y divide-gray-100">
                 {recentLogs.map(log => (
-                  <div key={log.id} className="flex items-center justify-between px-5 py-3">
+                  <Link key={log.id} to="/ptm/checksheet/history" className="flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors">
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold text-gray-900 text-sm">{log.template_name || 'PTM Checksheet'}</p>
                       <p className="text-xs text-gray-500 mt-0.5">
@@ -95,7 +96,7 @@ export default function PtmDashboard() {
                         <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-semibold">All OK</span>
                       )}
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}
@@ -105,14 +106,17 @@ export default function PtmDashboard() {
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="font-bold text-gray-900">Recent Breakdown Reports</h2>
-              <Link to="/ptm/breakdown/new" className="text-xs text-red-600 font-medium hover:underline">+ New</Link>
+              <div className="flex items-center gap-3">
+                <Link to="/ptm/checksheet/history?tab=breakdown" className="text-xs text-blue-600 font-medium hover:underline">View All →</Link>
+                <Link to="/ptm/breakdown/new" className="text-xs text-red-600 font-medium hover:underline">+ New</Link>
+              </div>
             </div>
             {recentBreakdowns.length === 0 ? (
               <div className="p-8 text-center text-gray-400 text-sm">No breakdown reports yet</div>
             ) : (
               <div className="divide-y divide-gray-100">
                 {recentBreakdowns.map(log => (
-                  <div key={log.id} className="flex items-center justify-between px-5 py-3">
+                  <Link key={log.id} to="/ptm/checksheet/history?tab=breakdown" className="flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors">
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold text-gray-900 text-sm">Breakdown Report</p>
                       <p className="text-xs text-gray-500 mt-0.5">
@@ -121,13 +125,13 @@ export default function PtmDashboard() {
                       </p>
                     </div>
                     <div className="ml-3 shrink-0">
-                      {log.total_breakdown_minutes > 0 ? (
-                        <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full font-semibold">{log.total_breakdown_minutes} min</span>
+                      {parseInt(log.total_minutes) > 0 ? (
+                        <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full font-semibold">{log.total_minutes} min</span>
                       ) : (
                         <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-semibold">No BD</span>
                       )}
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}

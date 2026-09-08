@@ -10,10 +10,12 @@ const firebaseConfig = {
   appId:             process.env.REACT_APP_FIREBASE_APP_ID,
 };
 
-const app = initializeApp(firebaseConfig);
-const messaging = getMessaging(app);
+const isConfigured = Boolean(firebaseConfig.projectId);
+const app = isConfigured ? initializeApp(firebaseConfig) : null;
+const messaging = isConfigured ? getMessaging(app) : null;
 
 export async function requestNotificationPermission() {
+  if (!isConfigured) return null;
   try {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') return null;
@@ -35,6 +37,7 @@ export async function requestNotificationPermission() {
 }
 
 export function onForegroundMessage(handler) {
+  if (!isConfigured) return () => {};
   return onMessage(messaging, (payload) => {
     handler({
       title: payload.notification?.title || 'SRJ Notification',

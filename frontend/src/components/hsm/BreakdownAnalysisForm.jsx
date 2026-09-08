@@ -5,6 +5,9 @@ import { hsmAPI } from '../../services/api';
 import ChecksheetPreviewModal, { PreviewSection, PreviewGrid } from '../hbm/ChecksheetPreviewModal';
 import { isWithinEditWindow } from '../../utils/editWindow';
 
+const MAX_IMAGES = 10;
+const MAX_IMAGE_MB = 5;
+
 const BREAKDOWN_TYPES = [
   'Mechanical',
   'Electrical',
@@ -125,11 +128,52 @@ export default function BreakdownAnalysisForm() {
   const editId = isEdit ? routeId : null;
 
   const [form, setForm] = useState(emptyForm);
+  const [images, setImages] = useState([]); // { key, id?, url, file?, existing }
   const [submitting, setSubmitting] = useState(false);
   const [loadingEdit, setLoadingEdit] = useState(Boolean(editId));
   const [showPreview, setShowPreview] = useState(false);
 
   const set = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
+
+  const handleImagePick = (e) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (!files.length) return;
+
+    setImages((prev) => {
+      const room = MAX_IMAGES - prev.length;
+      if (room <= 0) {
+        toast.error(`Maximum ${MAX_IMAGES} images allowed`);
+        return prev;
+      }
+      const accepted = [];
+      for (const file of files.slice(0, room)) {
+        if (!/^image\/(jpeg|jpg|png|webp|gif)$/i.test(file.type)) {
+          toast.error(`${file.name}: only JPEG/PNG/WebP/GIF allowed`);
+          continue;
+        }
+        if (file.size > MAX_IMAGE_MB * 1024 * 1024) {
+          toast.error(`${file.name}: max ${MAX_IMAGE_MB} MB`);
+          continue;
+        }
+        accepted.push({
+          key: `new-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          url: URL.createObjectURL(file),
+          file,
+          existing: false,
+        });
+      }
+      return [...prev, ...accepted];
+    });
+  };
+
+  const removeImage = (key) => {
+    setImages((prev) => {
+      const target = prev.find((i) => i.key === key);
+      if (target?.file && target.url) URL.revokeObjectURL(target.url);
+      return prev.filter((i) => i.key !== key);
+    });
+  };
 
   useEffect(() => {
     if (!editId) return;
@@ -175,6 +219,14 @@ export default function BreakdownAnalysisForm() {
           prepared_by: log.prepared_by || '',
           verified_by: log.verified_by || '',
         });
+        setImages(
+          (log.images || []).map((img) => ({
+            key: `existing-${img.id}`,
+            id: img.id,
+            url: img.url,
+            existing: true,
+          }))
+        );
       })
       .catch((err) => {
         toast.error(err?.message || 'Failed to load report for edit');
@@ -220,7 +272,17 @@ export default function BreakdownAnalysisForm() {
     spare_parts_used: form.spare_parts_used.trim() || null,
     prepared_by: form.prepared_by.trim() || null,
     verified_by: form.verified_by.trim() || null,
+    keep_image_ids: images.filter((i) => i.existing && i.id).map((i) => i.id),
   });
+
+  const buildFormData = () => {
+    const fd = new FormData();
+    fd.append('payload', JSON.stringify(buildPayload()));
+    images.forEach((img) => {
+      if (img.file) fd.append('images', img.file);
+    });
+    return fd;
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -232,13 +294,13 @@ export default function BreakdownAnalysisForm() {
   const handleConfirmSubmit = async () => {
     setSubmitting(true);
     try {
-      const payload = buildPayload();
+      const fd = buildFormData();
       let newId = editId;
       if (isEdit) {
-        await hsmAPI.updateBreakdownAnalysis(editId, payload);
+        await hsmAPI.updateBreakdownAnalysis(editId, fd);
         toast.success('Breakdown Analysis Report updated');
       } else {
-        const res = await hsmAPI.createBreakdownAnalysis(payload);
+        const res = await hsmAPI.createBreakdownAnalysis(fd);
         newId = res?.data?.id || res?.id;
         toast.success('Breakdown Analysis Report submitted');
       }
@@ -422,6 +484,41 @@ export default function BreakdownAnalysisForm() {
                 placeholder="Part name / qty..."
               />
             </Field>
+          </Section>
+
+          <Section title="Images (multiple)">
+            <p className="text-xs text-gray-500 -mt-2">
+              Up to {MAX_IMAGES} images · JPEG / PNG / WebP / GIF · max {MAX_IMAGE_MB} MB each
+            </p>
+            {images.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {images.map((img) => (
+                  <div key={img.key} className="relative group rounded-lg overflow-hidden border border-gray-200 bg-gray-50 aspect-square">
+                    <img src={img.url} alt="" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(img.key)}
+                      className="absolute top-1.5 right-1.5 px-2 py-0.5 bg-red-600 text-white text-[10px] font-semibold rounded opacity-90 hover:opacity-100"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {images.length < MAX_IMAGES && (
+              <label className="flex flex-col items-center justify-center w-full py-6 border-2 border-dashed border-indigo-300 rounded-lg cursor-pointer hover:bg-indigo-50 text-indigo-700">
+                <span className="text-sm font-semibold">+ Add Images</span>
+                <span className="text-xs text-indigo-500 mt-1">{images.length}/{MAX_IMAGES} selected</span>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  multiple
+                  className="hidden"
+                  onChange={handleImagePick}
+                />
+              </label>
+            )}
           </Section>
 
           <Section title="Sign-off">
