@@ -9,7 +9,7 @@ export const FM_CHECK_SECTIONS = [
   },
   {
     key: 'exit_top_bottom_stripper',
-    label: 'Exit top bottom stripper should be check',
+    label: 'Exit top/bottom stripper should be check',
   },
   {
     key: 'all_system_on',
@@ -83,6 +83,46 @@ export const FM_CHECK_SECTIONS = [
     key: 'simulation_3_4_times',
     label: '3 to 4 times simulation to be done',
   },
+  {
+    key: 'exit_guide_inside_entry_guide',
+    label: 'All exit side guides must be inside entry side guides',
+  },
+  {
+    key: 'entry_guide_gap_removal',
+    label: 'All entry side guides top and bottom gaps must be removed with welding, grinding and proper centerline setting',
+  },
+  {
+    key: 'looper_fingers_check',
+    label: 'All looper fingers check',
+  },
+  {
+    key: 'looper_levels_check',
+    label: 'All looper levels to be check',
+  },
+  {
+    key: 'guide_water_spray',
+    label: 'Water must be sprayed in entry/exit guides for scale removal every hour',
+  },
+  {
+    key: 'spare_guide_ready',
+    label: '1 spare guide for all stands to be kept ready for change if required',
+  },
+  {
+    key: 'drum_shear_calibration',
+    label: 'Drum shear calibration to be checked',
+  },
+  {
+    key: 'xray_width_gauge_calibration',
+    label: 'X-ray & width gauge must be calibration in roll change',
+  },
+  {
+    key: 'rm_fm_work_rolls_packing_remove',
+    label: 'RM & FM work rolls packing to be check for remove',
+  },
+  {
+    key: 'rm_dc_calibration_roll_change',
+    label: 'RM & DC calibration to be check in roll change',
+  },
 ];
 
 /** Flat list of every fillable check, derived from FM_CHECK_SECTIONS (one per main point). */
@@ -94,7 +134,7 @@ export const FM_CHECK_ITEMS = FM_CHECK_SECTIONS.map((section) => ({
 }));
 
 export const FM_GUIDE_CENTERLINE_KEYS = [
-  { key: 'DS', label: 'DS' },
+  { key: 'pinch_roll', label: 'Pinch Roll' },
   { key: 'E1', label: 'E1' },
   { key: 'F1', label: 'F1' },
   { key: 'F2', label: 'F2' },

@@ -233,7 +233,6 @@ export default function PtmBreakdownForm() {
           slot_label: m.name, slot_order: m.display_order, miss_roll: 0, entries,
           pipe_pieces: parseInt(prod.pieces) || null,
           pipe_length_m: parseFloat(prod.pipeLength) || 6,
-          total_minutes: parseInt(prod.totalTime) || TOTAL_MINUTES,
         };
       });
       await ptmAPI.createBreakdownLog({ log_date: logDate, size: null, slots });
