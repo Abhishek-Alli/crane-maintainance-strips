@@ -13,7 +13,10 @@ const TYPE_COLORS = [
   { card: 'bg-pink-50 border-pink-200',     header: 'bg-pink-100 text-pink-800',     badge: 'bg-pink-100 text-pink-800',     btn: 'text-pink-700 hover:text-pink-900',   left: 'border-l-pink-400',   ring: 'focus:ring-pink-400'   },
 ];
 
-const emptyRow = () => ({ breakdown_reason: '', from_size: '', to_size: '', breakdown_minutes: '', repeated_count: '' });
+const emptyRow = () => ({
+  breakdown_reason: '', from_size: '', to_size: '', breakdown_minutes: '', repeated_count: '',
+  sizes: [''], pipes: '', length: '', remarks: '', production_mt: '',
+});
 
 // Autocomplete for reason (portal-based)
 function ReasonAutocomplete({ value, onChange }) {
@@ -82,6 +85,10 @@ export default function PtmBreakdownForm() {
   const [millProduction, setMillProduction] = useState({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [downloadingTemplate, setDownloadingTemplate] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState(null);
+  const importFileRef = useRef(null);
 
   // Load config from DB
   useEffect(() => {
@@ -98,7 +105,7 @@ export default function PtmBreakdownForm() {
         activeMills.forEach(m => {
           data[m.id] = {};
           activeTypes.forEach(t => { data[m.id][t.id] = { enabled: false, rows: [emptyRow()] }; });
-          prod[m.id] = { pieces: '', pipeLength: 6 };
+          prod[m.id] = { pieces: '', pipeLength: 6, totalTime: 1440 };
         });
         setMillData(data);
         setMillProduction(prod);
@@ -117,13 +124,14 @@ export default function PtmBreakdownForm() {
       if (!td?.enabled) return s;
       return s + (td.rows || []).reduce((rs, r) => rs + (parseInt(r.breakdown_minutes) || 0), 0);
     }, 0);
-    const runtime = TOTAL_MINUTES - breakdownMins;
     const prod = millProduction[millId] || {};
+    const totalTime = parseInt(prod.totalTime) || TOTAL_MINUTES;
+    const runtime = totalTime - breakdownMins;
     const pieces = parseInt(prod.pieces) || 0;
     const pipeLength = parseFloat(prod.pipeLength) || 6;
     const totalMeters = pieces * pipeLength;
     const speed = runtime > 0 && pieces > 0 ? (totalMeters / runtime).toFixed(2) : null;
-    return { breakdownMins, runtime, pieces, pipeLength, totalMeters, speed };
+    return { breakdownMins, runtime, pieces, pipeLength, totalMeters, speed, totalTime };
   };
 
   const toggleType = (millId, typeId) => {
@@ -154,6 +162,34 @@ export default function PtmBreakdownForm() {
     });
   };
 
+  const updateSizeSlot = (millId, typeId, rowIdx, sizeIdx, val) => {
+    setMillData(prev => {
+      const row = prev[millId][typeId].rows[rowIdx];
+      const sizesArr = [...(row.sizes || [''])];
+      sizesArr[sizeIdx] = val;
+      const rows = prev[millId][typeId].rows.map((r, i) => i === rowIdx ? { ...r, sizes: sizesArr } : r);
+      return { ...prev, [millId]: { ...prev[millId], [typeId]: { ...prev[millId][typeId], rows } } };
+    });
+  };
+
+  const addSizeSlot = (millId, typeId, rowIdx) => {
+    setMillData(prev => {
+      const row = prev[millId][typeId].rows[rowIdx];
+      const sizesArr = [...(row.sizes || ['']), ''];
+      const rows = prev[millId][typeId].rows.map((r, i) => i === rowIdx ? { ...r, sizes: sizesArr } : r);
+      return { ...prev, [millId]: { ...prev[millId], [typeId]: { ...prev[millId][typeId], rows } } };
+    });
+  };
+
+  const removeSizeSlot = (millId, typeId, rowIdx, sizeIdx) => {
+    setMillData(prev => {
+      const row = prev[millId][typeId].rows[rowIdx];
+      const sizesArr = (row.sizes || ['']).filter((_, i) => i !== sizeIdx);
+      const rows = prev[millId][typeId].rows.map((r, i) => i === rowIdx ? { ...r, sizes: sizesArr.length ? sizesArr : [''] } : r);
+      return { ...prev, [millId]: { ...prev[millId], [typeId]: { ...prev[millId][typeId], rows } } };
+    });
+  };
+
   // Summary totals per type across all mills (safe: millData may be empty during first render)
   const totals = breakdownTypes.reduce((acc, t) => {
     acc[t.id] = mills.reduce((s, m) => {
@@ -175,7 +211,9 @@ export default function PtmBreakdownForm() {
           const td = millData[m.id]?.[t.id];
           if (!td?.enabled) return [];
           return td.rows
-            .filter(r => t.has_size_change ? (r.from_size || r.to_size || r.breakdown_minutes) : (r.breakdown_reason || r.breakdown_minutes))
+            .filter(r => t.has_size_change
+              ? (r.from_size || r.to_size || r.breakdown_minutes || (r.sizes || []).some(Boolean) || r.pipes || r.length || r.remarks || r.production_mt)
+              : (r.breakdown_reason || r.breakdown_minutes))
             .map(r => ({
               breakdown_type: t.name,
               breakdown_minutes: parseInt(r.breakdown_minutes) || 0,
@@ -183,6 +221,11 @@ export default function PtmBreakdownForm() {
                 ? (r.from_size || r.to_size ? `${r.from_size || '?'} → ${r.to_size || '?'}` : null)
                 : (r.breakdown_reason || null),
               repeated_count: r.repeated_count ? parseInt(r.repeated_count) : null,
+              size: t.has_size_change ? ((r.sizes || []).filter(Boolean).join(', ') || null) : null,
+              pipe_pieces: t.has_size_change && r.pipes ? parseInt(r.pipes) : null,
+              pipe_length_m: t.has_size_change && r.length ? parseFloat(r.length) : null,
+              remarks: t.has_size_change ? (r.remarks || null) : null,
+              production_mt: t.has_size_change && r.production_mt ? parseFloat(r.production_mt) : null,
             }));
         });
         const prod = millProduction[m.id] || {};
@@ -202,6 +245,47 @@ export default function PtmBreakdownForm() {
     }
   };
 
+  const handleDownloadTemplate = async () => {
+    setDownloadingTemplate(true);
+    try {
+      const res = await ptmAPI.downloadBreakdownImportTemplate();
+      const blob = res instanceof Blob ? res : new Blob([res.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'PTM_Breakdown_Import_Template.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      toast.error('Failed to download template');
+    } finally {
+      setDownloadingTemplate(false);
+    }
+  };
+
+  const handleImportExcel = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setImporting(true);
+    setImportResult(null);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await ptmAPI.importBreakdownExcel(fd);
+      const data = res?.data || res;
+      setImportResult(data);
+      toast.success(res?.message || `Imported ${data?.imported || 0} entr${data?.imported === 1 ? 'y' : 'ies'}`);
+    } catch (err) {
+      toast.error(err?.message || 'Import failed');
+      if (err?.errors) setImportResult({ errors: err.errors, imported: 0 });
+    } finally {
+      setImporting(false);
+    }
+  };
+
   if (loading) return <div className="flex items-center justify-center h-64 text-gray-500">Loading config...</div>;
 
   return (
@@ -211,8 +295,37 @@ export default function PtmBreakdownForm() {
           className="text-sm text-gray-500 hover:text-gray-700 mb-2 flex items-center gap-1">
           ← Back to Dashboard
         </button>
-        <h1 className="text-2xl font-bold text-blue-800">PTM Breakdown Report</h1>
-        <p className="text-gray-500 text-sm mt-1">Select breakdown types per mill and add details</p>
+        <div className="flex items-start justify-between flex-wrap gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-blue-800">PTM Breakdown Report</h1>
+            <p className="text-gray-500 text-sm mt-1">Select breakdown types per mill and add details</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={handleDownloadTemplate} disabled={downloadingTemplate}
+              className="text-xs font-semibold px-3 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors">
+              {downloadingTemplate ? 'Downloading...' : '⬇ Download Template'}
+            </button>
+            <button type="button" onClick={() => importFileRef.current?.click()} disabled={importing}
+              className="text-xs font-semibold px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 transition-colors">
+              {importing ? 'Importing...' : '⬆ Import from Excel'}
+            </button>
+            <input ref={importFileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImportExcel} />
+          </div>
+        </div>
+
+        {importResult && (
+          <div className={`mt-3 rounded-lg border p-3 text-sm ${importResult.imported > 0 ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
+            <p className="font-semibold">
+              {importResult.imported > 0 ? `Imported ${importResult.imported} entr${importResult.imported === 1 ? 'y' : 'ies'}` : 'Import failed'}
+              {importResult.skipped_errors > 0 ? ` · ${importResult.skipped_errors} row(s) skipped` : ''}
+            </p>
+            {(importResult.errors || []).length > 0 && (
+              <ul className="mt-1.5 list-disc list-inside space-y-0.5 text-xs">
+                {importResult.errors.map((e, i) => <li key={i}>{e}</li>)}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
@@ -251,14 +364,24 @@ export default function PtmBreakdownForm() {
             return s + (_td.rows || []).reduce((rs, r) => rs + (parseInt(r.breakdown_minutes) || 0), 0);
           }, 0);
           const anyEnabled = breakdownTypes.some(t => millData[mill.id]?.[t.id]?.enabled);
+          const millTotalTime = parseInt(millProduction[mill.id]?.totalTime) || TOTAL_MINUTES;
 
           return (
             <div key={mill.id} className={`bg-white rounded-xl border shadow-sm overflow-hidden ${anyEnabled ? 'border-orange-300' : 'border-gray-200'}`}>
               {/* Mill header */}
               <div className={`px-5 py-3 flex items-center justify-between border-b flex-wrap gap-2 ${anyEnabled ? 'bg-orange-50 border-orange-100' : 'bg-gray-50 border-gray-100'}`}>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
                   <span className="font-bold text-gray-800 text-base">{mill.name}</span>
-                  {millTotal > 0 && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium">{millTotal} min total</span>}
+                  <label className="flex items-center gap-1.5 bg-gray-200 rounded-full pl-2.5 pr-1 py-0.5">
+                    <span className="text-xs text-gray-700 font-medium">Total Time:</span>
+                    <input type="number" min="0" value={millProduction[mill.id]?.totalTime ?? TOTAL_MINUTES}
+                      onChange={e => updateProduction(mill.id, 'totalTime', e.target.value)}
+                      onClick={e => e.stopPropagation()}
+                      className="w-16 bg-white text-gray-800 text-xs font-semibold rounded-full px-2 py-0.5 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                    <span className="text-xs text-gray-500">min</span>
+                  </label>
+                  {millTotal > 0 && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium">Breakdown: {millTotal} min</span>}
+                  {millTotal > 0 && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Runtime: {millTotalTime - millTotal} min</span>}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {breakdownTypes.map((t, ti) => {
@@ -315,7 +438,8 @@ export default function PtmBreakdownForm() {
                     {/* Rows */}
                     <div className="px-5 pb-4 space-y-2">
                       {td.rows.map((row, rowIdx) => (
-                        <div key={rowIdx} className="grid grid-cols-12 gap-2 items-center">
+                        <div key={rowIdx} className={type.has_size_change ? 'rounded-lg border border-purple-100 bg-white/60 p-2' : ''}>
+                        <div className="grid grid-cols-12 gap-2 items-center">
                           {type.has_size_change ? (
                             <>
                               <div className="col-span-2">
@@ -359,6 +483,62 @@ export default function PtmBreakdownForm() {
                             )}
                           </div>
                         </div>
+
+                        {type.has_size_change && (
+                          <div className="grid grid-cols-12 gap-2 items-start mt-2 pt-2 border-t border-purple-100">
+                            <div className="col-span-2">
+                              <div className="flex items-center justify-between mb-1">
+                                <label className="block text-[11px] font-semibold text-gray-500">Size Produced</label>
+                                <button type="button" onClick={() => addSizeSlot(mill.id, type.id, rowIdx)}
+                                  className="text-[11px] font-semibold text-purple-600 hover:text-purple-800">+ Add</button>
+                              </div>
+                              <div className="space-y-1">
+                                {(row.sizes || ['']).map((sizeVal, sizeIdx) => (
+                                  <div key={sizeIdx} className="flex gap-1">
+                                    <select value={sizeVal} onChange={e => updateSizeSlot(mill.id, type.id, rowIdx, sizeIdx, e.target.value)}
+                                      className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 bg-white">
+                                      <option value="">—</option>
+                                      {sizes.map(s => <option key={s.id} value={s.size_label}>{s.size_label}</option>)}
+                                    </select>
+                                    {(row.sizes || []).length > 1 && (
+                                      <button type="button" onClick={() => removeSizeSlot(mill.id, type.id, rowIdx, sizeIdx)}
+                                        className="text-red-400 hover:text-red-600 text-sm font-bold leading-none px-1">×</button>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="col-span-2">
+                              <label className="block text-[11px] font-semibold text-gray-500 mb-1">No. of Pipes</label>
+                              <input type="number" min="0" value={row.pipes}
+                                onChange={e => updateRow(mill.id, type.id, rowIdx, 'pipes', e.target.value)}
+                                placeholder="0"
+                                className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-400" />
+                            </div>
+                            <div className="col-span-2">
+                              <label className="block text-[11px] font-semibold text-gray-500 mb-1">Length (m)</label>
+                              <input type="number" min="0" step="0.1" value={row.length}
+                                onChange={e => updateRow(mill.id, type.id, rowIdx, 'length', e.target.value)}
+                                placeholder="6"
+                                className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-400" />
+                            </div>
+                            <div className="col-span-2">
+                              <label className="block text-[11px] font-semibold text-gray-500 mb-1">Prod. (MT)</label>
+                              <input type="number" min="0" step="0.001" value={row.production_mt}
+                                onChange={e => updateRow(mill.id, type.id, rowIdx, 'production_mt', e.target.value)}
+                                placeholder="0.000"
+                                className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-400" />
+                            </div>
+                            <div className="col-span-4">
+                              <label className="block text-[11px] font-semibold text-gray-500 mb-1">Random <span className="font-normal text-gray-400">(optional)</span></label>
+                              <input type="text" value={row.remarks}
+                                onChange={e => updateRow(mill.id, type.id, rowIdx, 'remarks', e.target.value)}
+                                placeholder="Any note..."
+                                className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-400" />
+                            </div>
+                          </div>
+                        )}
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -372,7 +552,7 @@ export default function PtmBreakdownForm() {
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="px-5 py-3 bg-gray-50 border-b border-gray-200">
             <h3 className="font-bold text-gray-800">Production Summary</h3>
-            <p className="text-xs text-gray-500 mt-0.5">Total shift = {TOTAL_MINUTES} min (24 hrs)</p>
+            <p className="text-xs text-gray-500 mt-0.5">Default shift = {TOTAL_MINUTES} min (24 hrs) — editable per mill above</p>
           </div>
           <div className="p-5 space-y-4">
             {mills.map(mill => {
@@ -383,7 +563,7 @@ export default function PtmBreakdownForm() {
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-gray-800">{mill.name}</span>
                     <div className="flex gap-4 text-sm">
-                      <span className="text-gray-500">Total: <strong className="text-gray-800">{TOTAL_MINUTES} min</strong></span>
+                      <span className="text-gray-500">Total: <strong className="text-gray-800">{stats.totalTime} min</strong></span>
                       <span className="text-red-600">Breakdown: <strong>{stats.breakdownMins} min</strong></span>
                       <span className="text-green-700">Runtime: <strong>{stats.runtime} min</strong></span>
                     </div>
@@ -393,7 +573,7 @@ export default function PtmBreakdownForm() {
                   <div className="grid grid-cols-3 gap-3 text-center">
                     <div className="bg-gray-50 rounded-lg p-3">
                       <div className="text-xs text-gray-500">Total Time</div>
-                      <div className="font-bold text-gray-800 text-lg">{TOTAL_MINUTES}</div>
+                      <div className="font-bold text-gray-800 text-lg">{stats.totalTime}</div>
                       <div className="text-xs text-gray-400">min</div>
                     </div>
                     <div className="bg-red-50 rounded-lg p-3">

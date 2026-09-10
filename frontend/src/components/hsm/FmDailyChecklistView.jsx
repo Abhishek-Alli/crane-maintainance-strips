@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { hsmAPI } from '../../services/api';
+import { hsmAPI, resolveUploadUrl } from '../../services/api';
 import { isWithinEditWindow, editWindowLabel } from '../../utils/editWindow';
 import {
-  FM_CHECK_ITEMS,
+  FM_CHECK_SECTIONS,
   FM_GUIDE_CENTERLINE_KEYS,
   statusDisplay,
 } from './fmDailyConfig';
@@ -81,6 +81,7 @@ export default function FmDailyChecklistView() {
   const canModify = log.can_modify ?? isWithinEditWindow(log.created_at);
   const items = log.checklist_items || {};
   const guide = log.guide_centerline || {};
+  const images = log.images || [];
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
@@ -160,16 +161,19 @@ export default function FmDailyChecklistView() {
                   <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Item</th>
                   <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Status</th>
                   <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Remark</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Action Taken</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {FM_CHECK_ITEMS.map(({ key, label }, i) => {
-                  const row = items[key] || {};
+                {FM_CHECK_SECTIONS.map((section, sIdx) => {
+                  const row = items[section.key] || {};
                   const st = row.status;
                   return (
-                    <tr key={key} className="odd:bg-indigo-50/30">
-                      <td className="px-4 py-2.5 text-gray-500">{i + 1}</td>
-                      <td className="px-4 py-2.5 text-gray-900">{label}</td>
+                    <tr key={section.key} className="odd:bg-gray-50/50">
+                      <td className="px-4 py-2.5 text-gray-500">{sIdx + 1}</td>
+                      <td className="px-4 py-2.5 text-gray-900 font-semibold">
+                        {section.label}
+                      </td>
                       <td className="px-4 py-2.5">
                         <span
                           className={`text-xs font-semibold px-2 py-0.5 rounded ${
@@ -184,6 +188,9 @@ export default function FmDailyChecklistView() {
                         </span>
                       </td>
                       <td className="px-4 py-2.5 text-gray-600">{row.remark || '—'}</td>
+                      <td className="px-4 py-2.5 text-gray-600">
+                        {st === 'NOT_OK' ? (row.action_taken || '—') : '—'}
+                      </td>
                     </tr>
                   );
                 })}
@@ -196,6 +203,29 @@ export default function FmDailyChecklistView() {
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-5">
             <h2 className="text-sm font-bold text-indigo-800 uppercase tracking-wide mb-2">Note</h2>
             <p className="text-sm text-gray-900 whitespace-pre-wrap">{log.note}</p>
+          </div>
+        )}
+
+        {images.length > 0 && (
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-5">
+            <h2 className="text-sm font-bold text-indigo-800 uppercase tracking-wide mb-3">Images</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {images.map((img) => (
+                <a
+                  key={img.id}
+                  href={resolveUploadUrl(img.url)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block rounded-lg overflow-hidden border border-gray-200 bg-gray-50 aspect-square hover:opacity-90"
+                >
+                  <img
+                    src={resolveUploadUrl(img.url)}
+                    alt={img.original_name || 'Checklist image'}
+                    className="w-full h-full object-cover"
+                  />
+                </a>
+              ))}
+            </div>
           </div>
         )}
       </div>

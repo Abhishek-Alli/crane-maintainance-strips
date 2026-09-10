@@ -4,6 +4,14 @@ const PDFDocument = require('pdfkit');
 const { query, transaction } = require('../config/database');
 const { isWithinEditWindow, editWindowDeniedMessage } = require('../utils/editWindow');
 const { absoluteUploadPath, unlinkUpload } = require('../middleware/upload');
+const {
+  parseMultipartBody,
+  cleanupUploadedFiles: cleanupImageFiles,
+  makeImageSaver,
+  mapImageRows,
+} = require('../utils/hsmImageHelpers');
+
+const saveBreakdownAnalysisImages = makeImageSaver('hsm_breakdown_analysis_images', 'hsm-breakdown-analysis');
 
 const LOGO_PATH = path.join(__dirname, '../assets/srj-logo.png');
 
@@ -103,13 +111,16 @@ class HsmController {
   static async getBreakdownAnalysisById(req, res) {
     try {
       const { id } = req.params;
-      const result = await query(
-        `SELECT l.*, u.username AS filled_by_name
-         FROM hsm_breakdown_analysis_logs l
-         JOIN users u ON l.filled_by = u.id
-         WHERE l.id = $1`,
-        [id]
-      );
+      const [result, imagesRes] = await Promise.all([
+        query(
+          `SELECT l.*, u.username AS filled_by_name
+           FROM hsm_breakdown_analysis_logs l
+           JOIN users u ON l.filled_by = u.id
+           WHERE l.id = $1`,
+          [id]
+        ),
+        query(`SELECT * FROM hsm_breakdown_analysis_images WHERE log_id = $1 ORDER BY sort_order, id`, [id]),
+      ]);
       if (!result.rows.length) {
         return res.status(404).json({ success: false, message: 'Breakdown analysis report not found' });
       }
@@ -119,6 +130,7 @@ class HsmController {
         data: {
           ...row,
           can_modify: isWithinEditWindow(row.created_at),
+          images: mapImageRows(imagesRes.rows),
         },
       });
     } catch (error) {
@@ -128,12 +140,15 @@ class HsmController {
   }
 
   static async createBreakdownAnalysis(req, res) {
+    const uploaded = req.files || [];
     try {
-      const b = req.body || {};
+      const b = parseMultipartBody(req);
       if (!b.report_date) {
+        cleanupImageFiles(uploaded);
         return res.status(400).json({ success: false, message: 'Date is required' });
       }
       if (!b.machine_name || !String(b.machine_name).trim()) {
+        cleanupImageFiles(uploaded);
         return res.status(400).json({ success: false, message: 'Machine / Equipment Name is required' });
       }
 
@@ -142,7 +157,9 @@ class HsmController {
           ? parseInt(b.total_downtime_minutes, 10)
           : computeDowntimeMinutes(b.breakdown_at, b.restoration_at);
 
-      const result = await query(
+      let log;
+      await transaction(async (client) => {
+        const result = await client.query(
         `INSERT INTO hsm_breakdown_analysis_logs (
           report_date, department, machine_name,
           breakdown_at, restoration_at, total_downtime_minutes,
@@ -190,20 +207,25 @@ class HsmController {
           b.verified_by || null,
           req.user.id,
         ]
-      );
+        );
+        log = result.rows[0];
+        await saveBreakdownAnalysisImages(client, log.id, uploaded, null);
+      });
 
       res.status(201).json({
         success: true,
         message: 'Breakdown Analysis Report submitted',
-        data: result.rows[0],
+        data: log,
       });
     } catch (error) {
+      cleanupImageFiles(uploaded);
       console.error('HSM createBreakdownAnalysis error:', error);
       res.status(500).json({ success: false, message: 'Failed to submit breakdown analysis report' });
     }
   }
 
   static async updateBreakdownAnalysis(req, res) {
+    const uploaded = req.files || [];
     try {
       const { id } = req.params;
       const existing = await query(
@@ -217,11 +239,13 @@ class HsmController {
         return res.status(403).json({ success: false, message: editWindowDeniedMessage() });
       }
 
-      const b = req.body || {};
+      const b = parseMultipartBody(req);
       if (!b.report_date) {
+        cleanupImageFiles(uploaded);
         return res.status(400).json({ success: false, message: 'Date is required' });
       }
       if (!b.machine_name || !String(b.machine_name).trim()) {
+        cleanupImageFiles(uploaded);
         return res.status(400).json({ success: false, message: 'Machine / Equipment Name is required' });
       }
 
@@ -229,8 +253,11 @@ class HsmController {
         b.total_downtime_minutes != null && b.total_downtime_minutes !== ''
           ? parseInt(b.total_downtime_minutes, 10)
           : computeDowntimeMinutes(b.breakdown_at, b.restoration_at);
+      const keepImageIds = Array.isArray(b.keep_image_ids) ? b.keep_image_ids : [];
 
-      const result = await query(
+      let log;
+      await transaction(async (client) => {
+        const result = await client.query(
         `UPDATE hsm_breakdown_analysis_logs SET
           report_date = $1, department = $2, machine_name = $3,
           breakdown_at = $4, restoration_at = $5, total_downtime_minutes = $6,
@@ -276,14 +303,18 @@ class HsmController {
           b.verified_by || null,
           id,
         ]
-      );
+        );
+        log = result.rows[0];
+        await saveBreakdownAnalysisImages(client, log.id, uploaded, keepImageIds);
+      });
 
       res.json({
         success: true,
         message: 'Breakdown Analysis Report updated',
-        data: result.rows[0],
+        data: log,
       });
     } catch (error) {
+      cleanupImageFiles(uploaded);
       console.error('HSM updateBreakdownAnalysis error:', error);
       res.status(500).json({ success: false, message: 'Failed to update breakdown analysis report' });
     }
@@ -302,10 +333,12 @@ class HsmController {
       if (!isWithinEditWindow(existing.rows[0].created_at)) {
         return res.status(403).json({ success: false, message: editWindowDeniedMessage() });
       }
+      const images = await query('SELECT file_path FROM hsm_breakdown_analysis_images WHERE log_id = $1', [id]);
       await query(
         'DELETE FROM hsm_breakdown_analysis_logs WHERE id = $1 RETURNING id',
         [id]
       );
+      images.rows.forEach((img) => unlinkUpload(img.file_path));
       res.json({ success: true, message: 'Report deleted' });
     } catch (error) {
       console.error('HSM deleteBreakdownAnalysis error:', error);
@@ -315,9 +348,11 @@ class HsmController {
 
   static async clearAllBreakdownAnalysis(req, res) {
     try {
+      const images = await query('SELECT file_path FROM hsm_breakdown_analysis_images');
       const result = await query(
         'DELETE FROM hsm_breakdown_analysis_logs RETURNING id'
       );
+      images.rows.forEach((img) => unlinkUpload(img.file_path));
       res.json({
         success: true,
         message: `Deleted ${result.rowCount} breakdown analysis report(s)`,
@@ -332,17 +367,21 @@ class HsmController {
   static async downloadBreakdownAnalysisPDF(req, res) {
     const { id } = req.params;
     try {
-      const result = await query(
-        `SELECT l.*, u.username AS filled_by_name
-         FROM hsm_breakdown_analysis_logs l
-         JOIN users u ON l.filled_by = u.id
-         WHERE l.id = $1`,
-        [id]
-      );
+      const [result, imagesRes] = await Promise.all([
+        query(
+          `SELECT l.*, u.username AS filled_by_name
+           FROM hsm_breakdown_analysis_logs l
+           JOIN users u ON l.filled_by = u.id
+           WHERE l.id = $1`,
+          [id]
+        ),
+        query(`SELECT * FROM hsm_breakdown_analysis_images WHERE log_id = $1 ORDER BY sort_order, id`, [id]),
+      ]);
       if (!result.rows.length) {
         return res.status(404).json({ success: false, message: 'Breakdown analysis report not found' });
       }
       const log = result.rows[0];
+      const baImages = imagesRes.rows;
 
       const margin = 22;
       const pageW = 551; // A4 width 595 - 22*2
@@ -569,6 +608,52 @@ class HsmController {
       doc.x = colX;
       doc.y = signY + 48;
       doc.fillColor('#000000');
+
+      const validBaImages = baImages.filter((img) => {
+        const abs = absoluteUploadPath(img.file_path);
+        return abs && fs.existsSync(abs);
+      });
+      if (validBaImages.length) {
+        const landMargin = 22;
+        const landW = 842 - landMargin * 2;
+        const landH = 595 - landMargin * 2;
+        const gap = 12;
+        const perPage = 4;
+        let pageBaseY = landMargin;
+
+        const startImagesPage = () => {
+          doc.addPage({ size: 'A4', layout: 'landscape' });
+          doc.y = landMargin;
+          doc.font('Helvetica-Bold').fontSize(14).fillColor('#4f46e5')
+            .text('Attached Images', landMargin, doc.y, { width: landW, lineBreak: false });
+          doc.y += 18;
+          doc.font('Helvetica').fontSize(10).fillColor('#6b7280')
+            .text(`${formatDateOnly(log.report_date)} · ${log.machine_name || '—'}`, landMargin, doc.y, { width: landW, lineBreak: false });
+          doc.y += 14;
+          doc.moveTo(landMargin, doc.y).lineTo(landMargin + landW, doc.y).stroke('#4f46e5');
+          doc.y += 12;
+          doc.fillColor('#000000');
+          pageBaseY = doc.y;
+        };
+
+        validBaImages.forEach((img, i) => {
+          const slot = i % perPage;
+          if (slot === 0) startImagesPage();
+          const col = slot % 2;
+          const row = Math.floor(slot / 2);
+          const imgW = (landW - gap) / 2;
+          const imgH = ((landMargin + landH) - pageBaseY - gap) / 2;
+          const x = landMargin + col * (imgW + gap);
+          const y = pageBaseY + row * (imgH + gap);
+          const abs = absoluteUploadPath(img.file_path);
+          try {
+            doc.image(abs, x, y, { fit: [imgW, imgH], align: 'center', valign: 'center' });
+            doc.rect(x, y, imgW, imgH).stroke('#d6d3d1');
+          } catch (err) {
+            console.error('PDF image embed error:', err.message);
+          }
+        });
+      }
 
       doc.on('end', () => res.send(Buffer.concat(buffers)));
       doc.end();

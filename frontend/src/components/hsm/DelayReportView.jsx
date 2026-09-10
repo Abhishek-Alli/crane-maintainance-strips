@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { hsmAPI } from '../../services/api';
+import { hsmAPI, resolveUploadUrl } from '../../services/api';
 import { isWithinEditWindow, editWindowLabel } from '../../utils/editWindow';
 
 const formatDate = (d) =>
@@ -129,6 +129,7 @@ export default function DelayReportView() {
   if (!log) return null;
 
   const canModify = log.can_modify === true || isWithinEditWindow(log.created_at);
+  const images = log.images || [];
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
@@ -230,6 +231,28 @@ export default function DelayReportView() {
           <Info label="Operator Name" value={log.miss_operator_name} />
           <Info label="Remark" value={log.miss_remark} full />
         </Section>
+
+        {images.length > 0 && (
+          <Section title="Images">
+            <div className="sm:col-span-2 grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {images.map((img) => (
+                <a
+                  key={img.id}
+                  href={resolveUploadUrl(img.url)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block rounded-lg overflow-hidden border border-gray-200 bg-gray-50 aspect-square hover:opacity-90"
+                >
+                  <img
+                    src={resolveUploadUrl(img.url)}
+                    alt={img.original_name || 'Report image'}
+                    className="w-full h-full object-cover"
+                  />
+                </a>
+              ))}
+            </div>
+          </Section>
+        )}
       </div>
     </div>
   );

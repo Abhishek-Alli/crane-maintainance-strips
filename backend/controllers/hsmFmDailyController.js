@@ -1,15 +1,26 @@
 const fs = require('fs');
 const path = require('path');
 const PDFDocument = require('pdfkit');
-const { query } = require('../config/database');
+const { query, transaction } = require('../config/database');
 const { isWithinEditWindow, editWindowDeniedMessage } = require('../utils/editWindow');
+const { absoluteUploadPath, unlinkUpload } = require('../middleware/upload');
 const {
-  CHECK_ITEMS,
+  parseMultipartBody,
+  cleanupUploadedFiles,
+  makeImageSaver,
+  mapImageRows,
+} = require('../utils/hsmImageHelpers');
+const {
+  CHECK_SECTIONS,
   GUIDE_CENTERLINE_KEYS,
   nullIfEmpty,
   normalizeChecklistItems,
   normalizeGuideCenterline,
+  normalizeSectionValues,
+  findMissingActionTaken,
 } = require('../utils/hsmFmDailyConfig');
+
+const saveFmDailyImages = makeImageSaver('hsm_fm_daily_images', 'hsm-fm-daily');
 
 const LOGO_PATH = path.join(__dirname, '../assets/srj-logo.png');
 
@@ -26,6 +37,54 @@ function statusLabel(s) {
   if (s === 'OK') return 'OK';
   if (s === 'NOT_OK') return 'NOT OK';
   return '—';
+}
+
+function embedImagesLandscape(doc, images, title, subtitle) {
+  const validImages = images.filter((img) => {
+    const abs = absoluteUploadPath(img.file_path);
+    return abs && fs.existsSync(abs);
+  });
+  if (!validImages.length) return;
+
+  const landMargin = 22;
+  const landW = 842 - landMargin * 2;
+  const landH = 595 - landMargin * 2;
+  const gap = 12;
+  const perPage = 4;
+  let pageBaseY = landMargin;
+
+  const startImagesPage = () => {
+    doc.addPage({ size: 'A4', layout: 'landscape' });
+    doc.y = landMargin;
+    doc.font('Helvetica-Bold').fontSize(14).fillColor('#4f46e5')
+      .text(title, landMargin, doc.y, { width: landW, lineBreak: false });
+    doc.y += 18;
+    doc.font('Helvetica').fontSize(10).fillColor('#6b7280')
+      .text(subtitle, landMargin, doc.y, { width: landW, lineBreak: false });
+    doc.y += 14;
+    doc.moveTo(landMargin, doc.y).lineTo(landMargin + landW, doc.y).stroke('#4f46e5');
+    doc.y += 12;
+    doc.fillColor('#000000');
+    pageBaseY = doc.y;
+  };
+
+  validImages.forEach((img, i) => {
+    const slot = i % perPage;
+    if (slot === 0) startImagesPage();
+    const col = slot % 2;
+    const row = Math.floor(slot / 2);
+    const imgW = (landW - gap) / 2;
+    const imgH = ((landMargin + landH) - pageBaseY - gap) / 2;
+    const x = landMargin + col * (imgW + gap);
+    const y = pageBaseY + row * (imgH + gap);
+    const abs = absoluteUploadPath(img.file_path);
+    try {
+      doc.image(abs, x, y, { fit: [imgW, imgH], align: 'center', valign: 'center' });
+      doc.rect(x, y, imgW, imgH).stroke('#d6d3d1');
+    } catch (err) {
+      console.error('PDF image embed error:', err.message);
+    }
+  });
 }
 
 class HsmFmDailyController {
@@ -83,13 +142,16 @@ class HsmFmDailyController {
   static async getById(req, res) {
     try {
       const { id } = req.params;
-      const result = await query(
-        `SELECT l.*, u.username AS filled_by_name
-         FROM hsm_fm_daily_checklists l
-         JOIN users u ON l.filled_by = u.id
-         WHERE l.id = $1`,
-        [id]
-      );
+      const [result, imagesRes] = await Promise.all([
+        query(
+          `SELECT l.*, u.username AS filled_by_name
+           FROM hsm_fm_daily_checklists l
+           JOIN users u ON l.filled_by = u.id
+           WHERE l.id = $1`,
+          [id]
+        ),
+        query(`SELECT * FROM hsm_fm_daily_images WHERE log_id = $1 ORDER BY sort_order, id`, [id]),
+      ]);
       if (!result.rows.length) {
         return res.status(404).json({ success: false, message: 'FM Daily checklist not found' });
       }
@@ -99,6 +161,7 @@ class HsmFmDailyController {
         data: {
           ...row,
           can_modify: isWithinEditWindow(row.created_at),
+          images: mapImageRows(imagesRes.rows),
         },
       });
     } catch (error) {
@@ -116,83 +179,126 @@ class HsmFmDailyController {
   }
 
   static async create(req, res) {
+    const uploaded = req.files || [];
     try {
-      const b = req.body || {};
+      const b = parseMultipartBody(req);
       const err = HsmFmDailyController._validate(b);
-      if (err) return res.status(400).json({ success: false, message: err });
+      if (err) {
+        cleanupUploadedFiles(uploaded);
+        return res.status(400).json({ success: false, message: err });
+      }
 
       const items = normalizeChecklistItems(b.checklist_items);
+      const missingAction = findMissingActionTaken(items);
+      if (missingAction) {
+        cleanupUploadedFiles(uploaded);
+        return res.status(400).json({
+          success: false,
+          message: `Action taken is required for "${missingAction}" (marked NOT OK)`,
+        });
+      }
       const guide = normalizeGuideCenterline(b.guide_centerline);
+      const sectionValues = normalizeSectionValues(b.section_values);
 
-      const result = await query(
-        `INSERT INTO hsm_fm_daily_checklists (
-           report_date, shift, shift_engineer, checklist_items, guide_centerline, note, filled_by
-         ) VALUES ($1,$2,$3,$4::jsonb,$5::jsonb,$6,$7)
-         RETURNING *`,
-        [
-          b.report_date,
-          String(b.shift).toUpperCase(),
-          nullIfEmpty(b.shift_engineer),
-          JSON.stringify(items),
-          JSON.stringify(guide),
-          nullIfEmpty(b.note),
-          req.user.id,
-        ]
-      );
+      let log;
+      await transaction(async (client) => {
+        const result = await client.query(
+          `INSERT INTO hsm_fm_daily_checklists (
+             report_date, shift, shift_engineer, checklist_items, guide_centerline, section_values, note, filled_by
+           ) VALUES ($1,$2,$3,$4::jsonb,$5::jsonb,$6::jsonb,$7,$8)
+           RETURNING *`,
+          [
+            b.report_date,
+            String(b.shift).toUpperCase(),
+            nullIfEmpty(b.shift_engineer),
+            JSON.stringify(items),
+            JSON.stringify(guide),
+            JSON.stringify(sectionValues),
+            nullIfEmpty(b.note),
+            req.user.id,
+          ]
+        );
+        log = result.rows[0];
+        await saveFmDailyImages(client, log.id, uploaded, null);
+      });
 
       res.status(201).json({
         success: true,
         message: 'FM Daily checklist saved',
-        data: result.rows[0],
+        data: log,
       });
     } catch (error) {
+      cleanupUploadedFiles(uploaded);
       console.error('HSM FM Daily create error:', error);
       res.status(500).json({ success: false, message: 'Failed to save FM Daily checklist' });
     }
   }
 
   static async update(req, res) {
+    const uploaded = req.files || [];
     try {
       const { id } = req.params;
       const existing = await query(`SELECT * FROM hsm_fm_daily_checklists WHERE id = $1`, [id]);
       if (!existing.rows.length) {
+        cleanupUploadedFiles(uploaded);
         return res.status(404).json({ success: false, message: 'FM Daily checklist not found' });
       }
       if (!isWithinEditWindow(existing.rows[0].created_at)) {
+        cleanupUploadedFiles(uploaded);
         return res.status(403).json({ success: false, message: editWindowDeniedMessage() });
       }
 
-      const b = req.body || {};
+      const b = parseMultipartBody(req);
       const err = HsmFmDailyController._validate(b);
-      if (err) return res.status(400).json({ success: false, message: err });
+      if (err) {
+        cleanupUploadedFiles(uploaded);
+        return res.status(400).json({ success: false, message: err });
+      }
 
       const items = normalizeChecklistItems(b.checklist_items);
+      const missingAction = findMissingActionTaken(items);
+      if (missingAction) {
+        cleanupUploadedFiles(uploaded);
+        return res.status(400).json({
+          success: false,
+          message: `Action taken is required for "${missingAction}" (marked NOT OK)`,
+        });
+      }
       const guide = normalizeGuideCenterline(b.guide_centerline);
+      const sectionValues = normalizeSectionValues(b.section_values);
+      const keepImageIds = Array.isArray(b.keep_image_ids) ? b.keep_image_ids : [];
 
-      const result = await query(
-        `UPDATE hsm_fm_daily_checklists SET
-           report_date = $1, shift = $2, shift_engineer = $3,
-           checklist_items = $4::jsonb, guide_centerline = $5::jsonb, note = $6,
-           updated_at = NOW()
-         WHERE id = $7
-         RETURNING *`,
-        [
-          b.report_date,
-          String(b.shift).toUpperCase(),
-          nullIfEmpty(b.shift_engineer),
-          JSON.stringify(items),
-          JSON.stringify(guide),
-          nullIfEmpty(b.note),
-          id,
-        ]
-      );
+      let log;
+      await transaction(async (client) => {
+        const result = await client.query(
+          `UPDATE hsm_fm_daily_checklists SET
+             report_date = $1, shift = $2, shift_engineer = $3,
+             checklist_items = $4::jsonb, guide_centerline = $5::jsonb, section_values = $6::jsonb, note = $7,
+             updated_at = NOW()
+           WHERE id = $8
+           RETURNING *`,
+          [
+            b.report_date,
+            String(b.shift).toUpperCase(),
+            nullIfEmpty(b.shift_engineer),
+            JSON.stringify(items),
+            JSON.stringify(guide),
+            JSON.stringify(sectionValues),
+            nullIfEmpty(b.note),
+            id,
+          ]
+        );
+        log = result.rows[0];
+        await saveFmDailyImages(client, log.id, uploaded, keepImageIds);
+      });
 
       res.json({
         success: true,
         message: 'FM Daily checklist updated',
-        data: result.rows[0],
+        data: log,
       });
     } catch (error) {
+      cleanupUploadedFiles(uploaded);
       console.error('HSM FM Daily update error:', error);
       res.status(500).json({ success: false, message: 'Failed to update FM Daily checklist' });
     }
@@ -208,7 +314,9 @@ class HsmFmDailyController {
       if (!isWithinEditWindow(existing.rows[0].created_at)) {
         return res.status(403).json({ success: false, message: editWindowDeniedMessage() });
       }
+      const images = await query(`SELECT file_path FROM hsm_fm_daily_images WHERE log_id = $1`, [id]);
       await query(`DELETE FROM hsm_fm_daily_checklists WHERE id = $1`, [id]);
+      images.rows.forEach((img) => unlinkUpload(img.file_path));
       res.json({ success: true, message: 'FM Daily checklist deleted' });
     } catch (error) {
       console.error('HSM FM Daily delete error:', error);
@@ -218,7 +326,9 @@ class HsmFmDailyController {
 
   static async clearAll(req, res) {
     try {
+      const images = await query(`SELECT file_path FROM hsm_fm_daily_images`);
       const result = await query(`DELETE FROM hsm_fm_daily_checklists RETURNING id`);
+      images.rows.forEach((img) => unlinkUpload(img.file_path));
       res.json({
         success: true,
         message: `Deleted ${result.rowCount} FM Daily checklist(s)`,
@@ -233,19 +343,23 @@ class HsmFmDailyController {
   static async downloadPDF(req, res) {
     const { id } = req.params;
     try {
-      const result = await query(
-        `SELECT l.*, u.username AS filled_by_name
-         FROM hsm_fm_daily_checklists l
-         JOIN users u ON l.filled_by = u.id
-         WHERE l.id = $1`,
-        [id]
-      );
+      const [result, imagesRes] = await Promise.all([
+        query(
+          `SELECT l.*, u.username AS filled_by_name
+           FROM hsm_fm_daily_checklists l
+           JOIN users u ON l.filled_by = u.id
+           WHERE l.id = $1`,
+          [id]
+        ),
+        query(`SELECT * FROM hsm_fm_daily_images WHERE log_id = $1 ORDER BY sort_order, id`, [id]),
+      ]);
       if (!result.rows.length) {
         return res.status(404).json({ success: false, message: 'FM Daily checklist not found' });
       }
       const log = result.rows[0];
       const items = log.checklist_items || {};
       const guide = log.guide_centerline || {};
+      const images = imagesRes.rows;
 
       const margin = 28;
       const doc = new PDFDocument({
@@ -310,20 +424,30 @@ class HsmFmDailyController {
         .text('Checklist items', margin, y);
       y += 14;
 
-      CHECK_ITEMS.forEach(({ key, label }, idx) => {
-        if (y > doc.page.height - 70) {
+      CHECK_SECTIONS.forEach((section, sIdx) => {
+        if (y > doc.page.height - 80) {
           doc.addPage();
           y = 30;
         }
-        const row = items[key] || {};
-        const st = statusLabel(row.status);
-        doc.font('Helvetica-Bold').fontSize(8).fillColor('#1e293b')
-          .text(`${idx + 1}. ${label}`, margin, y, { width: pageW });
-        y = doc.y + 2;
-        doc.font('Helvetica').fontSize(8).fillColor('#334155')
-          .text(`Status: ${st}`, margin + 8, y, { continued: true });
-        doc.text(`   Remark: ${row.remark || '—'}`);
-        y = doc.y + 8;
+        doc.font('Helvetica-Bold').fontSize(9).fillColor('#312e81')
+          .text(`${sIdx + 1}. ${section.label}`, margin, y, { width: pageW });
+        y = doc.y + 4;
+
+        {
+          const row = items[section.key] || {};
+          const st = statusLabel(row.status);
+          doc.font('Helvetica').fontSize(8).fillColor('#334155')
+            .text(`Status: ${st}`, margin + 16, y, { continued: true });
+          doc.text(`   Remark: ${row.remark || '—'}`);
+          y = doc.y + 4;
+          if (row.status === 'NOT_OK') {
+            doc.font('Helvetica').fontSize(8).fillColor('#334155')
+              .text(`Action Taken: ${row.action_taken || '—'}`, margin + 16, y, { width: pageW - 16 });
+            y = doc.y + 2;
+          }
+          y += 4;
+        }
+        y += 4;
       });
 
       if (log.note) {
@@ -336,6 +460,13 @@ class HsmFmDailyController {
         doc.font('Helvetica').fontSize(9).fillColor('#0f172a')
           .text(log.note, margin, y, { width: pageW });
       }
+
+      embedImagesLandscape(
+        doc,
+        images,
+        'Attached Images',
+        `${formatDateOnly(log.report_date)} · Shift ${log.shift || '—'}`
+      );
 
       doc.end();
       await new Promise((resolve) => doc.on('end', resolve));
