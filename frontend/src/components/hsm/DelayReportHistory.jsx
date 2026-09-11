@@ -88,9 +88,9 @@ export default function DelayReportHistory() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+    <div className="min-h-screen bg-gray-50 pb-24">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <div>
             <button
               type="button"
@@ -121,26 +121,27 @@ export default function DelayReportHistory() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-6">
-          <div className="flex flex-col sm:flex-row gap-3 items-end">
+        {/* Filter bar */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-3 mb-4">
+          <div className="grid grid-cols-2 gap-2 mb-2">
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">From Date</label>
-              <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+              <label className="block text-xs font-semibold text-gray-500 mb-1">From Date</label>
+              <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">To Date</label>
-              <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+              <label className="block text-xs font-semibold text-gray-500 mb-1">To Date</label>
+              <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
             </div>
-            <button type="button" onClick={() => fetchLogs(dateFrom, dateTo)} className="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-medium hover:bg-gray-900">Search</button>
-            <button
-              type="button"
-              onClick={() => {
-                setDateFrom('');
-                setDateTo('');
-                fetchLogs('', '');
-              }}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
-            >
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => fetchLogs(dateFrom, dateTo)}
+              className="w-full py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 active:bg-indigo-800">
+              Search
+            </button>
+            <button type="button" onClick={() => { setDateFrom(''); setDateTo(''); fetchLogs('', ''); }}
+              className="w-full py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 active:bg-gray-100">
               Clear
             </button>
           </div>
@@ -212,3 +213,4 @@ export default function DelayReportHistory() {
     </div>
   );
 }
+
