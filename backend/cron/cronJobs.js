@@ -313,10 +313,16 @@ function startCronJobs() {
     maintenanceDueAlert();
   }, { timezone: 'Asia/Kolkata' });
 
+  cron.schedule('0 9 * * *', () => {
+    console.log('[CRON] Running 9 AM HSM morning reminder...');
+    const { notifyHsmMorningReminder } = require('../utils/notificationService');
+    notifyHsmMorningReminder();
+  }, { timezone: 'Asia/Kolkata' });
+
   cron.schedule('0 18 * * *', () => {
     console.log('[CRON] Running 6 PM daily inspection summary...');
     dailyInspectionSummary();
-    // Push: remind HOD of pending reviews
+    // Push: remind HOD of pending reviews + operators of unfilled sheets
     const { notifyHodPendingReview, notifyOperatorsSheetsNotFilled } = require('../utils/notificationService');
     notifyHodPendingReview();
     notifyOperatorsSheetsNotFilled();
@@ -351,7 +357,9 @@ function startCronJobs() {
 
   console.log('  Cron Jobs:');
   console.log('    - Maintenance Due Alert      → 09:00 AM IST');
+  console.log('    - HSM Morning Reminder       → 09:00 AM IST');
   console.log('    - Daily Inspection Summary   → 06:00 PM IST');
+  console.log('    - Operators Unfilled Sheets  → 06:00 PM IST');
   console.log('    - HBM Daily Status Summary   → 07:00 PM IST');
   console.log('    - HBM Data Cleanup (1yr)     → 02:30 AM IST');
   console.log('    - Notifications Cleanup (10d)→ 03:00 AM IST');

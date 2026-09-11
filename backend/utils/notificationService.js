@@ -121,8 +121,13 @@ async function notifyOperatorsSheetsNotFilled() {
       {
         module: 'HSM', userType: 'HSM_CHECKSHEETS', dashUrl: '/hsm/dashboard',
         tables: [
-          { table: 'hsm_fm_daily_logs',         dateCol: 'report_date',    label: 'FM Daily' },
-          { table: 'hsm_delay_reports',         dateCol: 'report_date',    label: 'Delay Report' },
+          { table: 'hsm_fm_daily_checklists',         dateCol: 'report_date', label: 'FM Daily' },
+          { table: 'hsm_induction_daily_checklists',  dateCol: 'report_date', label: 'Induction Daily' },
+          { table: 'hsm_dc_daily_checklists',         dateCol: 'report_date', label: 'DC Daily' },
+          { table: 'hsm_rm_daily_checklists',         dateCol: 'report_date', label: 'RM Daily' },
+          { table: 'hsm_delay_reports',               dateCol: 'report_date', label: 'Delay Report' },
+          { table: 'hsm_breakdown_analysis_logs',     dateCol: 'report_date', label: 'Breakdown Analysis' },
+          { table: 'hsm_roll_change_activity_logs',   dateCol: 'report_date', label: 'Roll Change' },
         ],
       },
     ];
@@ -164,10 +169,38 @@ async function notifyOperatorsSheetsNotFilled() {
   }
 }
 
+/** 9 AM morning reminder to HSM operators — fill today's reports */
+async function notifyHsmMorningReminder() {
+  try {
+    const opsRes = await query(
+      `SELECT u.id FROM users u WHERE u.user_type = 'HSM_CHECKSHEETS' AND u.is_active = true`
+    );
+    const userIds = opsRes.rows.map(r => r.id);
+    if (!userIds.length) return;
+
+    const title = 'HSM Daily Reports Reminder';
+    const body  = 'Please fill today\'s HSM checksheets — FM Daily, Induction, DC Daily, RM Daily, Delay Report.';
+    const url   = '/hsm/dashboard';
+
+    await saveNotifications(userIds, { title, body, url });
+
+    const tokRows = await query('SELECT token FROM fcm_tokens WHERE user_id = ANY($1)', [userIds]);
+    const tokens = tokRows.rows.map(r => r.token);
+    if (tokens.length) {
+      const result = await sendPush(tokens, { title, body, data: { tag: 'hsm-morning-reminder' }, url });
+      if (result?.invalid?.length) await removeTokens(result.invalid);
+    }
+    console.log(`[HSM Morning] Reminder sent to ${userIds.length} HSM user(s)`);
+  } catch (err) {
+    console.error('notifyHsmMorningReminder error:', err.message);
+  }
+}
+
 module.exports = {
   notifyHodNewSheet,
   notifyHodPendingReview,
   notifyOperatorsSheetsNotFilled,
+  notifyHsmMorningReminder,
   saveNotifications,
   SHEET_MODULE_MAP,
 };
