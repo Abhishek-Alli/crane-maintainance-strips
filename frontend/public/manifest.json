@@ -1,20 +1,25 @@
 {
   "short_name": "SRJ Checklists",
-  "name": "SRJ Checklists",
+  "name": "SRJ Checklists - HSM Checksheets",
   "icons": [
     {
-      "src": "srj-logo.png",
+      "src": "/srj-logo.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
-      "src": "srj-logo.png",
+      "src": "/srj-logo.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ],
-  "start_url": ".",
+  "start_url": "/hsm/dashboard",
+  "scope": "/",
   "display": "standalone",
-  "theme_color": "#1e40af",
-  "background_color": "#ffffff"
+  "orientation": "portrait",
+  "theme_color": "#3730a3",
+  "background_color": "#ffffff",
+  "description": "SRJ Strips and Pipes - HSM Checksheets and Reports"
 }
