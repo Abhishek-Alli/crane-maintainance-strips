@@ -83,7 +83,7 @@ const Login = ({ onLoginSuccess }) => {
     : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500';
 
   return (
-    <div className="relative flex items-center justify-center min-h-screen px-4 py-6 overflow-hidden" style={{ backgroundImage: "url('/bg-image-login.png')", backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}>
+    <div className="relative flex items-center justify-center min-h-screen px-4 py-6 overflow-hidden" style={{ backgroundImage: "url('/bg-image-login.png')", backgroundSize: 'cover', backgroundPosition: 'center center', backgroundRepeat: 'no-repeat' }}>
       <div className="absolute inset-0 bg-black/30" />
 
       {/* ── Decorative background icons scattered across full screen ── */}
