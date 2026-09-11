@@ -198,7 +198,7 @@ export default function DcDailyChecklistForm() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-6 pb-24 sm:pb-6">
       <div className="max-w-4xl mx-auto">
         <button
           type="button"

@@ -322,7 +322,7 @@ export default function BreakdownAnalysisForm() {
 
   return (
     <>
-    <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-6 pb-24 sm:pb-6">
       <div className="max-w-3xl mx-auto">
         <div className="flex items-center space-x-3 mb-6">
           <button
