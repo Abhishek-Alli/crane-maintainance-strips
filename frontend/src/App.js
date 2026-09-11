@@ -231,8 +231,8 @@ function App() {
   const isOnHODRoute = location.pathname.startsWith('/hod');
   const isOnAdminRoute = ['/create-user', '/telegram-settings', '/fabrication', '/admin/'].some(r => location.pathname.startsWith(r));
 
-  // Don't show nav on login page or admin routes (AdminLayout supplies its own top bar)
-  const showNav = user && location.pathname !== '/login' && !isOnAdminRoute;
+  // Don't show nav on login page, admin routes, or HSM routes (HSM uses bottom nav instead)
+  const showNav = user && location.pathname !== '/login' && !isOnAdminRoute && !isOnHSMRoute;
 
   // Determine default redirect after login restore
   const getDefaultRoute = () => {
@@ -1577,7 +1577,7 @@ function App() {
       </main>
 
       {/* HSM Mobile Bottom Navigation */}
-      {showNav && isOnHSMRoute && (
+      {user && isOnHSMRoute && (
         <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-indigo-700 border-t border-indigo-600 z-50 flex">
           <Link
             to="/hsm/dashboard"
