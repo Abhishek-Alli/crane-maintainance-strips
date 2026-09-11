@@ -162,12 +162,11 @@ const Login = ({ onLoginSuccess }) => {
 
         {/* Header band */}
         <div className="bg-gradient-to-r from-blue-700 to-blue-500 px-6 pt-8 pb-6 text-center">
-          <div className="w-36 h-36 mx-auto mb-3 bg-white rounded-2xl shadow-xl overflow-hidden flex items-center justify-center">
+          <div className="w-36 h-36 mx-auto mb-3 bg-white rounded-2xl shadow-xl flex items-center justify-center p-2">
             <img
               src="/srj-logo.png"
               alt="SRJ Logo"
               className="w-full h-full object-contain"
-              style={{ transform: 'scale(1.45)', transformOrigin: 'center' }}
             />
           </div>
           <h1 className="text-base font-extrabold text-white tracking-wide leading-tight">
