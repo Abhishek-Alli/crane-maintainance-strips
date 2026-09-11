@@ -1,28 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { toast } from 'react-toastify';
-import { hsmAPI } from '../../services/api';
-
-const formatDate = (d) =>
-  d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
-
-const formatDowntime = (mins) => {
-  if (mins == null) return '—';
-  const m = parseInt(mins, 10);
-  if (Number.isNaN(m)) return String(mins);
-  const h = Math.floor(m / 60);
-  const rem = m % 60;
-  if (h <= 0) return `${rem} min`;
-  return `${h}h ${rem}m`;
-};
 
 export default function HsmDashboard() {
-  const [baRecent, setBaRecent] = useState([]);
-  const [rcRecent, setRcRecent] = useState([]);
-  const [delayRecent, setDelayRecent] = useState([]);
-  const [fmRecent, setFmRecent] = useState([]);
-  const [loading, setLoading] = useState(true);
-
   const isAdminUser = (() => {
     try {
       const u = JSON.parse(localStorage.getItem('user'));
@@ -32,280 +11,134 @@ export default function HsmDashboard() {
     }
   })();
 
-  useEffect(() => {
-    Promise.all([
-      hsmAPI.getBreakdownAnalysisLogs({ limit: 5 }).catch(() => ({ data: [] })),
-      hsmAPI.getRollChangeActivityLogs({ limit: 5 }).catch(() => ({ data: [] })),
-      hsmAPI.getDelayReportLogs({ limit: 5 }).catch(() => ({ data: [] })),
-      hsmAPI.getFmDailyChecklistLogs({ limit: 5 }).catch(() => ({ data: [] })),
-    ])
-      .then(([ba, rc, delay, fm]) => {
-        setBaRecent(ba?.data || []);
-        setRcRecent(rc?.data || []);
-        setDelayRecent(delay?.data || []);
-        setFmRecent(fm?.data || []);
-      })
-      .catch(() => toast.error('Failed to load recent reports'))
-      .finally(() => setLoading(false));
-  }, []);
-
   const today = new Date().toLocaleDateString('en-IN', {
     weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',
   });
 
-  const actions = [
+  const reports = [
     {
       to: '/hsm/breakdown-analysis/new',
       label: 'Breakdown Analysis Report',
-      sub: 'RCA · 5-Why · CA / PA',
-      primary: true,
-    },
-    {
-      to: '/hsm/breakdown-analysis/history',
-      label: 'Breakdown Analysis History',
-      sub: 'Past analysis reports',
+      sub: 'RCA · 5-Why · Corrective & Preventive Actions',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+        </svg>
+      ),
+      color: 'text-red-600 bg-red-50',
     },
     {
       to: '/hsm/roll-change-activity/new',
-      label: 'Mechanical Activities During Roll Change',
-      sub: 'Area equipment · manpower · remarks',
-      primary: true,
-    },
-    {
-      to: '/hsm/roll-change-activity/history',
-      label: 'Roll Change Activity History',
-      sub: 'Past roll change reports',
+      label: 'Roll Change Activity',
+      sub: 'Area equipment · Manpower · Remarks',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+      ),
+      color: 'text-orange-600 bg-orange-50',
     },
     {
       to: '/hsm/delay-report/new',
       label: 'Delay Report',
-      sub: 'HOTOUT · Miss Roll · total time',
-      primary: true,
-    },
-    {
-      to: '/hsm/delay-report/history',
-      label: 'Delay Report History',
-      sub: 'Past delay reports',
+      sub: 'HOTOUT · Miss Roll · Total downtime',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
+      color: 'text-yellow-600 bg-yellow-50',
     },
     {
       to: '/hsm/fm-daily-checklist/new',
       label: 'FM Daily Check List',
-      sub: 'Guide gap · pressures · clamps · OK / NOT OK',
-      primary: true,
-    },
-    {
-      to: '/hsm/fm-daily-checklist/history',
-      label: 'FM Daily Check List History',
-      sub: 'Past FM daily checklists',
+      sub: 'Guide gap · Pressures · Clamps',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+        </svg>
+      ),
+      color: 'text-green-600 bg-green-50',
     },
     {
       to: '/hsm/induction-daily-checklist/new',
       label: 'Induction Daily Check List',
-      sub: 'Guide gap · rollers · heaters · OK / NOT OK',
-      primary: true,
-    },
-    {
-      to: '/hsm/induction-daily-checklist/history',
-      label: 'Induction Daily Check List History',
-      sub: 'Past induction daily checklists',
+      sub: 'Guide gap · Rollers · Heaters',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+      ),
+      color: 'text-blue-600 bg-blue-50',
     },
     {
       to: '/hsm/dc-daily-checklist/new',
       label: 'DC Daily Check List',
-      sub: 'Guide gap · mandrel · WR gap · OK / NOT OK',
-      primary: true,
-    },
-    {
-      to: '/hsm/dc-daily-checklist/history',
-      label: 'DC Daily Check List History',
-      sub: 'Past DC daily checklists',
+      sub: 'Guide gap · Mandrel · WR gap',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18" />
+        </svg>
+      ),
+      color: 'text-purple-600 bg-purple-50',
     },
     {
       to: '/hsm/rm-daily-checklist/new',
       label: 'RM Daily Check List',
-      sub: 'Guide gap · clamps · descaling · OK / NOT OK',
-      primary: true,
-    },
-    {
-      to: '/hsm/rm-daily-checklist/history',
-      label: 'RM Daily Check List History',
-      sub: 'Past RM daily checklists',
+      sub: 'Guide gap · Clamps · Descaling',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      ),
+      color: 'text-indigo-600 bg-indigo-50',
     },
     ...(isAdminUser
       ? [{
           to: '/hsm/insights',
           label: 'Insights',
-          sub: 'Custom analysis — pick pages to compare',
-          primary: true,
+          sub: 'Custom analysis · Compare reports',
+          icon: (
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          ),
+          color: 'text-teal-600 bg-teal-50',
         }]
       : []),
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 sm:p-6 pb-20 sm:pb-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">HSM Checksheets</h1>
-          <p className="text-gray-500 mt-1 text-sm">{today}</p>
-        </div>
+    <div className="min-h-screen bg-gray-50 pb-24 sm:pb-6">
+      {/* Header */}
+      <div className="bg-indigo-700 text-white px-4 py-5">
+        <h1 className="text-xl font-bold">HSM Checksheets</h1>
+        <p className="text-indigo-200 text-xs mt-0.5">{today}</p>
+      </div>
 
-        <div className="mb-8">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Reports</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {actions.map((a) => (
-              <Link
-                key={a.to}
-                to={a.to}
-                className="flex flex-col bg-white border border-gray-200 rounded-xl p-5 transition-all hover:shadow-md hover:border-indigo-200"
-              >
-                <p className="font-semibold text-gray-900 text-sm leading-tight">{a.label}</p>
-                <p className="text-xs text-gray-500 mt-1">{a.sub}</p>
-                {a.primary && (
-                  <span className="mt-3 inline-flex w-fit text-xs font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">
-                    Fill new report
-                  </span>
-                )}
-              </Link>
-            ))}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-5">
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-bold text-gray-900 text-sm">Recent Breakdown Analysis</h2>
-              <Link to="/hsm/breakdown-analysis/history" className="text-xs font-semibold text-indigo-700 hover:opacity-80">
-                View all →
-              </Link>
-            </div>
-            {loading ? (
-              <div className="p-10 flex justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
+      {/* Fill new report cards */}
+      <div className="p-4">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Select a report to fill</p>
+        <div className="space-y-3">
+          {reports.map((r) => (
+            <Link
+              key={r.to}
+              to={r.to}
+              className="flex items-center gap-4 bg-white rounded-xl border border-gray-200 px-4 py-4 shadow-sm hover:border-indigo-300 hover:shadow-md transition-all active:scale-98"
+            >
+              <div className={`flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center ${r.color}`}>
+                {r.icon}
               </div>
-            ) : baRecent.length === 0 ? (
-              <div className="p-8 text-center text-gray-400 text-sm">No reports yet.</div>
-            ) : (
-              <div className="divide-y divide-gray-100">
-                {baRecent.map((log) => (
-                  <Link
-                    key={log.id}
-                    to={`/hsm/breakdown-analysis/${log.id}`}
-                    className="flex items-center justify-between px-5 py-3.5 hover:bg-indigo-50/50 transition-colors"
-                  >
-                    <div>
-                      <p className="font-semibold text-gray-900 text-sm">{log.machine_name}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">{formatDate(log.report_date)}</p>
-                    </div>
-                    <p className="text-xs font-semibold text-indigo-700">{formatDowntime(log.total_downtime_minutes)}</p>
-                  </Link>
-                ))}
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-gray-900 text-sm leading-tight">{r.label}</p>
+                <p className="text-xs text-gray-500 mt-0.5 truncate">{r.sub}</p>
               </div>
-            )}
-          </div>
-
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-bold text-gray-900 text-sm">Recent Roll Change</h2>
-              <Link to="/hsm/roll-change-activity/history" className="text-xs font-semibold text-indigo-700 hover:opacity-80">
-                View all →
-              </Link>
-            </div>
-            {loading ? (
-              <div className="p-10 flex justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
-              </div>
-            ) : rcRecent.length === 0 ? (
-              <div className="p-8 text-center text-gray-400 text-sm">No reports yet.</div>
-            ) : (
-              <div className="divide-y divide-gray-100">
-                {rcRecent.map((log) => (
-                  <Link
-                    key={log.id}
-                    to={`/hsm/roll-change-activity/${log.id}`}
-                    className="flex items-center justify-between px-5 py-3.5 hover:bg-indigo-50/50 transition-colors"
-                  >
-                    <div>
-                      <p className="font-semibold text-gray-900 text-sm">{log.area}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {formatDate(log.report_date)} · Shift {log.shift}
-                      </p>
-                    </div>
-                    <p className="text-xs font-semibold text-indigo-700">
-                      {log.equipment_count != null ? `${log.equipment_count} eq.` : '—'}
-                    </p>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-bold text-gray-900 text-sm">Recent Delay Reports</h2>
-              <Link to="/hsm/delay-report/history" className="text-xs font-semibold text-indigo-700 hover:opacity-80">
-                View all →
-              </Link>
-            </div>
-            {loading ? (
-              <div className="p-10 flex justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
-              </div>
-            ) : delayRecent.length === 0 ? (
-              <div className="p-8 text-center text-gray-400 text-sm">No reports yet.</div>
-            ) : (
-              <div className="divide-y divide-gray-100">
-                {delayRecent.map((log) => (
-                  <Link
-                    key={log.id}
-                    to={`/hsm/delay-report/${log.id}`}
-                    className="flex items-center justify-between px-5 py-3.5 hover:bg-indigo-50/50 transition-colors"
-                  >
-                    <div>
-                      <p className="font-semibold text-gray-900 text-sm">
-                        Shift {log.shift}{log.agency ? ` · ${log.agency}` : ''}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-0.5">{formatDate(log.report_date)}</p>
-                    </div>
-                    <p className="text-xs font-semibold text-indigo-700">{formatDowntime(log.total_minutes)}</p>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-bold text-gray-900 text-sm">Recent FM Daily</h2>
-              <Link to="/hsm/fm-daily-checklist/history" className="text-xs font-semibold text-indigo-700 hover:opacity-80">
-                View all →
-              </Link>
-            </div>
-            {loading ? (
-              <div className="p-10 flex justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
-              </div>
-            ) : fmRecent.length === 0 ? (
-              <div className="p-8 text-center text-gray-400 text-sm">No checklists yet.</div>
-            ) : (
-              <div className="divide-y divide-gray-100">
-                {fmRecent.map((log) => (
-                  <Link
-                    key={log.id}
-                    to={`/hsm/fm-daily-checklist/${log.id}`}
-                    className="flex items-center justify-between px-5 py-3.5 hover:bg-indigo-50/50 transition-colors"
-                  >
-                    <div>
-                      <p className="font-semibold text-gray-900 text-sm">
-                        Shift {log.shift}{log.shift_engineer ? ` · ${log.shift_engineer}` : ''}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-0.5">{formatDate(log.report_date)}</p>
-                    </div>
-                    <p className="text-xs font-semibold text-indigo-700">View</p>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
+              <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+          ))}
         </div>
       </div>
     </div>

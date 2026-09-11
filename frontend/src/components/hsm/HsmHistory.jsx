@@ -60,7 +60,7 @@ export default function HsmHistory() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-gray-50 pb-24">
       <div className="bg-indigo-700 text-white px-4 py-4">
         <h1 className="text-lg font-bold">HSM History</h1>
         <p className="text-indigo-200 text-xs mt-0.5">View & download filled reports</p>
