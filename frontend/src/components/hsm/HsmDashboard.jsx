@@ -142,7 +142,7 @@ export default function HsmDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-6 pb-20 sm:pb-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">HSM Checksheets</h1>
