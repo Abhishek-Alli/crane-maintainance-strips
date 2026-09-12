@@ -1,18 +1,32 @@
 {
   "short_name": "SRJ Checklists",
   "name": "SRJ Checklists - HSM Checksheets",
+  "description": "SRJ Strips and Pipes - HSM Checksheets and Reports",
+  "categories": ["business", "productivity"],
   "icons": [
     {
-      "src": "/srj-logo.png",
+      "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "/srj-logo.png",
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "start_url": "/hsm/dashboard",
@@ -21,5 +35,7 @@
   "orientation": "portrait",
   "theme_color": "#3730a3",
   "background_color": "#ffffff",
-  "description": "SRJ Strips and Pipes - HSM Checksheets and Reports"
+  "lang": "en-IN",
+  "dir": "ltr",
+  "prefer_related_applications": false
 }
