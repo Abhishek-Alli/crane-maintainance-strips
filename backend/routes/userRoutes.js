@@ -17,6 +17,9 @@ router.use(authenticate);
 router.get('/:id/hbm-permissions', selfOrAdmin, UserController.getPermissions);
 router.get('/:id/crane-permissions', selfOrAdmin, UserController.getCranePermissions);
 router.get('/:id/hod-permissions', selfOrAdmin, UserController.getHodPermissions);
+router.get('/:id/hsm-permissions', selfOrAdmin, UserController.getHsmPermissions);
+router.get('/:id/ptm-permissions', selfOrAdmin, UserController.getPtmPermissions);
+router.get('/:id/sms-permissions', selfOrAdmin, UserController.getSmsPermissions);
 
 router.use(authorize('ADMIN'));
 
@@ -25,6 +28,9 @@ router.post('/create', UserController.createUser);
 router.put('/:id/hbm-permissions', UserController.updatePermissions);
 router.put('/:id/crane-permissions', UserController.updateCranePermissions);
 router.put('/:id/hod-permissions', UserController.updateHodPermissions);
+router.put('/:id/hsm-permissions', UserController.updateHsmPermissions);
+router.put('/:id/ptm-permissions', UserController.updatePtmPermissions);
+router.put('/:id/sms-permissions', UserController.updateSmsPermissions);
 router.get('/:id', UserController.getById);
 router.put('/:id', UserController.updateUser);
 router.delete('/:id', UserController.deleteUser);

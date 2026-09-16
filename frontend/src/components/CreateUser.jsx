@@ -40,6 +40,23 @@ const FALLBACK_CRANE_SECTIONS = [
   { key: 'calendar', label: 'Maintenance Calendar' }, { key: 'reports', label: 'Reports' },
   { key: 'fabrication', label: 'Fabrication' },
 ];
+const FALLBACK_HSM_SHEETS = [
+  { key: 'breakdown-analysis',       label: 'Breakdown Analysis Report' },
+  { key: 'roll-change-activity',     label: 'Roll Change Activity' },
+  { key: 'delay-report',             label: 'Delay Report' },
+  { key: 'fm-daily-checklist',       label: 'FM Daily Check List' },
+  { key: 'induction-daily-checklist', label: 'Induction Daily Check List' },
+  { key: 'dc-daily-checklist',       label: 'DC Daily Check List' },
+  { key: 'rm-daily-checklist',       label: 'RM Daily Check List' },
+];
+const FALLBACK_PTM_SHEETS = [
+  { key: 'breakdown',        label: 'Breakdown Report' },
+  { key: 'checksheet',       label: 'PTM Checksheet' },
+  { key: 'monthly-register', label: 'Monthly Register' },
+];
+const FALLBACK_SMS_SHEETS = [
+  { key: 'breakdown-analysis', label: 'Breakdown Analysis Report' },
+];
 
 // ─── Toggle Switch ─────────────────────────────────────────────────────────
 function Toggle({ checked, onChange, label }) {
@@ -66,8 +83,13 @@ function Toggle({ checked, onChange, label }) {
 }
 
 // ─── Inline Sheet Access Toggles (used in the Create form) ─────────────────
-function SheetAccessToggles({ userType, selectedSheets, onChange, hbmSheets, craneSections }) {
-  const sheets = userType === 'HBM_CHECKSHEETS' ? hbmSheets : craneSections;
+function SheetAccessToggles({ userType, selectedSheets, onChange, hbmSheets, craneSections, hsmSheets, ptmSheets, smsSheets }) {
+  const sheets =
+    userType === 'HBM_CHECKSHEETS'  ? hbmSheets :
+    userType === 'CRANE_MAINTENANCE' ? craneSections :
+    userType === 'HSM_CHECKSHEETS'  ? hsmSheets :
+    userType === 'PTM_CHECKSHEETS'  ? ptmSheets :
+    smsSheets;
   const allAllowed = selectedSheets === null;
   const selectedSet = new Set(selectedSheets ?? sheets.map(s => s.key));
 
@@ -343,6 +365,110 @@ function CranePermissionsPanel({ userId, onClose, craneSections }) {
   );
 }
 
+// ─── Generic Module Permissions Panel ──────────────────────────────────────
+function ModulePermissionsPanel({ userId, sheets, getPerms, savePerms, accentClass, buttonClass, onClose }) {
+  const [perms, setPerms] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    getPerms(userId)
+      .then(res => {
+        const p = res.data;
+        setPerms({
+          allowed_checksheets: p.allowed_checksheets,
+          can_download_pdf:    p.can_download_pdf,
+          can_delete:          p.can_delete,
+          can_edit_submitted:  p.can_edit_submitted,
+        });
+      })
+      .catch(() => toast.error('Failed to load permissions'));
+  }, [userId, getPerms]);
+
+  if (!perms) {
+    return (
+      <div className="mt-3 pt-3 border-t border-gray-200 flex justify-center py-4">
+        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600" />
+      </div>
+    );
+  }
+
+  const allAllowed = perms.allowed_checksheets === null;
+  const selectedSet = new Set(perms.allowed_checksheets ?? sheets.map(t => t.key));
+
+  const toggleSheet = (key) => {
+    const next = new Set(selectedSet);
+    next.has(key) ? next.delete(key) : next.add(key);
+    const arr = [...next];
+    setPerms(p => ({ ...p, allowed_checksheets: arr.length === sheets.length ? null : arr }));
+  };
+
+  const toggleAll = () => setPerms(p => ({ ...p, allowed_checksheets: allAllowed ? [] : null }));
+
+  const handleSave = async () => {
+    if (perms.allowed_checksheets !== null && perms.allowed_checksheets.length === 0) {
+      toast.warn('Select at least one checksheet type');
+      return;
+    }
+    setSaving(true);
+    try {
+      await savePerms(userId, perms);
+      toast.success('Permissions saved');
+      onClose();
+    } catch {
+      toast.error('Failed to save permissions');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="mt-3 pt-3 border-t border-gray-200 space-y-3">
+      <div>
+        <div className="flex items-center justify-between mb-1.5">
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Allowed Checksheets</p>
+          <button type="button" onClick={toggleAll} className="text-xs text-blue-600 hover:underline font-medium">
+            {allAllowed ? 'Deselect All' : 'Select All'}
+          </button>
+        </div>
+        <div className="grid grid-cols-2 gap-1">
+          {sheets.map(({ key, label }) => {
+            const isOn = allAllowed || selectedSet.has(key);
+            return (
+              <label key={key}
+                className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg border cursor-pointer text-xs font-medium transition-colors select-none ${
+                  isOn ? `${accentClass}` : 'bg-white border-gray-200 text-gray-400'
+                }`}>
+                <input type="checkbox" checked={isOn} onChange={() => toggleSheet(key)} className="w-3 h-3 accent-blue-600" />
+                {label}
+              </label>
+            );
+          })}
+        </div>
+        {perms.allowed_checksheets !== null && perms.allowed_checksheets.length === 0 && (
+          <p className="text-xs text-red-500 mt-1">At least one must be selected.</p>
+        )}
+      </div>
+
+      <div className="space-y-2 border border-gray-100 rounded-lg p-2.5 bg-gray-50">
+        <Toggle label="Can Download PDF"      checked={perms.can_download_pdf}    onChange={v => setPerms(p => ({ ...p, can_download_pdf: v }))} />
+        <Toggle label="Can Delete Submissions" checked={perms.can_delete}           onChange={v => setPerms(p => ({ ...p, can_delete: v }))} />
+        <Toggle label="Can Edit After Submit"  checked={perms.can_edit_submitted}  onChange={v => setPerms(p => ({ ...p, can_edit_submitted: v }))} />
+      </div>
+
+      <div className="flex gap-2">
+        <button type="button" onClick={handleSave} disabled={saving}
+          className={`flex-1 py-1.5 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors ${buttonClass}`}>
+          {saving ? 'Saving…' : 'Save Permissions'}
+        </button>
+        <button type="button" onClick={onClose}
+          className="px-4 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-lg transition-colors">
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Change Module Panel ────────────────────────────────────────────────────
 function ChangeModulePanel({ userId, currentType, moduleOptions, onClose, onChanged }) {
   const [selected, setSelected] = useState(currentType);
@@ -473,17 +599,26 @@ const CreateUser = ({ user }) => {
   const [expandedId, setExpandedId]   = useState(null); // { id, panel: 'perms'|'pwd' }
   const [selectedModule, setSelectedModule] = useState(null); // module code filter
   const [moduleOptions, setModuleOptions] = useState([]);
-  const [hbmSheets, setHbmSheets]     = useState(FALLBACK_HBM_SHEETS);
+  const [hbmSheets, setHbmSheets]         = useState(FALLBACK_HBM_SHEETS);
   const [craneSections, setCraneSections] = useState(FALLBACK_CRANE_SECTIONS);
+  const [hsmSheets, setHsmSheets]         = useState(FALLBACK_HSM_SHEETS);
+  const [ptmSheets, setPtmSheets]         = useState(FALLBACK_PTM_SHEETS);
+  const [smsSheets, setSmsSheets]         = useState(FALLBACK_SMS_SHEETS);
 
   useEffect(() => {
     permissionListsAPI.getAll().then(res => {
       const all = res.items || [];
       const toShape = (item) => ({ key: item.item_key, label: item.item_label });
-      const hbm = all.filter(i => i.module_code === 'HBM_CHECKSHEETS' && i.is_active).map(toShape);
+      const hbm   = all.filter(i => i.module_code === 'HBM_CHECKSHEETS'  && i.is_active).map(toShape);
       const crane = all.filter(i => i.module_code === 'CRANE_MAINTENANCE' && i.is_active).map(toShape);
-      if (hbm.length > 0) setHbmSheets(hbm);
+      const hsm   = all.filter(i => i.module_code === 'HSM_CHECKSHEETS'  && i.is_active).map(toShape);
+      const ptm   = all.filter(i => i.module_code === 'PTM_CHECKSHEETS'  && i.is_active).map(toShape);
+      const sms   = all.filter(i => i.module_code === 'SMS_CHECKSHEETS'  && i.is_active).map(toShape);
+      if (hbm.length > 0)   setHbmSheets(hbm);
       if (crane.length > 0) setCraneSections(crane);
+      if (hsm.length > 0)   setHsmSheets(hsm);
+      if (ptm.length > 0)   setPtmSheets(ptm);
+      if (sms.length > 0)   setSmsSheets(sms);
     }).catch(() => {});
   }, []);
 
@@ -577,15 +712,17 @@ const CreateUser = ({ user }) => {
         const newUserId = data.data.id;
 
         // Save sheet permissions immediately after creation
+        const basePerms = { allowed_checksheets: createSheets, can_download_pdf: true, can_delete: false, can_edit_submitted: false };
         if (formData.user_type === 'HBM_CHECKSHEETS') {
-          await userAPI.updatePermissions(newUserId, {
-            allowed_checksheets:  createSheets,
-            can_download_pdf:     true,
-            can_delete:           false,
-            can_edit_submitted:   false,
-          });
+          await userAPI.updatePermissions(newUserId, basePerms);
         } else if (formData.user_type === 'CRANE_MAINTENANCE') {
           await userAPI.updateCranePermissions(newUserId, { allowed_sections: createSheets });
+        } else if (formData.user_type === 'HSM_CHECKSHEETS') {
+          await userAPI.updateHsmPermissions(newUserId, basePerms);
+        } else if (formData.user_type === 'PTM_CHECKSHEETS') {
+          await userAPI.updatePtmPermissions(newUserId, basePerms);
+        } else if (formData.user_type === 'SMS_CHECKSHEETS') {
+          await userAPI.updateSmsPermissions(newUserId, basePerms);
         }
 
         toast.success(`User "${formData.username}" created successfully!`);
@@ -649,7 +786,8 @@ const CreateUser = ({ user }) => {
     );
   }
 
-  const showSheetToggles = formData.user_type === 'HBM_CHECKSHEETS' || formData.user_type === 'CRANE_MAINTENANCE';
+  const MODULES_WITH_SHEET_PERMS = ['HBM_CHECKSHEETS', 'CRANE_MAINTENANCE', 'HSM_CHECKSHEETS', 'PTM_CHECKSHEETS', 'SMS_CHECKSHEETS'];
+  const showSheetToggles = MODULES_WITH_SHEET_PERMS.includes(formData.user_type);
 
   // Group users by module (user_type), ordered like moduleOptions
   const usersByModule = (() => {
@@ -723,6 +861,27 @@ const CreateUser = ({ user }) => {
                 'Permissions',
                 () => openPanel(u.id, 'perms')
               )}
+              {u.user_type === 'HSM_CHECKSHEETS' && actionBtn(
+                panelOpen && expandedId?.panel === 'perms',
+                'bg-violet-100 text-violet-700 hover:bg-violet-200',
+                'bg-violet-600 text-white',
+                'Permissions',
+                () => openPanel(u.id, 'perms')
+              )}
+              {u.user_type === 'PTM_CHECKSHEETS' && actionBtn(
+                panelOpen && expandedId?.panel === 'perms',
+                'bg-blue-100 text-blue-700 hover:bg-blue-200',
+                'bg-blue-600 text-white',
+                'Permissions',
+                () => openPanel(u.id, 'perms')
+              )}
+              {u.user_type === 'SMS_CHECKSHEETS' && actionBtn(
+                panelOpen && expandedId?.panel === 'perms',
+                'bg-amber-100 text-amber-700 hover:bg-amber-200',
+                'bg-amber-600 text-white',
+                'Permissions',
+                () => openPanel(u.id, 'perms')
+              )}
               {u.user_type === 'HOD' && actionBtn(
                 panelOpen && expandedId?.panel === 'perms',
                 'bg-red-100 text-red-700 hover:bg-red-200',
@@ -762,6 +921,39 @@ const CreateUser = ({ user }) => {
               )}
               {expandedId?.panel === 'perms' && u.user_type === 'CRANE_MAINTENANCE' && (
                 <CranePermissionsPanel userId={u.id} onClose={closePanel} craneSections={craneSections} />
+              )}
+              {expandedId?.panel === 'perms' && u.user_type === 'HSM_CHECKSHEETS' && (
+                <ModulePermissionsPanel
+                  userId={u.id}
+                  sheets={hsmSheets}
+                  getPerms={userAPI.getHsmPermissions}
+                  savePerms={userAPI.updateHsmPermissions}
+                  accentClass="bg-violet-50 border-violet-300 text-violet-800"
+                  buttonClass="bg-violet-600 hover:bg-violet-700"
+                  onClose={closePanel}
+                />
+              )}
+              {expandedId?.panel === 'perms' && u.user_type === 'PTM_CHECKSHEETS' && (
+                <ModulePermissionsPanel
+                  userId={u.id}
+                  sheets={ptmSheets}
+                  getPerms={userAPI.getPtmPermissions}
+                  savePerms={userAPI.updatePtmPermissions}
+                  accentClass="bg-blue-50 border-blue-300 text-blue-800"
+                  buttonClass="bg-blue-600 hover:bg-blue-700"
+                  onClose={closePanel}
+                />
+              )}
+              {expandedId?.panel === 'perms' && u.user_type === 'SMS_CHECKSHEETS' && (
+                <ModulePermissionsPanel
+                  userId={u.id}
+                  sheets={smsSheets}
+                  getPerms={userAPI.getSmsPermissions}
+                  savePerms={userAPI.updateSmsPermissions}
+                  accentClass="bg-amber-50 border-amber-300 text-amber-800"
+                  buttonClass="bg-amber-600 hover:bg-amber-700"
+                  onClose={closePanel}
+                />
               )}
               {expandedId?.panel === 'perms' && u.user_type === 'HOD' && (
                 <HodPermissionsPanel userId={u.id} onClose={closePanel} />
@@ -863,6 +1055,9 @@ const CreateUser = ({ user }) => {
                   onChange={setCreateSheets}
                   hbmSheets={hbmSheets}
                   craneSections={craneSections}
+                  hsmSheets={hsmSheets}
+                  ptmSheets={ptmSheets}
+                  smsSheets={smsSheets}
                 />
               </div>
             )}

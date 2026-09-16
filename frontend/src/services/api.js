@@ -377,6 +377,12 @@ export const userAPI = {
   changeModule: (id, user_type) => api.put(`/users/${id}`, { user_type }),
   getHodPermissions: (id) => api.get(`/users/${id}/hod-permissions`),
   updateHodPermissions: (id, data) => api.put(`/users/${id}/hod-permissions`, data),
+  getHsmPermissions: (id) => api.get(`/users/${id}/hsm-permissions`),
+  updateHsmPermissions: (id, data) => api.put(`/users/${id}/hsm-permissions`, data),
+  getPtmPermissions: (id) => api.get(`/users/${id}/ptm-permissions`),
+  updatePtmPermissions: (id, data) => api.put(`/users/${id}/ptm-permissions`, data),
+  getSmsPermissions: (id) => api.get(`/users/${id}/sms-permissions`),
+  updateSmsPermissions: (id, data) => api.put(`/users/${id}/sms-permissions`, data),
 };
 
 export const permissionListsAPI = {

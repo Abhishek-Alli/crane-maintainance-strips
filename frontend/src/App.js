@@ -137,6 +137,9 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [hbmAllowedSheets, setHbmAllowedSheets] = useState(null); // null = all allowed
+  const [hsmAllowedSheets, setHsmAllowedSheets] = useState(null);
+  const [ptmAllowedSheets, setPtmAllowedSheets] = useState(null);
+  const [smsAllowedSheets, setSmsAllowedSheets] = useState(null);
   const [hodNavModules, setHodNavModules] = useState([]); // [{moduleLabel, sheets:[{key,label}]}]
   const location = useLocation();
   const { removeToken } = useNotifications(user);
@@ -175,16 +178,27 @@ function App() {
     setUser(userData);
   };
 
-  // Fetch HBM permissions when an HBM user logs in
+  // Fetch module permissions when a module user logs in
   useEffect(() => {
     if (!user) return;
     const loginType = user.loginType || user.user_type;
-    if (loginType !== 'HBM_CHECKSHEETS') return;
-    userAPI.getPermissions(user.id)
-      .then(res => {
-        setHbmAllowedSheets(res.data?.allowed_checksheets ?? null);
-      })
-      .catch(() => setHbmAllowedSheets(null));
+    if (loginType === 'HBM_CHECKSHEETS') {
+      userAPI.getPermissions(user.id)
+        .then(res => setHbmAllowedSheets(res.data?.allowed_checksheets ?? null))
+        .catch(() => setHbmAllowedSheets(null));
+    } else if (loginType === 'HSM_CHECKSHEETS') {
+      userAPI.getHsmPermissions(user.id)
+        .then(res => setHsmAllowedSheets(res.data?.allowed_checksheets ?? null))
+        .catch(() => setHsmAllowedSheets(null));
+    } else if (loginType === 'PTM_CHECKSHEETS') {
+      userAPI.getPtmPermissions(user.id)
+        .then(res => setPtmAllowedSheets(res.data?.allowed_checksheets ?? null))
+        .catch(() => setPtmAllowedSheets(null));
+    } else if (loginType === 'SMS_CHECKSHEETS' || loginType === 'SMS') {
+      userAPI.getSmsPermissions(user.id)
+        .then(res => setSmsAllowedSheets(res.data?.allowed_checksheets ?? null))
+        .catch(() => setSmsAllowedSheets(null));
+    }
   }, [user]);
 
   // Fetch HOD scope for sidebar nav when a HOD (or admin) user logs in
@@ -221,6 +235,7 @@ function App() {
   const userLoginType = user?.loginType || user?.user_type || 'CRANE_MAINTENANCE';
   const isHBMUser = userLoginType === 'HBM_CHECKSHEETS';
   const isHSMUser = userLoginType === 'HSM_CHECKSHEETS';
+  const isPTMUser = userLoginType === 'PTM_CHECKSHEETS';
   const isSMSUser = userLoginType === 'SMS_CHECKSHEETS' || userLoginType === 'SMS';
   const isHODUser = userLoginType === 'HOD';
   const isAdminUser = user?.role === 'ADMIN' || user?.user_type === 'ADMIN';
@@ -239,6 +254,7 @@ function App() {
     if (isAdminUser) return '/admin/dashboard';
     if (isHBMUser) return '/hbm/dashboard';
     if (isHSMUser) return '/hsm/dashboard';
+    if (isPTMUser) return '/ptm/dashboard';
     if (isSMSUser) return '/sms/dashboard';
     if (isHODUser) return '/hod/dashboard';
     return '/';
@@ -247,6 +263,12 @@ function App() {
   // Returns true if current user can access a given HBM sheet key
   const canAccessSheet = (key) =>
     isAdminUser || hbmAllowedSheets === null || (Array.isArray(hbmAllowedSheets) && hbmAllowedSheets.includes(key));
+  const canAccessHsmSheet = (key) =>
+    isAdminUser || hsmAllowedSheets === null || (Array.isArray(hsmAllowedSheets) && hsmAllowedSheets.includes(key));
+  const canAccessPtmSheet = (key) =>
+    isAdminUser || ptmAllowedSheets === null || (Array.isArray(ptmAllowedSheets) && ptmAllowedSheets.includes(key));
+  const canAccessSmsSheet = (key) =>
+    isAdminUser || smsAllowedSheets === null || (Array.isArray(smsAllowedSheets) && smsAllowedSheets.includes(key));
 
   // Nav colors based on module
   const navBg        = isOnAdminRoute ? 'bg-slate-900'         : isOnHBMRoute ? 'bg-emerald-600'       : isOnHSMRoute ? 'bg-indigo-600'       : isOnPTMRoute ? 'bg-blue-700'       : isOnSMSRoute ? 'bg-amber-600'       : isOnHODRoute ? 'bg-red-700'        : 'bg-blue-600';
@@ -1111,7 +1133,7 @@ function App() {
             path="/hsm/dashboard"
             element={
               user && (isHSMUser || isAdminUser) ? (
-                <HsmDashboard />
+                <HsmDashboard allowedSheets={isAdminUser ? null : hsmAllowedSheets} />
               ) : user ? (
                 <Navigate to="/" replace />
               ) : (
@@ -1119,142 +1141,23 @@ function App() {
               )
             }
           />
-          <Route
-            path="/hsm/breakdown-analysis/new"
-            element={
-              user && (isHSMUser || isAdminUser) ? (
-                <HsmBreakdownAnalysisForm />
-              ) : user ? (
-                <Navigate to="/hsm/dashboard" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-          <Route
-            path="/hsm/breakdown-analysis/history"
-            element={
-              user && (isHSMUser || isAdminUser) ? (
-                <HsmBreakdownAnalysisHistory />
-              ) : user ? (
-                <Navigate to="/hsm/dashboard" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-          <Route
-            path="/hsm/breakdown-analysis/:id/edit"
-            element={
-              user && (isHSMUser || isAdminUser) ? (
-                <HsmBreakdownAnalysisForm />
-              ) : user ? (
-                <Navigate to="/hsm/dashboard" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-          <Route
-            path="/hsm/breakdown-analysis/:id"
-            element={
-              user && (isHSMUser || isAdminUser) ? (
-                <HsmBreakdownAnalysisView />
-              ) : user ? (
-                <Navigate to="/hsm/dashboard" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-          <Route
-            path="/hsm/roll-change-activity/new"
-            element={
-              user && (isHSMUser || isAdminUser) ? (
-                <RollChangeActivityForm />
-              ) : user ? (
-                <Navigate to="/hsm/dashboard" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-          <Route
-            path="/hsm/roll-change-activity/history"
-            element={
-              user && (isHSMUser || isAdminUser) ? (
-                <RollChangeActivityHistory />
-              ) : user ? (
-                <Navigate to="/hsm/dashboard" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-          <Route
-            path="/hsm/roll-change-activity/:id/edit"
-            element={
-              user && (isHSMUser || isAdminUser) ? (
-                <RollChangeActivityForm />
-              ) : user ? (
-                <Navigate to="/hsm/dashboard" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-          <Route
-            path="/hsm/roll-change-activity/:id"
-            element={
-              user && (isHSMUser || isAdminUser) ? (
-                <RollChangeActivityView />
-              ) : user ? (
-                <Navigate to="/hsm/dashboard" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-          <Route
-            path="/hsm/delay-report/new"
-            element={
-              user && (isHSMUser || isAdminUser) ? (
-                <DelayReportForm />
-              ) : user ? (
-                <Navigate to="/hsm/dashboard" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-          <Route
-            path="/hsm/delay-report/history"
-            element={
-              user && (isHSMUser || isAdminUser) ? (
-                <DelayReportHistory />
-              ) : user ? (
-                <Navigate to="/hsm/dashboard" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-          <Route
-            path="/hsm/delay-report/:id/edit"
-            element={
-              user && (isHSMUser || isAdminUser) ? (
-                <DelayReportForm />
-              ) : user ? (
-                <Navigate to="/hsm/dashboard" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
+          <Route path="/hsm/breakdown-analysis/new"    element={user ? (isHSMUser || isAdminUser) && canAccessHsmSheet('breakdown-analysis') ? <HsmBreakdownAnalysisForm /> : <Navigate to="/hsm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hsm/breakdown-analysis/history" element={user ? (isHSMUser || isAdminUser) && canAccessHsmSheet('breakdown-analysis') ? <HsmBreakdownAnalysisHistory /> : <Navigate to="/hsm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hsm/breakdown-analysis/:id/edit" element={user ? (isHSMUser || isAdminUser) && canAccessHsmSheet('breakdown-analysis') ? <HsmBreakdownAnalysisForm /> : <Navigate to="/hsm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hsm/breakdown-analysis/:id"     element={user ? (isHSMUser || isAdminUser) && canAccessHsmSheet('breakdown-analysis') ? <HsmBreakdownAnalysisView /> : <Navigate to="/hsm/dashboard" replace /> : <Navigate to="/login" replace />} />
+
+          <Route path="/hsm/roll-change-activity/new"    element={user ? (isHSMUser || isAdminUser) && canAccessHsmSheet('roll-change-activity') ? <RollChangeActivityForm /> : <Navigate to="/hsm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hsm/roll-change-activity/history" element={user ? (isHSMUser || isAdminUser) && canAccessHsmSheet('roll-change-activity') ? <RollChangeActivityHistory /> : <Navigate to="/hsm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hsm/roll-change-activity/:id/edit" element={user ? (isHSMUser || isAdminUser) && canAccessHsmSheet('roll-change-activity') ? <RollChangeActivityForm /> : <Navigate to="/hsm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hsm/roll-change-activity/:id"    element={user ? (isHSMUser || isAdminUser) && canAccessHsmSheet('roll-change-activity') ? <RollChangeActivityView /> : <Navigate to="/hsm/dashboard" replace /> : <Navigate to="/login" replace />} />
+
+          <Route path="/hsm/delay-report/new"    element={user ? (isHSMUser || isAdminUser) && canAccessHsmSheet('delay-report') ? <DelayReportForm /> : <Navigate to="/hsm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hsm/delay-report/history" element={user ? (isHSMUser || isAdminUser) && canAccessHsmSheet('delay-report') ? <DelayReportHistory /> : <Navigate to="/hsm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hsm/delay-report/:id/edit" element={user ? (isHSMUser || isAdminUser) && canAccessHsmSheet('delay-report') ? <DelayReportForm /> : <Navigate to="/hsm/dashboard" replace /> : <Navigate to="/login" replace />} />
           <Route
             path="/hsm/delay-report/:id"
             element={
-              user && (isHSMUser || isAdminUser) ? (
+              user && (isHSMUser || isAdminUser) && canAccessHsmSheet('delay-report') ? (
                 <DelayReportView />
               ) : user ? (
                 <Navigate to="/hsm/dashboard" replace />
@@ -1263,198 +1166,25 @@ function App() {
               )
             }
           />
-          <Route
-            path="/hsm/fm-daily-checklist/new"
-            element={
-              user && (isHSMUser || isAdminUser) ? (
-                <FmDailyChecklistForm />
-              ) : user ? (
-                <Navigate to="/hsm/dashboard" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-          <Route
-            path="/hsm/fm-daily-checklist/history"
-            element={
-              user && (isHSMUser || isAdminUser) ? (
-                <FmDailyChecklistHistory />
-              ) : user ? (
-                <Navigate to="/hsm/dashboard" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-          <Route
-            path="/hsm/fm-daily-checklist/:id/edit"
-            element={
-              user && (isHSMUser || isAdminUser) ? (
-                <FmDailyChecklistForm />
-              ) : user ? (
-                <Navigate to="/hsm/dashboard" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-          <Route
-            path="/hsm/fm-daily-checklist/:id"
-            element={
-              user && (isHSMUser || isAdminUser) ? (
-                <FmDailyChecklistView />
-              ) : user ? (
-                <Navigate to="/hsm/dashboard" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-          <Route
-            path="/hsm/induction-daily-checklist/new"
-            element={
-              user && (isHSMUser || isAdminUser) ? (
-                <InductionDailyChecklistForm />
-              ) : user ? (
-                <Navigate to="/hsm/dashboard" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-          <Route
-            path="/hsm/induction-daily-checklist/history"
-            element={
-              user && (isHSMUser || isAdminUser) ? (
-                <InductionDailyChecklistHistory />
-              ) : user ? (
-                <Navigate to="/hsm/dashboard" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-          <Route
-            path="/hsm/induction-daily-checklist/:id/edit"
-            element={
-              user && (isHSMUser || isAdminUser) ? (
-                <InductionDailyChecklistForm />
-              ) : user ? (
-                <Navigate to="/hsm/dashboard" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-          <Route
-            path="/hsm/induction-daily-checklist/:id"
-            element={
-              user && (isHSMUser || isAdminUser) ? (
-                <InductionDailyChecklistView />
-              ) : user ? (
-                <Navigate to="/hsm/dashboard" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-          <Route
-            path="/hsm/dc-daily-checklist/new"
-            element={
-              user && (isHSMUser || isAdminUser) ? (
-                <DcDailyChecklistForm />
-              ) : user ? (
-                <Navigate to="/hsm/dashboard" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-          <Route
-            path="/hsm/dc-daily-checklist/history"
-            element={
-              user && (isHSMUser || isAdminUser) ? (
-                <DcDailyChecklistHistory />
-              ) : user ? (
-                <Navigate to="/hsm/dashboard" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-          <Route
-            path="/hsm/dc-daily-checklist/:id/edit"
-            element={
-              user && (isHSMUser || isAdminUser) ? (
-                <DcDailyChecklistForm />
-              ) : user ? (
-                <Navigate to="/hsm/dashboard" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-          <Route
-            path="/hsm/dc-daily-checklist/:id"
-            element={
-              user && (isHSMUser || isAdminUser) ? (
-                <DcDailyChecklistView />
-              ) : user ? (
-                <Navigate to="/hsm/dashboard" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-          <Route
-            path="/hsm/rm-daily-checklist/new"
-            element={
-              user && (isHSMUser || isAdminUser) ? (
-                <RmDailyChecklistForm />
-              ) : user ? (
-                <Navigate to="/hsm/dashboard" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-          <Route
-            path="/hsm/rm-daily-checklist/history"
-            element={
-              user && (isHSMUser || isAdminUser) ? (
-                <RmDailyChecklistHistory />
-              ) : user ? (
-                <Navigate to="/hsm/dashboard" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-          <Route
-            path="/hsm/rm-daily-checklist/:id/edit"
-            element={
-              user && (isHSMUser || isAdminUser) ? (
-                <RmDailyChecklistForm />
-              ) : user ? (
-                <Navigate to="/hsm/dashboard" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-          <Route
-            path="/hsm/rm-daily-checklist/:id"
-            element={
-              user && (isHSMUser || isAdminUser) ? (
-                <RmDailyChecklistView />
-              ) : user ? (
-                <Navigate to="/hsm/dashboard" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
+          <Route path="/hsm/fm-daily-checklist/new"    element={user ? (isHSMUser || isAdminUser) && canAccessHsmSheet('fm-daily-checklist') ? <FmDailyChecklistForm /> : <Navigate to="/hsm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hsm/fm-daily-checklist/history" element={user ? (isHSMUser || isAdminUser) && canAccessHsmSheet('fm-daily-checklist') ? <FmDailyChecklistHistory /> : <Navigate to="/hsm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hsm/fm-daily-checklist/:id/edit" element={user ? (isHSMUser || isAdminUser) && canAccessHsmSheet('fm-daily-checklist') ? <FmDailyChecklistForm /> : <Navigate to="/hsm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hsm/fm-daily-checklist/:id"     element={user ? (isHSMUser || isAdminUser) && canAccessHsmSheet('fm-daily-checklist') ? <FmDailyChecklistView /> : <Navigate to="/hsm/dashboard" replace /> : <Navigate to="/login" replace />} />
+
+          <Route path="/hsm/induction-daily-checklist/new"    element={user ? (isHSMUser || isAdminUser) && canAccessHsmSheet('induction-daily-checklist') ? <InductionDailyChecklistForm /> : <Navigate to="/hsm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hsm/induction-daily-checklist/history" element={user ? (isHSMUser || isAdminUser) && canAccessHsmSheet('induction-daily-checklist') ? <InductionDailyChecklistHistory /> : <Navigate to="/hsm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hsm/induction-daily-checklist/:id/edit" element={user ? (isHSMUser || isAdminUser) && canAccessHsmSheet('induction-daily-checklist') ? <InductionDailyChecklistForm /> : <Navigate to="/hsm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hsm/induction-daily-checklist/:id"    element={user ? (isHSMUser || isAdminUser) && canAccessHsmSheet('induction-daily-checklist') ? <InductionDailyChecklistView /> : <Navigate to="/hsm/dashboard" replace /> : <Navigate to="/login" replace />} />
+
+          <Route path="/hsm/dc-daily-checklist/new"    element={user ? (isHSMUser || isAdminUser) && canAccessHsmSheet('dc-daily-checklist') ? <DcDailyChecklistForm /> : <Navigate to="/hsm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hsm/dc-daily-checklist/history" element={user ? (isHSMUser || isAdminUser) && canAccessHsmSheet('dc-daily-checklist') ? <DcDailyChecklistHistory /> : <Navigate to="/hsm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hsm/dc-daily-checklist/:id/edit" element={user ? (isHSMUser || isAdminUser) && canAccessHsmSheet('dc-daily-checklist') ? <DcDailyChecklistForm /> : <Navigate to="/hsm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hsm/dc-daily-checklist/:id"    element={user ? (isHSMUser || isAdminUser) && canAccessHsmSheet('dc-daily-checklist') ? <DcDailyChecklistView /> : <Navigate to="/hsm/dashboard" replace /> : <Navigate to="/login" replace />} />
+
+          <Route path="/hsm/rm-daily-checklist/new"    element={user ? (isHSMUser || isAdminUser) && canAccessHsmSheet('rm-daily-checklist') ? <RmDailyChecklistForm /> : <Navigate to="/hsm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hsm/rm-daily-checklist/history" element={user ? (isHSMUser || isAdminUser) && canAccessHsmSheet('rm-daily-checklist') ? <RmDailyChecklistHistory /> : <Navigate to="/hsm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hsm/rm-daily-checklist/:id/edit" element={user ? (isHSMUser || isAdminUser) && canAccessHsmSheet('rm-daily-checklist') ? <RmDailyChecklistForm /> : <Navigate to="/hsm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/hsm/rm-daily-checklist/:id"    element={user ? (isHSMUser || isAdminUser) && canAccessHsmSheet('rm-daily-checklist') ? <RmDailyChecklistView /> : <Navigate to="/hsm/dashboard" replace /> : <Navigate to="/login" replace />} />
           <Route
             path="/hsm/insights"
             element={
@@ -1476,20 +1206,11 @@ function App() {
           {/* ========== PTM ROUTES ========== */}
           <Route
             path="/ptm/dashboard"
-            element={user && isAdminUser ? <PtmDashboard /> : user ? <Navigate to="/" replace /> : <Navigate to="/login" replace />}
+            element={user && (isPTMUser || isAdminUser) ? <PtmDashboard /> : user ? <Navigate to="/" replace /> : <Navigate to="/login" replace />}
           />
-          <Route
-            path="/ptm/checksheet/history"
-            element={user && isAdminUser ? <PtmChecksheetHistory /> : user ? <Navigate to="/" replace /> : <Navigate to="/login" replace />}
-          />
-          <Route
-            path="/ptm/breakdown/new"
-            element={user && isAdminUser ? <PtmBreakdownForm /> : user ? <Navigate to="/" replace /> : <Navigate to="/login" replace />}
-          />
-          <Route
-            path="/ptm/monthly-register"
-            element={user && isAdminUser ? <PtmMonthlyRegister /> : user ? <Navigate to="/" replace /> : <Navigate to="/login" replace />}
-          />
+          <Route path="/ptm/checksheet/history" element={user ? (isPTMUser || isAdminUser) && canAccessPtmSheet('checksheet') ? <PtmChecksheetHistory /> : <Navigate to="/ptm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/ptm/breakdown/new"       element={user ? (isPTMUser || isAdminUser) && canAccessPtmSheet('breakdown') ? <PtmBreakdownForm /> : <Navigate to="/ptm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/ptm/monthly-register"    element={user ? (isPTMUser || isAdminUser) && canAccessPtmSheet('monthly-register') ? <PtmMonthlyRegister /> : <Navigate to="/ptm/dashboard" replace /> : <Navigate to="/login" replace />} />
           <Route
             path="/ptm/admin/config"
             element={user && isAdminUser ? <PtmAdminConfig /> : user ? <Navigate to="/" replace /> : <Navigate to="/login" replace />}
@@ -1498,64 +1219,12 @@ function App() {
           {/* ========== SMS ROUTES ========== */}
           <Route
             path="/sms/dashboard"
-            element={
-              user && (isSMSUser || isAdminUser) ? (
-                <SmsDashboard />
-              ) : user ? (
-                <Navigate to="/" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
+            element={user && (isSMSUser || isAdminUser) ? <SmsDashboard /> : user ? <Navigate to="/" replace /> : <Navigate to="/login" replace />}
           />
-          <Route
-            path="/sms/breakdown-analysis/new"
-            element={
-              user && (isSMSUser || isAdminUser) ? (
-                <BreakdownAnalysisForm />
-              ) : user ? (
-                <Navigate to="/sms/dashboard" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-          <Route
-            path="/sms/breakdown-analysis/history"
-            element={
-              user && (isSMSUser || isAdminUser) ? (
-                <BreakdownAnalysisHistory />
-              ) : user ? (
-                <Navigate to="/sms/dashboard" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-          <Route
-            path="/sms/breakdown-analysis/:id/edit"
-            element={
-              user && (isSMSUser || isAdminUser) ? (
-                <BreakdownAnalysisForm />
-              ) : user ? (
-                <Navigate to="/sms/dashboard" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-          <Route
-            path="/sms/breakdown-analysis/:id"
-            element={
-              user && (isSMSUser || isAdminUser) ? (
-                <BreakdownAnalysisView />
-              ) : user ? (
-                <Navigate to="/sms/dashboard" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
+          <Route path="/sms/breakdown-analysis/new"    element={user ? (isSMSUser || isAdminUser) && canAccessSmsSheet('breakdown-analysis') ? <BreakdownAnalysisForm /> : <Navigate to="/sms/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/sms/breakdown-analysis/history" element={user ? (isSMSUser || isAdminUser) && canAccessSmsSheet('breakdown-analysis') ? <BreakdownAnalysisHistory /> : <Navigate to="/sms/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/sms/breakdown-analysis/:id/edit" element={user ? (isSMSUser || isAdminUser) && canAccessSmsSheet('breakdown-analysis') ? <BreakdownAnalysisForm /> : <Navigate to="/sms/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/sms/breakdown-analysis/:id"    element={user ? (isSMSUser || isAdminUser) && canAccessSmsSheet('breakdown-analysis') ? <BreakdownAnalysisView /> : <Navigate to="/sms/dashboard" replace /> : <Navigate to="/login" replace />} />
 
           {/* ========== HOD ROUTES ========== */}
           <Route

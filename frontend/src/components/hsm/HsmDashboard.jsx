@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-export default function HsmDashboard() {
+export default function HsmDashboard({ allowedSheets }) {
   const isAdminUser = (() => {
     try {
       const u = JSON.parse(localStorage.getItem('user'));
@@ -11,12 +11,15 @@ export default function HsmDashboard() {
     }
   })();
 
+  const canAccess = (key) => !allowedSheets || allowedSheets.includes(key);
+
   const today = new Date().toLocaleDateString('en-IN', {
     weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',
   });
 
-  const reports = [
+  const allReports = [
     {
+      key: 'breakdown-analysis',
       to: '/hsm/breakdown-analysis/new',
       label: 'Breakdown Analysis Report',
       sub: 'RCA · 5-Why · Corrective & Preventive Actions',
@@ -28,6 +31,7 @@ export default function HsmDashboard() {
       color: 'text-red-600 bg-red-50',
     },
     {
+      key: 'roll-change-activity',
       to: '/hsm/roll-change-activity/new',
       label: 'Roll Change Activity',
       sub: 'Area equipment · Manpower · Remarks',
@@ -39,6 +43,7 @@ export default function HsmDashboard() {
       color: 'text-orange-600 bg-orange-50',
     },
     {
+      key: 'delay-report',
       to: '/hsm/delay-report/new',
       label: 'Delay Report',
       sub: 'HOTOUT · Miss Roll · Total downtime',
@@ -50,6 +55,7 @@ export default function HsmDashboard() {
       color: 'text-yellow-600 bg-yellow-50',
     },
     {
+      key: 'fm-daily-checklist',
       to: '/hsm/fm-daily-checklist/new',
       label: 'FM Daily Check List',
       sub: 'Guide gap · Pressures · Clamps',
@@ -61,6 +67,7 @@ export default function HsmDashboard() {
       color: 'text-green-600 bg-green-50',
     },
     {
+      key: 'induction-daily-checklist',
       to: '/hsm/induction-daily-checklist/new',
       label: 'Induction Daily Check List',
       sub: 'Guide gap · Rollers · Heaters',
@@ -72,6 +79,7 @@ export default function HsmDashboard() {
       color: 'text-blue-600 bg-blue-50',
     },
     {
+      key: 'dc-daily-checklist',
       to: '/hsm/dc-daily-checklist/new',
       label: 'DC Daily Check List',
       sub: 'Guide gap · Mandrel · WR gap',
@@ -83,6 +91,7 @@ export default function HsmDashboard() {
       color: 'text-purple-600 bg-purple-50',
     },
     {
+      key: 'rm-daily-checklist',
       to: '/hsm/rm-daily-checklist/new',
       label: 'RM Daily Check List',
       sub: 'Guide gap · Clamps · Descaling',
@@ -96,6 +105,7 @@ export default function HsmDashboard() {
     },
     ...(isAdminUser
       ? [{
+          key: null,
           to: '/hsm/insights',
           label: 'Insights',
           sub: 'Custom analysis · Compare reports',
@@ -108,6 +118,8 @@ export default function HsmDashboard() {
         }]
       : []),
   ];
+
+  const reports = allReports.filter(r => r.key === null || canAccess(r.key));
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24 sm:pb-6">

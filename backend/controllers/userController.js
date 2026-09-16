@@ -485,6 +485,132 @@ class UserController {
     }
   }
 
+  /** GET /api/users/:id/hsm-permissions */
+  static async getHsmPermissions(req, res) {
+    try {
+      const { id } = req.params;
+      const result = await query(
+        `SELECT allowed_checksheets, can_download_pdf, can_delete, can_edit_submitted
+         FROM hsm_user_permissions WHERE user_id = $1`,
+        [id]
+      );
+      if (result.rows.length === 0) {
+        return res.json({ success: true, data: { allowed_checksheets: null, can_download_pdf: true, can_delete: false, can_edit_submitted: false } });
+      }
+      res.json({ success: true, data: result.rows[0] });
+    } catch (error) {
+      console.error('Get HSM permissions error:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch HSM permissions' });
+    }
+  }
+
+  /** PUT /api/users/:id/hsm-permissions */
+  static async updateHsmPermissions(req, res) {
+    try {
+      const { id } = req.params;
+      const { allowed_checksheets, can_download_pdf, can_delete, can_edit_submitted } = req.body;
+      await query(
+        `INSERT INTO hsm_user_permissions (user_id, allowed_checksheets, can_download_pdf, can_delete, can_edit_submitted, updated_at)
+         VALUES ($1, $2, $3, $4, $5, NOW())
+         ON CONFLICT (user_id) DO UPDATE SET
+           allowed_checksheets  = EXCLUDED.allowed_checksheets,
+           can_download_pdf     = EXCLUDED.can_download_pdf,
+           can_delete           = EXCLUDED.can_delete,
+           can_edit_submitted   = EXCLUDED.can_edit_submitted,
+           updated_at           = NOW()`,
+        [id, allowed_checksheets, can_download_pdf, can_delete, can_edit_submitted]
+      );
+      res.json({ success: true, message: 'HSM permissions updated' });
+    } catch (error) {
+      console.error('Update HSM permissions error:', error);
+      res.status(500).json({ success: false, message: 'Failed to update HSM permissions' });
+    }
+  }
+
+  /** GET /api/users/:id/ptm-permissions */
+  static async getPtmPermissions(req, res) {
+    try {
+      const { id } = req.params;
+      const result = await query(
+        `SELECT allowed_checksheets, can_download_pdf, can_delete, can_edit_submitted
+         FROM ptm_user_permissions WHERE user_id = $1`,
+        [id]
+      );
+      if (result.rows.length === 0) {
+        return res.json({ success: true, data: { allowed_checksheets: null, can_download_pdf: true, can_delete: false, can_edit_submitted: false } });
+      }
+      res.json({ success: true, data: result.rows[0] });
+    } catch (error) {
+      console.error('Get PTM permissions error:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch PTM permissions' });
+    }
+  }
+
+  /** PUT /api/users/:id/ptm-permissions */
+  static async updatePtmPermissions(req, res) {
+    try {
+      const { id } = req.params;
+      const { allowed_checksheets, can_download_pdf, can_delete, can_edit_submitted } = req.body;
+      await query(
+        `INSERT INTO ptm_user_permissions (user_id, allowed_checksheets, can_download_pdf, can_delete, can_edit_submitted, updated_at)
+         VALUES ($1, $2, $3, $4, $5, NOW())
+         ON CONFLICT (user_id) DO UPDATE SET
+           allowed_checksheets  = EXCLUDED.allowed_checksheets,
+           can_download_pdf     = EXCLUDED.can_download_pdf,
+           can_delete           = EXCLUDED.can_delete,
+           can_edit_submitted   = EXCLUDED.can_edit_submitted,
+           updated_at           = NOW()`,
+        [id, allowed_checksheets, can_download_pdf, can_delete, can_edit_submitted]
+      );
+      res.json({ success: true, message: 'PTM permissions updated' });
+    } catch (error) {
+      console.error('Update PTM permissions error:', error);
+      res.status(500).json({ success: false, message: 'Failed to update PTM permissions' });
+    }
+  }
+
+  /** GET /api/users/:id/sms-permissions */
+  static async getSmsPermissions(req, res) {
+    try {
+      const { id } = req.params;
+      const result = await query(
+        `SELECT allowed_checksheets, can_download_pdf, can_delete, can_edit_submitted
+         FROM sms_user_permissions WHERE user_id = $1`,
+        [id]
+      );
+      if (result.rows.length === 0) {
+        return res.json({ success: true, data: { allowed_checksheets: null, can_download_pdf: true, can_delete: false, can_edit_submitted: false } });
+      }
+      res.json({ success: true, data: result.rows[0] });
+    } catch (error) {
+      console.error('Get SMS permissions error:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch SMS permissions' });
+    }
+  }
+
+  /** PUT /api/users/:id/sms-permissions */
+  static async updateSmsPermissions(req, res) {
+    try {
+      const { id } = req.params;
+      const { allowed_checksheets, can_download_pdf, can_delete, can_edit_submitted } = req.body;
+      await query(
+        `INSERT INTO sms_user_permissions (user_id, allowed_checksheets, can_download_pdf, can_delete, can_edit_submitted, updated_at)
+         VALUES ($1, $2, $3, $4, $5, NOW())
+         ON CONFLICT (user_id) DO UPDATE SET
+           allowed_checksheets  = EXCLUDED.allowed_checksheets,
+           can_download_pdf     = EXCLUDED.can_download_pdf,
+           can_delete           = EXCLUDED.can_delete,
+           can_edit_submitted   = EXCLUDED.can_edit_submitted,
+           updated_at           = NOW()`,
+        [id, allowed_checksheets, can_download_pdf, can_delete, can_edit_submitted]
+      );
+      res.json({ success: true, message: 'SMS permissions updated' });
+    } catch (error) {
+      console.error('Update SMS permissions error:', error);
+      res.status(500).json({ success: false, message: 'Failed to update SMS permissions' });
+    }
+  }
+
   /**
    * Delete user (Admin only)
    * DELETE /api/users/:id
