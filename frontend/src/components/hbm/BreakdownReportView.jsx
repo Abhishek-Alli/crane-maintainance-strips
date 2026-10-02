@@ -45,7 +45,7 @@ const BreakdownReportView = () => {
   const fetchLog = async () => {
     try {
       const res = await hbmAPI.getBreakdownLogById(id);
-      setLog(res.data);
+      setLog(res.data ?? res);
     } catch {
       toast.error('Failed to load breakdown report');
       navigate('/hbm/breakdown/history');

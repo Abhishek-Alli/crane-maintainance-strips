@@ -3078,6 +3078,78 @@ class HbmController {
     }
   }
 
+  static async getBreakdownReasonStats(req, res) {
+    try {
+      const { date_from, date_to, breakdown_type } = req.query;
+      const conditions = [`e.breakdown_reason IS NOT NULL`, `TRIM(e.breakdown_reason) <> ''`];
+      const params = [];
+      if (date_from) { params.push(date_from); conditions.push(`l.log_date >= $${params.length}`); }
+      if (date_to)   { params.push(date_to);   conditions.push(`l.log_date <= $${params.length}`); }
+      if (breakdown_type) { params.push(breakdown_type); conditions.push(`e.breakdown_type = $${params.length}`); }
+      const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+      const { rows: reasonRows } = await query(
+        `WITH cleaned AS (
+           SELECT e.breakdown_reason, e.breakdown_minutes, l.id AS log_id,
+             TRIM(REGEXP_REPLACE(
+               REGEXP_REPLACE(
+                 REGEXP_REPLACE(
+                   REGEXP_REPLACE(
+                     REGEXP_REPLACE(
+                       REGEXP_REPLACE(
+                         LOWER(TRIM(e.breakdown_reason)),
+                       '&', ' and ', 'g'),
+                     '[^a-z0-9 ]', ' ', 'g'),
+                   '\\s+', ' ', 'g'),
+                 'caste|ccm', 'caster', 'g'),
+               'mil ', 'mill ', 'g'),
+             'caster.*mill|mill.*caster|ccm.*mill|mill.*ccm', 'caster and mill off', 'g'
+             )) AS clean_reason
+           FROM hbm_breakdown_entries e
+           JOIN hbm_breakdown_slots sl ON sl.id = e.slot_id
+           JOIN hbm_breakdown_logs l ON l.id = sl.log_id
+           ${where}
+         ),
+         normalized AS (
+           SELECT breakdown_reason, breakdown_minutes, log_id, clean_reason AS reason_key
+           FROM cleaned
+         )
+         SELECT
+           CASE WHEN reason_key = 'caster and mill off' THEN 'Caster and Mill OFF'
+                ELSE MIN(TRIM(breakdown_reason)) END AS reason,
+           reason_key,
+           COUNT(*) AS occurrences,
+           SUM(COALESCE(breakdown_minutes, 0)) AS total_minutes,
+           COUNT(DISTINCT log_id) AS report_count
+         FROM normalized
+         GROUP BY reason_key
+         ORDER BY occurrences DESC, total_minutes DESC
+         LIMIT 20`,
+        params
+      );
+      const typeConditions = [`e.breakdown_type IS NOT NULL`];
+      const typeParams = [];
+      if (date_from) { typeParams.push(date_from); typeConditions.push(`l.log_date >= $${typeParams.length}`); }
+      if (date_to)   { typeParams.push(date_to);   typeConditions.push(`l.log_date <= $${typeParams.length}`); }
+      const typeWhere = `WHERE ${typeConditions.join(' AND ')}`;
+      const { rows: typeRows } = await query(
+        `SELECT e.breakdown_type,
+                COUNT(*) AS occurrences,
+                SUM(COALESCE(e.breakdown_minutes, 0)) AS total_minutes
+         FROM hbm_breakdown_entries e
+         JOIN hbm_breakdown_slots sl ON sl.id = e.slot_id
+         JOIN hbm_breakdown_logs l ON l.id = sl.log_id
+         ${typeWhere}
+         GROUP BY e.breakdown_type
+         ORDER BY total_minutes DESC`,
+        typeParams
+      );
+      res.json({ success: true, reasons: reasonRows, types: typeRows });
+    } catch (e) {
+      console.error('Breakdown reason stats error:', e);
+      res.status(500).json({ success: false, message: 'Failed to fetch stats' });
+    }
+  }
+
   static async getBreakdownLogById(req, res) {
     try {
       const { id } = req.params;
@@ -3808,7 +3880,18 @@ class HbmController {
       const tgLib = require('../utils/telegram');
 
       // Special handlers for sheets that need extra DB queries
-      if (type === 'roughing-gb-temp') {
+      if (type === 'breakdown') {
+        const slotsRes = await query(`SELECT * FROM hbm_breakdown_slots WHERE log_id = $1 ORDER BY slot_order`, [id]);
+        const slots = await Promise.all(slotsRes.rows.map(async (slot) => {
+          const entriesRes = await query(`SELECT * FROM hbm_breakdown_entries WHERE slot_id = $1 ORDER BY id`, [slot.id]);
+          return { ...slot, entries: entriesRes.rows };
+        }));
+        await tgLib.sendBreakdownNotification({
+          date: log.log_date, size: log.size,
+          filledBy: log.filled_by_name, submittedAt: new Date(log.created_at),
+          slots,
+        });
+      } else if (type === 'roughing-gb-temp') {
         const stands = await query(`SELECT * FROM hbm_roughing_gb_temp_stands WHERE log_id = $1 ORDER BY stand_name`, [id]);
         const s1 = {
           flywheel_de: log.s1_flywheel_de, flywheel_nde: log.s1_flywheel_nde,

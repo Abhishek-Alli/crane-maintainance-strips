@@ -333,6 +333,8 @@ export const hbmAPI = {
   getBreakdownLogById: (id) => api.get(`/hbm/breakdown/${id}`),
   createBreakdownLog: (data) => api.post('/hbm/breakdown', data),
   downloadBreakdownPDF: (id) => api.get(`/hbm/breakdown/${id}/pdf`, { responseType: 'blob' }),
+  getBreakdownReasonStats: (params) => api.get('/hbm/breakdown-reason-stats', { params }),
+  getBreakdownReasons: (q) => api.get('/hbm/breakdown-reasons', { params: { q } }),
 
   // PDF downloads
   downloadPDF: (type, id) =>
