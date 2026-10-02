@@ -121,6 +121,34 @@ import SmsDashboard from './components/sms/SmsDashboard';
 import BreakdownAnalysisForm from './components/sms/BreakdownAnalysisForm';
 import BreakdownAnalysisHistory from './components/sms/BreakdownAnalysisHistory';
 import BreakdownAnalysisView from './components/sms/BreakdownAnalysisView';
+import EotCraneMaintenanceForm from './components/sms/EotCraneMaintenanceForm';
+import EotCraneMaintenanceHistory from './components/sms/EotCraneMaintenanceHistory';
+import EotCraneMaintenanceView from './components/sms/EotCraneMaintenanceView';
+import EotCraneCalendar from './components/sms/EotCraneCalendar';
+import CrucibleMaintenanceForm from './components/sms/CrucibleMaintenanceForm';
+import CrucibleMaintenanceHistory from './components/sms/CrucibleMaintenanceHistory';
+import CrucibleMaintenanceView from './components/sms/CrucibleMaintenanceView';
+import PokerMaintenanceForm from './components/sms/PokerMaintenanceForm';
+import PokerMaintenanceHistory from './components/sms/PokerMaintenanceHistory';
+import PokerMaintenanceView from './components/sms/PokerMaintenanceView';
+import SmsPumpHouseForm from './components/sms/SmsPumpHouseForm';
+import SmsPumpHouseHistory from './components/sms/SmsPumpHouseHistory';
+import SmsPumpHouseView from './components/sms/SmsPumpHouseView';
+import PatchingForm from './components/sms/PatchingForm';
+import PatchingHistory from './components/sms/PatchingHistory';
+import PatchingView from './components/sms/PatchingView';
+import ScrapTrollyForm from './components/sms/ScrapTrollyForm';
+import ScrapTrollyHistory from './components/sms/ScrapTrollyHistory';
+import ScrapTrollyView from './components/sms/ScrapTrollyView';
+import LadleCarForm from './components/sms/LadleCarForm';
+import LadleCarHistory from './components/sms/LadleCarHistory';
+import LadleCarView from './components/sms/LadleCarView';
+import PollutionForm from './components/sms/PollutionForm';
+import PollutionHistory from './components/sms/PollutionHistory';
+import PollutionView from './components/sms/PollutionView';
+import DmUnitForm from './components/sms/DmUnitForm';
+import DmUnitHistory from './components/sms/DmUnitHistory';
+import DmUnitView from './components/sms/DmUnitView';
 
 // import FabricationReport from "./components/fabrication/FabricationReport";
 import Dashboard from "./components/Dashboard";
@@ -764,7 +792,83 @@ function App() {
                       </Link>
                       <Link to="/sms/breakdown-analysis/history" className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/sms/breakdown-analysis/history' ? navActive + ' text-white' : navHover}`}>
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
-                        <span className="font-medium">History</span>
+                        <span className="font-medium">Breakdown History</span>
+                      </Link>
+                      <Link to="/sms/eot-crane-maintenance/new" className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/sms/eot-crane-maintenance/new' ? navActive + ' text-white' : navHover}`}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                        <span className="font-medium">EOT Crane Maintenance</span>
+                      </Link>
+                      <Link to="/sms/eot-crane-maintenance/calendar" className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/sms/eot-crane-maintenance/calendar' ? navActive + ' text-white' : navHover}`}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                        <span className="font-medium">EOT Crane Schedule</span>
+                      </Link>
+                      <Link to="/sms/eot-crane-maintenance/history" className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/sms/eot-crane-maintenance/history' ? navActive + ' text-white' : navHover}`}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                        <span className="font-medium">EOT Crane History</span>
+                      </Link>
+                      <Link to="/sms/crucible-maintenance/new" className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/sms/crucible-maintenance/new' ? navActive + ' text-white' : navHover}`}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                        <span className="font-medium">Crucible Maintenance</span>
+                      </Link>
+                      <Link to="/sms/crucible-maintenance/history" className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/sms/crucible-maintenance/history' ? navActive + ' text-white' : navHover}`}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                        <span className="font-medium">Crucible History</span>
+                      </Link>
+                      <Link to="/sms/poker-maintenance/new" className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/sms/poker-maintenance/new' ? navActive + ' text-white' : navHover}`}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                        <span className="font-medium">Hyd Poker Maintenance</span>
+                      </Link>
+                      <Link to="/sms/poker-maintenance/history" className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/sms/poker-maintenance/history' ? navActive + ' text-white' : navHover}`}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                        <span className="font-medium">Poker History</span>
+                      </Link>
+                      <Link to="/sms/pump-house/new" className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/sms/pump-house/new' ? navActive + ' text-white' : navHover}`}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                        <span className="font-medium">Pump House</span>
+                      </Link>
+                      <Link to="/sms/pump-house/history" className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/sms/pump-house/history' ? navActive + ' text-white' : navHover}`}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                        <span className="font-medium">Pump House History</span>
+                      </Link>
+                      <Link to="/sms/patching/new" className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/sms/patching/new' ? navActive + ' text-white' : navHover}`}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                        <span className="font-medium">Patching</span>
+                      </Link>
+                      <Link to="/sms/patching/history" className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/sms/patching/history' ? navActive + ' text-white' : navHover}`}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                        <span className="font-medium">Patching History</span>
+                      </Link>
+                      <Link to="/sms/scrap-trolly/new" className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/sms/scrap-trolly/new' ? navActive + ' text-white' : navHover}`}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                        <span className="font-medium">Scrap Transfer Trolly</span>
+                      </Link>
+                      <Link to="/sms/scrap-trolly/history" className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/sms/scrap-trolly/history' ? navActive + ' text-white' : navHover}`}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                        <span className="font-medium">Scrap Trolly History</span>
+                      </Link>
+                      <Link to="/sms/ladle-car/new" className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/sms/ladle-car/new' ? navActive + ' text-white' : navHover}`}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                        <span className="font-medium">Ladle Car</span>
+                      </Link>
+                      <Link to="/sms/ladle-car/history" className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/sms/ladle-car/history' ? navActive + ' text-white' : navHover}`}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                        <span className="font-medium">Ladle Car History</span>
+                      </Link>
+                      <Link to="/sms/pollution/new" className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/sms/pollution/new' ? navActive + ' text-white' : navHover}`}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                        <span className="font-medium">Pollution</span>
+                      </Link>
+                      <Link to="/sms/pollution/history" className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/sms/pollution/history' ? navActive + ' text-white' : navHover}`}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                        <span className="font-medium">Pollution History</span>
+                      </Link>
+                      <Link to="/sms/dm-unit/new" className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/sms/dm-unit/new' ? navActive + ' text-white' : navHover}`}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                        <span className="font-medium">DM Unit</span>
+                      </Link>
+                      <Link to="/sms/dm-unit/history" className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/sms/dm-unit/history' ? navActive + ' text-white' : navHover}`}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                        <span className="font-medium">DM Unit History</span>
                       </Link>
                       {isAdminUser && (
                         <>
@@ -1543,6 +1647,450 @@ function App() {
             element={
               user && (isSMSUser || isAdminUser) ? (
                 <BreakdownAnalysisView />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/eot-crane-maintenance/new"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <EotCraneMaintenanceForm />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/eot-crane-maintenance/calendar"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <EotCraneCalendar />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/eot-crane-maintenance/history"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <EotCraneMaintenanceHistory />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/eot-crane-maintenance/:id/edit"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <EotCraneMaintenanceForm />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/eot-crane-maintenance/:id"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <EotCraneMaintenanceView />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/crucible-maintenance/new"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <CrucibleMaintenanceForm />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/crucible-maintenance/history"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <CrucibleMaintenanceHistory />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/crucible-maintenance/:id/edit"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <CrucibleMaintenanceForm />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/crucible-maintenance/:id"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <CrucibleMaintenanceView />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/poker-maintenance/new"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <PokerMaintenanceForm />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/poker-maintenance/history"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <PokerMaintenanceHistory />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/poker-maintenance/:id/edit"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <PokerMaintenanceForm />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/poker-maintenance/:id"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <PokerMaintenanceView />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/pump-house/new"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <SmsPumpHouseForm />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/pump-house/history"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <SmsPumpHouseHistory />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/pump-house/:id/edit"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <SmsPumpHouseForm />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/pump-house/:id"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <SmsPumpHouseView />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/patching/new"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <PatchingForm />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/patching/history"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <PatchingHistory />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/patching/:id/edit"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <PatchingForm />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/patching/:id"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <PatchingView />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/scrap-trolly/new"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <ScrapTrollyForm />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/scrap-trolly/history"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <ScrapTrollyHistory />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/scrap-trolly/:id/edit"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <ScrapTrollyForm />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/scrap-trolly/:id"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <ScrapTrollyView />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/ladle-car/new"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <LadleCarForm />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/ladle-car/history"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <LadleCarHistory />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/ladle-car/:id/edit"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <LadleCarForm />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/ladle-car/:id"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <LadleCarView />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/pollution/new"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <PollutionForm />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/pollution/history"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <PollutionHistory />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/pollution/:id/edit"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <PollutionForm />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/pollution/:id"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <PollutionView />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/dm-unit/new"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <DmUnitForm />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/dm-unit/history"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <DmUnitHistory />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/dm-unit/:id/edit"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <DmUnitForm />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/dm-unit/:id"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <DmUnitView />
               ) : user ? (
                 <Navigate to="/sms/dashboard" replace />
               ) : (

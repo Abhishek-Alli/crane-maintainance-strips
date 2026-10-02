@@ -15,7 +15,6 @@ const TYPE_COLORS = [
 
 const emptyRow = () => ({
   breakdown_reason: '', from_size: '', to_size: '', breakdown_minutes: '', repeated_count: '',
-  sizes: [''], pipes: '', length: '', remarks: '', production_mt: '',
 });
 
 // Autocomplete for reason (portal-based)
@@ -162,34 +161,6 @@ export default function PtmBreakdownForm() {
     });
   };
 
-  const updateSizeSlot = (millId, typeId, rowIdx, sizeIdx, val) => {
-    setMillData(prev => {
-      const row = prev[millId][typeId].rows[rowIdx];
-      const sizesArr = [...(row.sizes || [''])];
-      sizesArr[sizeIdx] = val;
-      const rows = prev[millId][typeId].rows.map((r, i) => i === rowIdx ? { ...r, sizes: sizesArr } : r);
-      return { ...prev, [millId]: { ...prev[millId], [typeId]: { ...prev[millId][typeId], rows } } };
-    });
-  };
-
-  const addSizeSlot = (millId, typeId, rowIdx) => {
-    setMillData(prev => {
-      const row = prev[millId][typeId].rows[rowIdx];
-      const sizesArr = [...(row.sizes || ['']), ''];
-      const rows = prev[millId][typeId].rows.map((r, i) => i === rowIdx ? { ...r, sizes: sizesArr } : r);
-      return { ...prev, [millId]: { ...prev[millId], [typeId]: { ...prev[millId][typeId], rows } } };
-    });
-  };
-
-  const removeSizeSlot = (millId, typeId, rowIdx, sizeIdx) => {
-    setMillData(prev => {
-      const row = prev[millId][typeId].rows[rowIdx];
-      const sizesArr = (row.sizes || ['']).filter((_, i) => i !== sizeIdx);
-      const rows = prev[millId][typeId].rows.map((r, i) => i === rowIdx ? { ...r, sizes: sizesArr.length ? sizesArr : [''] } : r);
-      return { ...prev, [millId]: { ...prev[millId], [typeId]: { ...prev[millId][typeId], rows } } };
-    });
-  };
-
   // Summary totals per type across all mills (safe: millData may be empty during first render)
   const totals = breakdownTypes.reduce((acc, t) => {
     acc[t.id] = mills.reduce((s, m) => {
@@ -212,7 +183,7 @@ export default function PtmBreakdownForm() {
           if (!td?.enabled) return [];
           return td.rows
             .filter(r => t.has_size_change
-              ? (r.from_size || r.to_size || r.breakdown_minutes || (r.sizes || []).some(Boolean) || r.pipes || r.length || r.remarks || r.production_mt)
+              ? (r.from_size || r.to_size || r.breakdown_minutes)
               : (r.breakdown_reason || r.breakdown_minutes))
             .map(r => ({
               breakdown_type: t.name,
@@ -221,11 +192,6 @@ export default function PtmBreakdownForm() {
                 ? (r.from_size || r.to_size ? `${r.from_size || '?'} → ${r.to_size || '?'}` : null)
                 : (r.breakdown_reason || null),
               repeated_count: r.repeated_count ? parseInt(r.repeated_count) : null,
-              size: t.has_size_change ? ((r.sizes || []).filter(Boolean).join(', ') || null) : null,
-              pipe_pieces: t.has_size_change && r.pipes ? parseInt(r.pipes) : null,
-              pipe_length_m: t.has_size_change && r.length ? parseFloat(r.length) : null,
-              remarks: t.has_size_change ? (r.remarks || null) : null,
-              production_mt: t.has_size_change && r.production_mt ? parseFloat(r.production_mt) : null,
             }));
         });
         const prod = millProduction[m.id] || {};
@@ -438,8 +404,7 @@ export default function PtmBreakdownForm() {
                     {/* Rows */}
                     <div className="px-5 pb-4 space-y-2">
                       {td.rows.map((row, rowIdx) => (
-                        <div key={rowIdx} className={type.has_size_change ? 'rounded-lg border border-purple-100 bg-white/60 p-2' : ''}>
-                        <div className="grid grid-cols-12 gap-2 items-center">
+                        <div key={rowIdx} className="grid grid-cols-12 gap-2 items-center">
                           {type.has_size_change ? (
                             <>
                               <div className="col-span-2">
@@ -482,62 +447,6 @@ export default function PtmBreakdownForm() {
                                 className="text-red-400 hover:text-red-600 text-lg font-bold leading-none">×</button>
                             )}
                           </div>
-                        </div>
-
-                        {type.has_size_change && (
-                          <div className="grid grid-cols-12 gap-2 items-start mt-2 pt-2 border-t border-purple-100">
-                            <div className="col-span-2">
-                              <div className="flex items-center justify-between mb-1">
-                                <label className="block text-[11px] font-semibold text-gray-500">Size Produced</label>
-                                <button type="button" onClick={() => addSizeSlot(mill.id, type.id, rowIdx)}
-                                  className="text-[11px] font-semibold text-purple-600 hover:text-purple-800">+ Add</button>
-                              </div>
-                              <div className="space-y-1">
-                                {(row.sizes || ['']).map((sizeVal, sizeIdx) => (
-                                  <div key={sizeIdx} className="flex gap-1">
-                                    <select value={sizeVal} onChange={e => updateSizeSlot(mill.id, type.id, rowIdx, sizeIdx, e.target.value)}
-                                      className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 bg-white">
-                                      <option value="">—</option>
-                                      {sizes.map(s => <option key={s.id} value={s.size_label}>{s.size_label}</option>)}
-                                    </select>
-                                    {(row.sizes || []).length > 1 && (
-                                      <button type="button" onClick={() => removeSizeSlot(mill.id, type.id, rowIdx, sizeIdx)}
-                                        className="text-red-400 hover:text-red-600 text-sm font-bold leading-none px-1">×</button>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                            <div className="col-span-2">
-                              <label className="block text-[11px] font-semibold text-gray-500 mb-1">No. of Pipes</label>
-                              <input type="number" min="0" value={row.pipes}
-                                onChange={e => updateRow(mill.id, type.id, rowIdx, 'pipes', e.target.value)}
-                                placeholder="0"
-                                className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-400" />
-                            </div>
-                            <div className="col-span-2">
-                              <label className="block text-[11px] font-semibold text-gray-500 mb-1">Length (m)</label>
-                              <input type="number" min="0" step="0.1" value={row.length}
-                                onChange={e => updateRow(mill.id, type.id, rowIdx, 'length', e.target.value)}
-                                placeholder="6"
-                                className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-400" />
-                            </div>
-                            <div className="col-span-2">
-                              <label className="block text-[11px] font-semibold text-gray-500 mb-1">Prod. (MT)</label>
-                              <input type="number" min="0" step="0.001" value={row.production_mt}
-                                onChange={e => updateRow(mill.id, type.id, rowIdx, 'production_mt', e.target.value)}
-                                placeholder="0.000"
-                                className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-400" />
-                            </div>
-                            <div className="col-span-4">
-                              <label className="block text-[11px] font-semibold text-gray-500 mb-1">Random <span className="font-normal text-gray-400">(optional)</span></label>
-                              <input type="text" value={row.remarks}
-                                onChange={e => updateRow(mill.id, type.id, rowIdx, 'remarks', e.target.value)}
-                                placeholder="Any note..."
-                                className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-400" />
-                            </div>
-                          </div>
-                        )}
                         </div>
                       ))}
                     </div>
