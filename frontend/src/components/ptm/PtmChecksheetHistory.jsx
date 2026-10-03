@@ -351,15 +351,6 @@ function BreakdownDetailModal({ logId, onClose }) {
                             </div>
                             <span className="shrink-0 font-medium text-gray-700">{e.breakdown_minutes || 0} min</span>
                           </div>
-                          {(e.size || e.pipe_pieces || e.pipe_length_m || e.production_mt || e.remarks) && (
-                            <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-500">
-                              {e.size && <span>Size: <span className="font-medium text-gray-700">{e.size}</span></span>}
-                              {e.pipe_pieces ? <span>Pipes: <span className="font-medium text-gray-700">{e.pipe_pieces}</span></span> : null}
-                              {e.pipe_length_m ? <span>Length: <span className="font-medium text-gray-700">{e.pipe_length_m}m</span></span> : null}
-                              {e.production_mt ? <span>Prod: <span className="font-medium text-gray-700">{e.production_mt} MT</span></span> : null}
-                              {e.remarks && <span className="italic">"{e.remarks}"</span>}
-                            </div>
-                          )}
                         </div>
                       ))}
                     </div>

@@ -21,7 +21,7 @@ const fileFilter = (_req, file, cb) => {
   }
 };
 
-function makeImageUpload(dirName, prefix) {
+function makeImageUpload(dirName, prefix, maxFiles = 10) {
   const dir = path.join(UPLOAD_ROOT, dirName);
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
@@ -37,8 +37,8 @@ function makeImageUpload(dirName, prefix) {
   return multer({
     storage,
     fileFilter,
-    limits: { fileSize: 5 * 1024 * 1024, files: 10 },
-  }).array('images', 10);
+    limits: { fileSize: 5 * 1024 * 1024, files: maxFiles },
+  }).array('images', maxFiles);
 }
 
 const rollChangeImageUpload = makeImageUpload('hsm-roll-change', 'rc');
@@ -48,6 +48,21 @@ const delayReportImageUpload = makeImageUpload('hsm-delay-report', 'dr');
 const fmDailyImageUpload = makeImageUpload('hsm-fm-daily', 'fm');
 const inductionDailyImageUpload = makeImageUpload('hsm-induction-daily', 'ind');
 const dcDailyImageUpload = makeImageUpload('hsm-dc-daily', 'dc');
+// Photos are attached per checklist point, so allow more files per submit
+const eotCraneImageUpload = makeImageUpload('sms-eot-crane', 'eot', 40);
+const crucibleImageUpload = makeImageUpload('sms-crucible', 'cru');
+// 4 photo points × 3 photos each
+const pokerImageUpload = makeImageUpload('sms-poker', 'pok', 12);
+// 5 photo points × 3 photos each
+const pumpHouseImageUpload = makeImageUpload('sms-pump-house', 'ph', 15);
+// 7 photo points × 3 photos each
+const scrapTrollyImageUpload = makeImageUpload('sms-scrap-trolly', 'stt', 21);
+// 8 photo points × 3 photos each
+const ladleCarImageUpload = makeImageUpload('sms-ladle-car', 'lc', 24);
+// Many photo points; cap a single submit at 60 photos
+const pollutionImageUpload = makeImageUpload('sms-pollution', 'pol', 60);
+// 8 photo points × 3 photos each
+const dmUnitImageUpload = makeImageUpload('sms-dm-unit', 'dm', 24);
 
 const excelMemoryUpload = multer({
   storage: multer.memoryStorage(),
@@ -87,6 +102,14 @@ module.exports = {
   fmDailyImageUpload,
   inductionDailyImageUpload,
   dcDailyImageUpload,
+  eotCraneImageUpload,
+  crucibleImageUpload,
+  pokerImageUpload,
+  pumpHouseImageUpload,
+  scrapTrollyImageUpload,
+  ladleCarImageUpload,
+  pollutionImageUpload,
+  dmUnitImageUpload,
   excelMemoryUpload,
   absoluteUploadPath,
   unlinkUpload,

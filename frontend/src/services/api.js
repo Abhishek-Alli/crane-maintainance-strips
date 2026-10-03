@@ -470,6 +470,83 @@ export const smsAPI = {
   deleteBreakdownAnalysis: (id) => api.delete(`/sms/breakdown-analysis/${id}`),
   downloadBreakdownAnalysisPDF: (id) =>
     api.get(`/sms/breakdown-analysis/${id}/pdf`, { responseType: 'blob' }),
+
+  getEotSchedules: (params) => api.get('/sms/eot-crane-maintenance/schedules', { params }),
+  getEotScheduleById: (id) => api.get(`/sms/eot-crane-maintenance/schedules/${id}`),
+  createEotSchedules: (data) => api.post('/sms/eot-crane-maintenance/schedules', data),
+  deleteEotSchedule: (id) => api.delete(`/sms/eot-crane-maintenance/schedules/${id}`),
+  getEotCraneLogs: (params) => api.get('/sms/eot-crane-maintenance', { params }),
+  getEotCraneById: (id) => api.get(`/sms/eot-crane-maintenance/${id}`),
+  createEotCrane: (data) => api.post('/sms/eot-crane-maintenance', data),
+  updateEotCrane: (id, data) => api.put(`/sms/eot-crane-maintenance/${id}`, data),
+  deleteEotCrane: (id) => api.delete(`/sms/eot-crane-maintenance/${id}`),
+  clearAllEotCrane: () => api.delete('/sms/eot-crane-maintenance/clear-all'),
+  downloadEotCranePDF: (id) =>
+    api.get(`/sms/eot-crane-maintenance/${id}/pdf`, { responseType: 'blob' }),
+
+  getCrucibleLogs: (params) => api.get('/sms/crucible-maintenance', { params }),
+  getCrucibleById: (id) => api.get(`/sms/crucible-maintenance/${id}`),
+  createCrucible: (data) => api.post('/sms/crucible-maintenance', data),
+  updateCrucible: (id, data) => api.put(`/sms/crucible-maintenance/${id}`, data),
+  deleteCrucible: (id) => api.delete(`/sms/crucible-maintenance/${id}`),
+  downloadCruciblePDF: (id) =>
+    api.get(`/sms/crucible-maintenance/${id}/pdf`, { responseType: 'blob' }),
+
+  getPokerLogs: (params) => api.get('/sms/poker-maintenance', { params }),
+  getPokerById: (id) => api.get(`/sms/poker-maintenance/${id}`),
+  createPoker: (data) => api.post('/sms/poker-maintenance', data),
+  updatePoker: (id, data) => api.put(`/sms/poker-maintenance/${id}`, data),
+  deletePoker: (id) => api.delete(`/sms/poker-maintenance/${id}`),
+  downloadPokerPDF: (id) =>
+    api.get(`/sms/poker-maintenance/${id}/pdf`, { responseType: 'blob' }),
+
+  getPumpHouseLogs: (params) => api.get('/sms/pump-house', { params }),
+  getPumpHouseById: (id) => api.get(`/sms/pump-house/${id}`),
+  createPumpHouse: (data) => api.post('/sms/pump-house', data),
+  updatePumpHouse: (id, data) => api.put(`/sms/pump-house/${id}`, data),
+  deletePumpHouse: (id) => api.delete(`/sms/pump-house/${id}`),
+  downloadPumpHousePDF: (id) =>
+    api.get(`/sms/pump-house/${id}/pdf`, { responseType: 'blob' }),
+
+  getPatchingLogs: (params) => api.get('/sms/patching', { params }),
+  getPatchingById: (id) => api.get(`/sms/patching/${id}`),
+  createPatching: (data) => api.post('/sms/patching', data),
+  updatePatching: (id, data) => api.put(`/sms/patching/${id}`, data),
+  deletePatching: (id) => api.delete(`/sms/patching/${id}`),
+  downloadPatchingPDF: (id) =>
+    api.get(`/sms/patching/${id}/pdf`, { responseType: 'blob' }),
+
+  getScrapTrollyLogs: (params) => api.get('/sms/scrap-trolly', { params }),
+  getScrapTrollyById: (id) => api.get(`/sms/scrap-trolly/${id}`),
+  createScrapTrolly: (data) => api.post('/sms/scrap-trolly', data),
+  updateScrapTrolly: (id, data) => api.put(`/sms/scrap-trolly/${id}`, data),
+  deleteScrapTrolly: (id) => api.delete(`/sms/scrap-trolly/${id}`),
+  downloadScrapTrollyPDF: (id) =>
+    api.get(`/sms/scrap-trolly/${id}/pdf`, { responseType: 'blob' }),
+
+  getLadleCarLogs: (params) => api.get('/sms/ladle-car', { params }),
+  getLadleCarById: (id) => api.get(`/sms/ladle-car/${id}`),
+  createLadleCar: (data) => api.post('/sms/ladle-car', data),
+  updateLadleCar: (id, data) => api.put(`/sms/ladle-car/${id}`, data),
+  deleteLadleCar: (id) => api.delete(`/sms/ladle-car/${id}`),
+  downloadLadleCarPDF: (id) =>
+    api.get(`/sms/ladle-car/${id}/pdf`, { responseType: 'blob' }),
+
+  getPollutionLogs: (params) => api.get('/sms/pollution', { params }),
+  getPollutionById: (id) => api.get(`/sms/pollution/${id}`),
+  createPollution: (data) => api.post('/sms/pollution', data),
+  updatePollution: (id, data) => api.put(`/sms/pollution/${id}`, data),
+  deletePollution: (id) => api.delete(`/sms/pollution/${id}`),
+  downloadPollutionPDF: (id) =>
+    api.get(`/sms/pollution/${id}/pdf`, { responseType: 'blob' }),
+
+  getDmUnitLogs: (params) => api.get('/sms/dm-unit', { params }),
+  getDmUnitById: (id) => api.get(`/sms/dm-unit/${id}`),
+  createDmUnit: (data) => api.post('/sms/dm-unit', data),
+  updateDmUnit: (id, data) => api.put(`/sms/dm-unit/${id}`, data),
+  deleteDmUnit: (id) => api.delete(`/sms/dm-unit/${id}`),
+  downloadDmUnitPDF: (id) =>
+    api.get(`/sms/dm-unit/${id}/pdf`, { responseType: 'blob' }),
 };
 
 /* =============================

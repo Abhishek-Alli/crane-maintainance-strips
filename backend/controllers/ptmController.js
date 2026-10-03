@@ -497,15 +497,10 @@ class PtmController {
             if (!entry.breakdown_type && !entry.breakdown_minutes) continue;
             await client.query(
               `INSERT INTO ptm_breakdown_entries
-                 (slot_id, breakdown_type, breakdown_minutes, breakdown_reason, repeated_count, size, pipe_pieces, pipe_length_m, remarks, production_mt)
-               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+                 (slot_id, breakdown_type, breakdown_minutes, breakdown_reason, repeated_count)
+               VALUES ($1,$2,$3,$4,$5)`,
               [slotId, entry.breakdown_type || null, parseInt(entry.breakdown_minutes) || 0, entry.breakdown_reason || null,
-                entry.repeated_count ? parseInt(entry.repeated_count) : null,
-                entry.size || null,
-                entry.pipe_pieces != null && entry.pipe_pieces !== '' ? parseInt(entry.pipe_pieces) : null,
-                entry.pipe_length_m != null && entry.pipe_length_m !== '' ? parseFloat(entry.pipe_length_m) : null,
-                entry.remarks || null,
-                entry.production_mt != null && entry.production_mt !== '' ? parseFloat(entry.production_mt) : null]
+                entry.repeated_count ? parseInt(entry.repeated_count) : null]
             );
           }
         }
@@ -625,8 +620,7 @@ class PtmController {
       const sheet = workbook.addWorksheet('Breakdown Data');
       const headers = [
         'Date', 'Shift', 'Mill No.', 'Breakdown Type', 'Breakdown Reason',
-        'Time Taken (min)', 'No. of Times Repeated', 'No. of Pipes Made',
-        'Size', 'Thickness', 'Length (m)',
+        'Time Taken (min)', 'No. of Times Repeated',
       ];
       sheet.addRow(headers);
       sheet.getRow(1).font = { bold: true };
@@ -637,14 +631,14 @@ class PtmController {
       const mm = String(today.getMonth() + 1).padStart(2, '0');
       sheet.addRow([
         `${dd}-${mm}-${today.getFullYear()}`, 'DAY', millNames[0] || 'Mill No. 1', typeNames[0] || 'Electrical',
-        'Sample reason', 15, 2, 500, '10MM', '3.5MM', 6,
+        'Sample reason', 15, 2,
       ]);
 
       const help = workbook.addWorksheet('Instructions');
       help.addRow(['PTM Breakdown Report — Import Instructions']);
       help.getRow(1).font = { bold: true, size: 14 };
       help.addRow([]);
-      help.addRow(['1. Fill data in "Breakdown Data" sheet — one row = one breakdown/production entry']);
+      help.addRow(['1. Fill data in "Breakdown Data" sheet — one row = one breakdown entry']);
       help.addRow(['2. Date: DD-MM-YYYY (e.g. 29-08-2026)']);
       help.addRow(['3. Shift: optional, free text (e.g. DAY, NIGHT, A, B, C)']);
       help.addRow([`4. Mill No.: one of — ${millNames.join(', ') || 'Mill No. 1, Mill No. 2, ...'}`]);
@@ -652,9 +646,7 @@ class PtmController {
       help.addRow(['6. Breakdown Reason: free text']);
       help.addRow(['7. Time Taken (min): number']);
       help.addRow(['8. No. of Times Repeated: optional number']);
-      help.addRow(['9. No. of Pipes Made / Size / Thickness / Length: optional — fill when the row also records production']);
-      help.addRow(['10. Multiple sizes/thicknesses run in one day: add one row per size/thickness change']);
-      help.addRow(['11. Delete the sample row before importing']);
+      help.addRow(['9. Delete the sample row before importing']);
       help.getColumn(1).width = 90;
 
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -705,10 +697,6 @@ class PtmController {
         reason: col('Breakdown Reason'),
         minutes: col('Time Taken (min)') || col('Time Taken'),
         repeated: col('No. of Times Repeated'),
-        pieces: col('No. of Pipes Made'),
-        size: col('Size'),
-        thickness: col('Thickness'),
-        length: col('Length (m)') || col('Length'),
       };
 
       if (!map.date || !map.mill || !map.type) {
@@ -742,11 +730,6 @@ class PtmController {
       const toInt = (v) => {
         if (v == null || v === '') return null;
         const n = parseInt(v, 10);
-        return Number.isNaN(n) ? null : n;
-      };
-      const toFloat = (v) => {
-        if (v == null || v === '') return null;
-        const n = parseFloat(v);
         return Number.isNaN(n) ? null : n;
       };
 
@@ -790,10 +773,6 @@ class PtmController {
           breakdown_reason: nullIfEmpty(cellVal(row, map.reason)),
           breakdown_minutes: toInt(cellVal(row, map.minutes)) || 0,
           repeated_count: toInt(cellVal(row, map.repeated)),
-          pipe_pieces: toInt(cellVal(row, map.pieces)),
-          size: nullIfEmpty(cellVal(row, map.size)),
-          thickness: nullIfEmpty(cellVal(row, map.thickness)),
-          pipe_length_m: toFloat(cellVal(row, map.length)),
         });
       });
 
@@ -847,10 +826,9 @@ class PtmController {
 
           await client.query(
             `INSERT INTO ptm_breakdown_entries
-               (slot_id, breakdown_type, breakdown_minutes, breakdown_reason, repeated_count, shift, size, thickness, pipe_pieces, pipe_length_m)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-            [slotId, r.breakdown_type, r.breakdown_minutes, r.breakdown_reason, r.repeated_count,
-              r.shift, r.size, r.thickness, r.pipe_pieces, r.pipe_length_m]
+               (slot_id, breakdown_type, breakdown_minutes, breakdown_reason, repeated_count, shift)
+             VALUES ($1,$2,$3,$4,$5,$6)`,
+            [slotId, r.breakdown_type, r.breakdown_minutes, r.breakdown_reason, r.repeated_count, r.shift]
           );
           imported += 1;
         }

@@ -16,7 +16,7 @@ const formatDowntime = (mins) => {
   return `${h}h ${rem}m`;
 };
 
-export default function ModuleDashboard({ module: moduleKey = 'sms' }) {
+export default function ModuleDashboard({ module: moduleKey = 'sms', extraActions = [], children }) {
   const mod = getBreakdownModule(moduleKey);
   const [recent, setRecent] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -42,10 +42,11 @@ export default function ModuleDashboard({ module: moduleKey = 'sms' }) {
     },
     {
       to: `${mod.base}/breakdown-analysis/history`,
-      label: 'View History',
+      label: 'Breakdown Analysis History',
       sub: 'Past analysis reports',
       icon: '📋',
     },
+    ...extraActions,
   ];
 
   return (
@@ -116,6 +117,8 @@ export default function ModuleDashboard({ module: moduleKey = 'sms' }) {
             </div>
           )}
         </div>
+
+        {children}
       </div>
     </div>
   );
