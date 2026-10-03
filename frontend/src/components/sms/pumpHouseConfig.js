@@ -64,7 +64,7 @@ export function needsPhoto(p, value, minPressure) {
 }
 
 export function actionLabel(p) {
-  return p.action === REMARK_PHOTO ? 'Remark + Photo' : 'Remark';
+  return 'Remark';
 }
 
 export function emptyChecklistItems() {
@@ -86,7 +86,6 @@ export function listChecklistIssues(items, photoCounts, minPressure) {
     else if (p.type === 'number' && !isNumeric(row.value)) add('Enter a valid number');
     if (isAlert(p, row.value, minPressure)) {
       if (!String(row.remark || '').trim()) add(`Remark required (${row.value})`);
-      if (p.action === REMARK_PHOTO && !(photoCounts[p.key] > 0)) add(`Photo required (${row.value})`);
     }
     if ((photoCounts[p.key] || 0) > MAX_PHOTOS_PER_POINT) add(`Maximum ${MAX_PHOTOS_PER_POINT} photos`);
   });

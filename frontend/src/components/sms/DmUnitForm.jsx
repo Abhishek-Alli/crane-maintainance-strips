@@ -79,7 +79,6 @@ export default function DmUnitForm() {
           recorded_by: d.recorded_by || '',
           furnace: d.furnace || '',
           crucible: d.crucible || '',
-          coil: d.coil || '',
           checklist_items: items,
         });
         setOpenRemarks(remarksOpen);
@@ -199,7 +198,6 @@ export default function DmUnitForm() {
       recorded_by: form.recorded_by.trim(),
       furnace: form.furnace || null,
       crucible: form.crucible || null,
-      coil: form.coil.trim() || null,
       checklist_items: form.checklist_items,
       keep_image_ids: all.filter((ph) => ph.existing && ph.id).map((ph) => ph.id),
       new_image_item_keys: newPhotos.map((ph) => ph.itemKey),
@@ -308,16 +306,6 @@ export default function DmUnitForm() {
                 <option value="">Select crucible (optional)</option>
                 {DM_UNIT_CRUCIBLES.map((n) => <option key={n} value={n}>{n}</option>)}
               </select>
-            </Field>
-            <Field label="Coil">
-              <input
-                type="text"
-                className={inputCls}
-                value={form.coil}
-                maxLength={50}
-                onChange={(e) => setForm({ ...form, coil: e.target.value })}
-                placeholder="Coil (optional)"
-              />
             </Field>
           </div>
         </div>
@@ -435,7 +423,7 @@ export default function DmUnitForm() {
                       {itemPhotos.length < MAX_PHOTOS_PER_POINT && (
                         <label className="w-20 h-20 flex flex-col items-center justify-center border-2 border-dashed border-red-300 rounded-lg cursor-pointer hover:bg-red-50 text-red-700">
                           <span className="text-lg leading-none">+</span>
-                          <span className="text-[10px] font-semibold mt-1">Photo *</span>
+                          <span className="text-[10px] font-semibold mt-1 text-center leading-tight">Photo (optional)</span>
                           <input
                             type="file"
                             accept="image/jpeg,image/png,image/webp,image/gif"
@@ -508,7 +496,6 @@ export default function DmUnitForm() {
               Date {formatDate(form.report_date)}
               {form.furnace ? ` · Furnace ${form.furnace}` : ''}
               {form.crucible ? ` · Crucible ${form.crucible}` : ''}
-              {form.coil.trim() ? ` · Coil ${form.coil.trim()}` : ''}
             </p>
             <p className="text-sm text-gray-600 mb-4">
               Recorded by {form.recorded_by} ·{' '}

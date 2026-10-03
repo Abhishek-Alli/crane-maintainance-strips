@@ -112,7 +112,6 @@ export default function DmUnitHistory() {
                       <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Date</th>
                       <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Furnace</th>
                       <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Crucible</th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Coil</th>
                       <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Recorded By</th>
                       <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Alerts</th>
                       <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">By</th>
@@ -126,7 +125,6 @@ export default function DmUnitHistory() {
                         <td className="px-4 py-3 font-semibold text-gray-900 whitespace-nowrap">{formatDate(log.report_date)}</td>
                         <td className="px-4 py-3 text-gray-700 whitespace-nowrap">{log.furnace || '—'}</td>
                         <td className="px-4 py-3 text-gray-700">{log.crucible || '—'}</td>
-                        <td className="px-4 py-3 text-gray-700">{log.coil || '—'}</td>
                         <td className="px-4 py-3 text-gray-700">{log.recorded_by || '—'}</td>
                         <td className="px-4 py-3">
                           <span className={`text-xs font-semibold ${log.alert_count ? 'text-red-600' : 'text-emerald-600'}`}>

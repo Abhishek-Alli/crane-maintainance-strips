@@ -114,7 +114,6 @@ export default function PokerMaintenanceHistory() {
                       <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Date</th>
                       <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Furnace</th>
                       <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Crucible</th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Coil</th>
                       <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Pressure</th>
                       <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Recorded By</th>
                       <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Alerts</th>
@@ -129,7 +128,6 @@ export default function PokerMaintenanceHistory() {
                         <td className="px-4 py-3 font-semibold text-gray-900 whitespace-nowrap">{formatDate(log.report_date)}</td>
                         <td className="px-4 py-3 text-gray-700 whitespace-nowrap">{log.furnace || '—'}</td>
                         <td className="px-4 py-3 text-gray-700">{log.crucible || '—'}</td>
-                        <td className="px-4 py-3 text-gray-700">{log.coil || '—'}</td>
                         <td className="px-4 py-3">
                           <span
                             className={`text-xs font-semibold ${
