@@ -1,5 +1,85 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import {
+  AlertTriangle,
+  RefreshCw,
+  Clock,
+  ClipboardCheck,
+  Zap,
+  Grid,
+  Settings,
+  BarChart3,
+} from 'lucide-react';
+
+const ICON_WRAP = {
+  red:    'bg-red-50 text-red-600',
+  orange: 'bg-orange-50 text-orange-600',
+  yellow: 'bg-yellow-50 text-yellow-700',
+  green:  'bg-green-50 text-green-600',
+  blue:   'bg-blue-50 text-blue-600',
+  purple: 'bg-purple-50 text-purple-600',
+  indigo: 'bg-indigo-50 text-indigo-600',
+  teal:   'bg-teal-50 text-teal-600',
+};
+
+const BORDER_MAP = {
+  red:    'border-red-100 hover:border-red-300',
+  orange: 'border-orange-100 hover:border-orange-300',
+  yellow: 'border-yellow-100 hover:border-yellow-300',
+  green:  'border-green-100 hover:border-green-300',
+  blue:   'border-blue-100 hover:border-blue-300',
+  purple: 'border-purple-100 hover:border-purple-300',
+  indigo: 'border-indigo-100 hover:border-indigo-300',
+  teal:   'border-teal-100 hover:border-teal-300',
+};
+
+function SheetIcon({ icon: Icon, color }) {
+  return (
+    <span className={`mb-3 inline-flex h-11 w-11 items-center justify-center rounded-xl ${ICON_WRAP[color] || 'bg-gray-100 text-gray-600'}`}>
+      <Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden />
+    </span>
+  );
+}
+
+function HsmCard({ sheet }) {
+  const border = BORDER_MAP[sheet.color] || 'border-gray-200 hover:border-gray-300';
+
+  // Insights / special card — single link
+  if (!sheet.history) {
+    return (
+      <Link
+        to={sheet.to}
+        className={`flex flex-col bg-white border rounded-xl p-4 transition-all hover:shadow-md ${border}`}
+      >
+        <SheetIcon icon={sheet.icon} color={sheet.color} />
+        <p className="font-semibold text-gray-900 text-sm leading-tight">{sheet.label}</p>
+        <p className="text-xs text-gray-500 mt-1">{sheet.sub}</p>
+      </Link>
+    );
+  }
+
+  return (
+    <div className={`flex flex-col bg-white border rounded-xl p-4 shadow-sm ${border}`}>
+      <SheetIcon icon={sheet.icon} color={sheet.color} />
+      <p className="font-semibold text-gray-900 text-sm leading-tight">{sheet.label}</p>
+      <p className="text-xs text-gray-500 mt-1 mb-3">{sheet.sub}</p>
+      <div className="mt-auto grid grid-cols-2 gap-1.5">
+        <Link
+          to={sheet.to}
+          className="flex-1 text-center text-[11px] font-semibold px-1.5 py-1.5 rounded-lg border transition-colors bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700"
+        >
+          Fill
+        </Link>
+        <Link
+          to={sheet.history}
+          className="flex-1 text-center text-[11px] font-semibold px-1.5 py-1.5 rounded-lg border transition-colors bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+        >
+          History
+        </Link>
+      </div>
+    </div>
+  );
+}
 
 export default function HsmDashboard({ allowedSheets }) {
   const isAdminUser = (() => {
@@ -17,140 +97,101 @@ export default function HsmDashboard({ allowedSheets }) {
     weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',
   });
 
-  const allReports = [
+  const allSheets = [
     {
       key: 'breakdown-analysis',
       to: '/hsm/breakdown-analysis/new',
+      history: '/hsm/breakdown-analysis/history',
       label: 'Breakdown Analysis Report',
       sub: 'RCA · 5-Why · Corrective & Preventive Actions',
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-        </svg>
-      ),
-      color: 'text-red-600 bg-red-50',
+      icon: AlertTriangle,
+      color: 'red',
     },
     {
       key: 'roll-change-activity',
       to: '/hsm/roll-change-activity/new',
+      history: '/hsm/roll-change-activity/history',
       label: 'Roll Change Activity',
       sub: 'Area equipment · Manpower · Remarks',
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-        </svg>
-      ),
-      color: 'text-orange-600 bg-orange-50',
+      icon: RefreshCw,
+      color: 'orange',
     },
     {
       key: 'delay-report',
       to: '/hsm/delay-report/new',
+      history: '/hsm/delay-report/history',
       label: 'Delay Report',
       sub: 'HOTOUT · Miss Roll · Total downtime',
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      ),
-      color: 'text-yellow-600 bg-yellow-50',
+      icon: Clock,
+      color: 'yellow',
     },
     {
       key: 'fm-daily-checklist',
       to: '/hsm/fm-daily-checklist/new',
+      history: '/hsm/fm-daily-checklist/history',
       label: 'FM Daily Check List',
       sub: 'Guide gap · Pressures · Clamps',
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-        </svg>
-      ),
-      color: 'text-green-600 bg-green-50',
+      icon: ClipboardCheck,
+      color: 'green',
     },
     {
       key: 'induction-daily-checklist',
       to: '/hsm/induction-daily-checklist/new',
+      history: '/hsm/induction-daily-checklist/history',
       label: 'Induction Daily Check List',
       sub: 'Guide gap · Rollers · Heaters',
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-        </svg>
-      ),
-      color: 'text-blue-600 bg-blue-50',
+      icon: Zap,
+      color: 'blue',
     },
     {
       key: 'dc-daily-checklist',
       to: '/hsm/dc-daily-checklist/new',
+      history: '/hsm/dc-daily-checklist/history',
       label: 'DC Daily Check List',
       sub: 'Guide gap · Mandrel · WR gap',
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18" />
-        </svg>
-      ),
-      color: 'text-purple-600 bg-purple-50',
+      icon: Grid,
+      color: 'purple',
     },
     {
       key: 'rm-daily-checklist',
       to: '/hsm/rm-daily-checklist/new',
+      history: '/hsm/rm-daily-checklist/history',
       label: 'RM Daily Check List',
       sub: 'Guide gap · Clamps · Descaling',
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-      ),
-      color: 'text-indigo-600 bg-indigo-50',
+      icon: Settings,
+      color: 'indigo',
     },
     ...(isAdminUser
       ? [{
           key: null,
           to: '/hsm/insights',
+          history: null,
           label: 'Insights',
           sub: 'Custom analysis · Compare reports',
-          icon: (
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-          ),
-          color: 'text-teal-600 bg-teal-50',
+          icon: BarChart3,
+          color: 'teal',
         }]
       : []),
   ];
 
-  const reports = allReports.filter(r => r.key === null || canAccess(r.key));
+  const sheets = allSheets.filter(s => s.key === null || canAccess(s.key));
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24 sm:pb-6">
-      {/* Header */}
-      <div className="bg-indigo-700 text-white px-4 py-5">
-        <h1 className="text-xl font-bold">HSM Checksheets</h1>
-        <p className="text-indigo-200 text-xs mt-0.5">{today}</p>
-      </div>
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">HSM Dashboard</h1>
+          <p className="text-gray-500 mt-1 text-sm">{today}</p>
+        </div>
 
-      {/* Fill new report cards */}
-      <div className="p-4">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Select a report to fill</p>
-        <div className="space-y-3">
-          {reports.map((r) => (
-            <Link
-              key={r.to}
-              to={r.to}
-              className="flex items-center gap-4 bg-white rounded-xl border border-gray-200 px-4 py-4 shadow-sm hover:border-indigo-300 hover:shadow-md transition-all active:scale-98"
-            >
-              <div className={`flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center ${r.color}`}>
-                {r.icon}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-gray-900 text-sm leading-tight">{r.label}</p>
-                <p className="text-xs text-gray-500 mt-0.5 truncate">{r.sub}</p>
-              </div>
-              <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </Link>
-          ))}
+        <div className="mb-6">
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Checksheets</h2>
+          <p className="text-xs text-gray-500 mb-3">Fill · View history</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            {sheets.map(s => (
+              <HsmCard key={s.key || s.to} sheet={s} />
+            ))}
+          </div>
         </div>
       </div>
     </div>
