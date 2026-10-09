@@ -21,6 +21,18 @@ const SmsScrapTrollyController = require('../controllers/smsScrapTrollyControlle
 const SmsLadleCarController = require('../controllers/smsLadleCarController');
 const SmsPollutionController = require('../controllers/smsPollutionController');
 const SmsDmUnitController = require('../controllers/smsDmUnitController');
+const SmsCcmMotorController = require('../controllers/smsCcmMotorController');
+const SmsPumpHouseMotorController = require('../controllers/smsPumpHouseMotorController');
+const SmsFurnaceMotorPanelController = require('../controllers/smsFurnaceMotorPanelController');
+const SmsDgController = require('../controllers/smsDgController');
+const SmsFurnacePollutionPmController = require('../controllers/smsFurnacePollutionPmController');
+const SmsLtTransformerController = require('../controllers/smsLtTransformerController');
+const SmsCompressorPmController = require('../controllers/smsCompressorPmController');
+const SmsFurnacePollutionController = require('../controllers/smsFurnacePollutionController');
+const SmsFurnaceStandByController = require('../controllers/smsFurnaceStandByController');
+const SmsFurnacePokerController = require('../controllers/smsFurnacePokerController');
+const SmsBundlePressController = require('../controllers/smsBundlePressController');
+const SmsFurnaceTransformerController = require('../controllers/smsFurnaceTransformerController');
 
 router.use(authenticate);
 router.use(requireSMS);
@@ -100,5 +112,76 @@ router.get('/dm-unit/:id', SmsDmUnitController.getById);
 router.post('/dm-unit', dmUnitImageUpload, SmsDmUnitController.create);
 router.put('/dm-unit/:id', dmUnitImageUpload, SmsDmUnitController.update);
 router.delete('/dm-unit/:id', SmsDmUnitController.remove);
+
+router.get('/ccm-motor', SmsCcmMotorController.getLogs);
+router.get('/ccm-motor/:id', SmsCcmMotorController.getById);
+router.post('/ccm-motor', SmsCcmMotorController.create);
+router.put('/ccm-motor/:id', SmsCcmMotorController.update);
+router.delete('/ccm-motor/:id', SmsCcmMotorController.remove);
+
+router.get('/pump-house-motor', SmsPumpHouseMotorController.getLogs);
+router.get('/pump-house-motor/:id', SmsPumpHouseMotorController.getById);
+router.post('/pump-house-motor', SmsPumpHouseMotorController.create);
+router.put('/pump-house-motor/:id', SmsPumpHouseMotorController.update);
+router.delete('/pump-house-motor/:id', SmsPumpHouseMotorController.remove);
+router.get('/furnace-motor-panel', SmsFurnaceMotorPanelController.getLogs);
+router.get('/furnace-motor-panel/:id', SmsFurnaceMotorPanelController.getById);
+router.post('/furnace-motor-panel', SmsFurnaceMotorPanelController.create);
+router.put('/furnace-motor-panel/:id', SmsFurnaceMotorPanelController.update);
+router.delete('/furnace-motor-panel/:id', SmsFurnaceMotorPanelController.remove);
+
+router.get('/dg', SmsDgController.getLogs);
+router.get('/dg/:id', SmsDgController.getById);
+router.post('/dg', SmsDgController.create);
+router.put('/dg/:id', SmsDgController.update);
+router.delete('/dg/:id', SmsDgController.remove);
+
+router.get('/furnace-pollution-pm', SmsFurnacePollutionPmController.getLogs);
+router.get('/furnace-pollution-pm/:id', SmsFurnacePollutionPmController.getById);
+router.post('/furnace-pollution-pm', SmsFurnacePollutionPmController.create);
+router.put('/furnace-pollution-pm/:id', SmsFurnacePollutionPmController.update);
+router.delete('/furnace-pollution-pm/:id', SmsFurnacePollutionPmController.remove);
+
+router.get('/lt-transformer', SmsLtTransformerController.getLogs);
+router.get('/lt-transformer/:id', SmsLtTransformerController.getById);
+router.post('/lt-transformer', SmsLtTransformerController.create);
+router.put('/lt-transformer/:id', SmsLtTransformerController.update);
+router.delete('/lt-transformer/:id', SmsLtTransformerController.remove);
+
+router.get('/compressor-pm', SmsCompressorPmController.getLogs);
+router.get('/compressor-pm/:id', SmsCompressorPmController.getById);
+router.post('/compressor-pm', SmsCompressorPmController.create);
+router.put('/compressor-pm/:id', SmsCompressorPmController.update);
+router.delete('/compressor-pm/:id', SmsCompressorPmController.remove);
+
+router.get('/furnace-pollution', SmsFurnacePollutionController.getLogs);
+router.get('/furnace-pollution/:id', SmsFurnacePollutionController.getById);
+router.post('/furnace-pollution', SmsFurnacePollutionController.create);
+router.put('/furnace-pollution/:id', SmsFurnacePollutionController.update);
+router.delete('/furnace-pollution/:id', SmsFurnacePollutionController.remove);
+
+router.get('/furnace-stand-by', SmsFurnaceStandByController.getLogs);
+router.get('/furnace-stand-by/:id', SmsFurnaceStandByController.getById);
+router.post('/furnace-stand-by', SmsFurnaceStandByController.create);
+router.put('/furnace-stand-by/:id', SmsFurnaceStandByController.update);
+router.delete('/furnace-stand-by/:id', SmsFurnaceStandByController.remove);
+
+router.get('/furnace-poker', SmsFurnacePokerController.getLogs);
+router.get('/furnace-poker/:id', SmsFurnacePokerController.getById);
+router.post('/furnace-poker', SmsFurnacePokerController.create);
+router.put('/furnace-poker/:id', SmsFurnacePokerController.update);
+router.delete('/furnace-poker/:id', SmsFurnacePokerController.remove);
+
+router.get('/bundle-press', SmsBundlePressController.getLogs);
+router.get('/bundle-press/:id', SmsBundlePressController.getById);
+router.post('/bundle-press', SmsBundlePressController.create);
+router.put('/bundle-press/:id', SmsBundlePressController.update);
+router.delete('/bundle-press/:id', SmsBundlePressController.remove);
+
+router.get('/furnace-transformer', SmsFurnaceTransformerController.getLogs);
+router.get('/furnace-transformer/:id', SmsFurnaceTransformerController.getById);
+router.post('/furnace-transformer', SmsFurnaceTransformerController.create);
+router.put('/furnace-transformer/:id', SmsFurnaceTransformerController.update);
+router.delete('/furnace-transformer/:id', SmsFurnaceTransformerController.remove);
 
 module.exports = router;

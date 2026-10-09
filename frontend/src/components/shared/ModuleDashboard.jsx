@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { getBreakdownModule } from './breakdownModuleConfig';
+import { TriangleAlert, History } from 'lucide-react';
+import CardIcon from '../sms/CardIcon';
 
 const formatDate = (d) =>
   d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
@@ -38,13 +40,13 @@ export default function ModuleDashboard({ module: moduleKey = 'sms', extraAction
       label: 'Breakdown Analysis Report',
       sub: 'RCA · 5-Why · CA / PA',
       primary: true,
-      icon: '⚠',
+      icon: TriangleAlert,
     },
     {
       to: `${mod.base}/breakdown-analysis/history`,
       label: 'Breakdown Analysis History',
       sub: 'Past analysis reports',
-      icon: '📋',
+      icon: History,
     },
     ...extraActions,
   ];
@@ -66,7 +68,7 @@ export default function ModuleDashboard({ module: moduleKey = 'sms', extraAction
                 to={a.to}
                 className={`flex flex-col bg-white border border-gray-200 rounded-xl p-5 transition-all hover:shadow-md ${mod.hoverCard}`}
               >
-                <span className="text-2xl mb-2">{a.icon}</span>
+                <CardIcon icon={a.icon} label={a.label} />
                 <p className="font-semibold text-gray-900 text-sm leading-tight">{a.label}</p>
                 <p className="text-xs text-gray-500 mt-1">{a.sub}</p>
                 {a.primary && (
