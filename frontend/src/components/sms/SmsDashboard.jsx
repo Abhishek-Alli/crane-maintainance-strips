@@ -135,6 +135,19 @@ const EOT_ACTIONS = [
     sub: 'Past DM unit checklists',
     icon: '📋',
   },
+  {
+    to: '/sms/electrical/new',
+    label: 'Electrical Check Sheet',
+    sub: 'Transformer · Motors · Panels · Cables · UPS',
+    primary: true,
+    icon: '⚡',
+  },
+  {
+    to: '/sms/electrical/history',
+    label: 'Electrical History',
+    sub: 'Past electrical checklists',
+    icon: '📋',
+  },
 ];
 
 const Spinner = () => (

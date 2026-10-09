@@ -10,6 +10,7 @@ const {
   ladleCarImageUpload,
   pollutionImageUpload,
   dmUnitImageUpload,
+  electricalImageUpload,
 } = require('../middleware/upload');
 const SmsController = require('../controllers/smsController');
 const SmsEotCraneController = require('../controllers/smsEotCraneController');
@@ -21,6 +22,7 @@ const SmsScrapTrollyController = require('../controllers/smsScrapTrollyControlle
 const SmsLadleCarController = require('../controllers/smsLadleCarController');
 const SmsPollutionController = require('../controllers/smsPollutionController');
 const SmsDmUnitController = require('../controllers/smsDmUnitController');
+const SmsElectricalController = require('../controllers/smsElectricalController');
 
 router.use(authenticate);
 router.use(requireSMS);
@@ -100,5 +102,13 @@ router.get('/dm-unit/:id', SmsDmUnitController.getById);
 router.post('/dm-unit', dmUnitImageUpload, SmsDmUnitController.create);
 router.put('/dm-unit/:id', dmUnitImageUpload, SmsDmUnitController.update);
 router.delete('/dm-unit/:id', SmsDmUnitController.remove);
+
+router.delete('/electrical/clear-all', requireAdmin, SmsElectricalController.clearAll);
+router.get('/electrical', SmsElectricalController.getLogs);
+router.get('/electrical/:id/pdf', SmsElectricalController.downloadPDF);
+router.get('/electrical/:id', SmsElectricalController.getById);
+router.post('/electrical', electricalImageUpload, SmsElectricalController.create);
+router.put('/electrical/:id', electricalImageUpload, SmsElectricalController.update);
+router.delete('/electrical/:id', SmsElectricalController.remove);
 
 module.exports = router;

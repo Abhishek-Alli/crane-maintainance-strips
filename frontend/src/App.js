@@ -150,6 +150,9 @@ import PollutionView from './components/sms/PollutionView';
 import DmUnitForm from './components/sms/DmUnitForm';
 import DmUnitHistory from './components/sms/DmUnitHistory';
 import DmUnitView from './components/sms/DmUnitView';
+import ElectricalForm from './components/sms/ElectricalForm';
+import ElectricalHistory from './components/sms/ElectricalHistory';
+import ElectricalView from './components/sms/ElectricalView';
 
 // import FabricationReport from "./components/fabrication/FabricationReport";
 import Dashboard from "./components/Dashboard";
@@ -1773,6 +1776,12 @@ function App() {
               )
             }
           />
+
+          {/* SMS Electrical */}
+          <Route path="/sms/electrical/new" element={user && (isSMSUser || isAdminUser) ? <ElectricalForm /> : user ? <Navigate to="/sms/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/sms/electrical/history" element={user && (isSMSUser || isAdminUser) ? <ElectricalHistory /> : user ? <Navigate to="/sms/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/sms/electrical/:id/edit" element={user && (isSMSUser || isAdminUser) ? <ElectricalForm /> : user ? <Navigate to="/sms/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/sms/electrical/:id" element={user && (isSMSUser || isAdminUser) ? <ElectricalView /> : user ? <Navigate to="/sms/dashboard" replace /> : <Navigate to="/login" replace />} />
 
           {/* ========== HOD ROUTES ========== */}
           <Route

@@ -547,6 +547,15 @@ export const smsAPI = {
   deleteDmUnit: (id) => api.delete(`/sms/dm-unit/${id}`),
   downloadDmUnitPDF: (id) =>
     api.get(`/sms/dm-unit/${id}/pdf`, { responseType: 'blob' }),
+
+  getElectricalLogs: (params) => api.get('/sms/electrical', { params }),
+  getElectricalById: (id) => api.get(`/sms/electrical/${id}`),
+  createElectrical: (data) => api.post('/sms/electrical', data),
+  updateElectrical: (id, data) => api.put(`/sms/electrical/${id}`, data),
+  deleteElectrical: (id) => api.delete(`/sms/electrical/${id}`),
+  clearAllElectrical: () => api.delete('/sms/electrical/clear-all'),
+  downloadElectricalPDF: (id) =>
+    api.get(`/sms/electrical/${id}/pdf`, { responseType: 'blob' }),
 };
 
 /* =============================

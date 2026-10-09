@@ -63,6 +63,7 @@ const ladleCarImageUpload = makeImageUpload('sms-ladle-car', 'lc', 24);
 const pollutionImageUpload = makeImageUpload('sms-pollution', 'pol', 60);
 // 8 photo points × 3 photos each
 const dmUnitImageUpload = makeImageUpload('sms-dm-unit', 'dm', 24);
+const electricalImageUpload = makeImageUpload('sms-electrical', 'elec', 30);
 
 const excelMemoryUpload = multer({
   storage: multer.memoryStorage(),
@@ -110,6 +111,7 @@ module.exports = {
   ladleCarImageUpload,
   pollutionImageUpload,
   dmUnitImageUpload,
+  electricalImageUpload,
   excelMemoryUpload,
   absoluteUploadPath,
   unlinkUpload,
