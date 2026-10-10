@@ -24,7 +24,6 @@ const {
 const UPLOAD_SUBDIR = 'sms-dm-unit';
 const LOGO_PATH = path.join(__dirname, '../assets/srj-logo.png');
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-const MAX_COIL_LENGTH = 50;
 
 function formatDateOnly(value) {
   if (!value) return '—';
@@ -166,7 +165,7 @@ class SmsDmUnitController {
       params.push(rowLimit);
 
       const result = await query(
-        `SELECT l.id, l.report_date, l.recorded_by, l.furnace, l.crucible, l.coil, l.alert_count, l.created_at,
+        `SELECT l.id, l.report_date, l.recorded_by, l.furnace, l.crucible, l.alert_count, l.created_at,
                 u.username AS filled_by_name
          FROM sms_dm_unit_checklists l
          JOIN users u ON l.filled_by = u.id
@@ -236,13 +235,11 @@ class SmsDmUnitController {
     const recordedBy = nullIfEmpty(b.recorded_by);
     if (!recordedBy) return { error: 'Recorded By is required' };
 
-    // Furnace / crucible / coil are optional, but a given furnace or crucible must be a known one
+    // Furnace and crucible are optional, but a given furnace or crucible must be a known one
     const furnace = nullIfEmpty(b.furnace);
     if (furnace && !DM_UNIT_FURNACES.includes(furnace)) return { error: 'Invalid furnace' };
     const crucible = nullIfEmpty(b.crucible);
     if (crucible && !DM_UNIT_CRUCIBLES.includes(crucible)) return { error: 'Invalid crucible' };
-    const coil = nullIfEmpty(b.coil);
-    if (coil && coil.length > MAX_COIL_LENGTH) return { error: `Coil can be at most ${MAX_COIL_LENGTH} characters` };
 
     const items = normalizeChecklistItems(b.checklist_items);
     const wanted = photoItemKeys(items);
@@ -263,7 +260,6 @@ class SmsDmUnitController {
         recorded_by: recordedBy,
         furnace,
         crucible,
-        coil,
       },
       items,
       alertCount: countAlerts(items),
@@ -290,11 +286,11 @@ class SmsDmUnitController {
       await transaction(async (client) => {
         const result = await client.query(
           `INSERT INTO sms_dm_unit_checklists (
-             report_date, recorded_by, furnace, crucible, coil, checklist_items, alert_count, filled_by
-           ) VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8)
+             report_date, recorded_by, furnace, crucible, checklist_items, alert_count, filled_by
+           ) VALUES ($1,$2,$3,$4,$5::jsonb,$6,$7)
            RETURNING id`,
           [
-            h.report_date, h.recorded_by, h.furnace, h.crucible, h.coil,
+            h.report_date, h.recorded_by, h.furnace, h.crucible,
             JSON.stringify(prep.items), prep.alertCount, req.user.id,
           ]
         );
@@ -335,12 +331,12 @@ class SmsDmUnitController {
       await transaction(async (client) => {
         const result = await client.query(
           `UPDATE sms_dm_unit_checklists SET
-             report_date = $1, recorded_by = $2, furnace = $3, crucible = $4, coil = $5,
-             checklist_items = $6::jsonb, alert_count = $7, updated_at = NOW()
-           WHERE id = $8
+             report_date = $1, recorded_by = $2, furnace = $3, crucible = $4,
+             checklist_items = $5::jsonb, alert_count = $6, updated_at = NOW()
+           WHERE id = $7
            RETURNING id`,
           [
-            h.report_date, h.recorded_by, h.furnace, h.crucible, h.coil,
+            h.report_date, h.recorded_by, h.furnace, h.crucible,
             JSON.stringify(prep.items), prep.alertCount, id,
           ]
         );
@@ -424,7 +420,6 @@ class SmsDmUnitController {
         ['Recorded By', log.recorded_by || '—'],
         ['Furnace', log.furnace || '—'],
         ['Crucible', log.crucible || '—'],
-        ['Coil', log.coil || '—'],
         ['Filled by', log.filled_by_name || '—'],
         ['Alerts', String(log.alert_count ?? 0)],
       ];

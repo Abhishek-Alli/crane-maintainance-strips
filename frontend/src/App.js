@@ -153,6 +153,51 @@ import DmUnitView from './components/sms/DmUnitView';
 import ElectricalForm from './components/sms/ElectricalForm';
 import ElectricalHistory from './components/sms/ElectricalHistory';
 import ElectricalView from './components/sms/ElectricalView';
+import BilletSlabCaster from './components/sms/BilletSlabCaster';
+import Electrical from './components/sms/Electrical';
+import SmsMechanical from './components/sms/SmsMechanical';
+import Ccm from './components/sms/Ccm';
+import CcmCombo from './components/sms/CcmCombo';
+import SmsDownload from './components/sms/SmsDownload';
+import FcCcmPumpHouse from './components/sms/FcCcmPumpHouse';
+import MainPccRoom from './components/sms/MainPccRoom';
+import FurnaceSide from './components/sms/FurnaceSide';
+import FurnaceStandByForm from './components/sms/FurnaceStandByForm';
+import FurnaceStandByHistory from './components/sms/FurnaceStandByHistory';
+import FurnaceStandByView from './components/sms/FurnaceStandByView';
+import FurnacePokerForm from './components/sms/FurnacePokerForm';
+import FurnacePokerHistory from './components/sms/FurnacePokerHistory';
+import FurnacePokerView from './components/sms/FurnacePokerView';
+import BundlePressForm from './components/sms/BundlePressForm';
+import BundlePressHistory from './components/sms/BundlePressHistory';
+import BundlePressView from './components/sms/BundlePressView';
+import FurnaceTransformerForm from './components/sms/FurnaceTransformerForm';
+import FurnaceTransformerHistory from './components/sms/FurnaceTransformerHistory';
+import FurnaceTransformerView from './components/sms/FurnaceTransformerView';
+import FurnaceMotorPanelForm from './components/sms/FurnaceMotorPanelForm';
+import FurnaceMotorPanelHistory from './components/sms/FurnaceMotorPanelHistory';
+import FurnaceMotorPanelView from './components/sms/FurnaceMotorPanelView';
+import DgForm from './components/sms/DgForm';
+import DgHistory from './components/sms/DgHistory';
+import DgView from './components/sms/DgView';
+import FurnacePollutionPmForm from './components/sms/FurnacePollutionPmForm';
+import FurnacePollutionPmHistory from './components/sms/FurnacePollutionPmHistory';
+import FurnacePollutionPmView from './components/sms/FurnacePollutionPmView';
+import LtTransformerForm from './components/sms/LtTransformerForm';
+import LtTransformerHistory from './components/sms/LtTransformerHistory';
+import LtTransformerView from './components/sms/LtTransformerView';
+import CompressorPmForm from './components/sms/CompressorPmForm';
+import CompressorPmHistory from './components/sms/CompressorPmHistory';
+import CompressorPmView from './components/sms/CompressorPmView';
+import FurnacePollutionForm from './components/sms/FurnacePollutionForm';
+import FurnacePollutionHistory from './components/sms/FurnacePollutionHistory';
+import FurnacePollutionView from './components/sms/FurnacePollutionView';
+import PumpHouseMotorForm from './components/sms/PumpHouseMotorForm';
+import PumpHouseMotorHistory from './components/sms/PumpHouseMotorHistory';
+import PumpHouseMotorView from './components/sms/PumpHouseMotorView';
+import CcmMotorForm from './components/sms/CcmMotorForm';
+import CcmMotorHistory from './components/sms/CcmMotorHistory';
+import CcmMotorView from './components/sms/CcmMotorView';
 
 // import FabricationReport from "./components/fabrication/FabricationReport";
 import Dashboard from "./components/Dashboard";
@@ -1728,6 +1773,112 @@ function App() {
               )
             }
           />
+          <Route
+            path="/sms/electrical"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <Electrical />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/fc-ccm-pump-house"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <FcCcmPumpHouse />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/billet-slab-caster"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <BilletSlabCaster />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          {[
+            ['/sms/main-pcc-room', <MainPccRoom />],
+            ['/sms/mechanical', <SmsMechanical />],
+            ['/sms/ccm', <Ccm />],
+            ['/sms/ccm-combo', <CcmCombo />],
+            ['/sms/download', <SmsDownload />],
+            ['/sms/furnace-side', <FurnaceSide />],
+            ['/sms/furnace-stand-by/new', <FurnaceStandByForm />],
+            ['/sms/furnace-stand-by/history', <FurnaceStandByHistory />],
+            ['/sms/furnace-stand-by/:id/edit', <FurnaceStandByForm />],
+            ['/sms/furnace-stand-by/:id', <FurnaceStandByView />],
+            ['/sms/furnace-poker/new', <FurnacePokerForm />],
+            ['/sms/furnace-poker/history', <FurnacePokerHistory />],
+            ['/sms/furnace-poker/:id/edit', <FurnacePokerForm />],
+            ['/sms/furnace-poker/:id', <FurnacePokerView />],
+            ['/sms/bundle-press/new', <BundlePressForm />],
+            ['/sms/bundle-press/history', <BundlePressHistory />],
+            ['/sms/bundle-press/:id/edit', <BundlePressForm />],
+            ['/sms/bundle-press/:id', <BundlePressView />],
+            ['/sms/furnace-transformer/new', <FurnaceTransformerForm />],
+            ['/sms/furnace-transformer/history', <FurnaceTransformerHistory />],
+            ['/sms/furnace-transformer/:id/edit', <FurnaceTransformerForm />],
+            ['/sms/furnace-transformer/:id', <FurnaceTransformerView />],
+            ['/sms/furnace-motor-panel/new', <FurnaceMotorPanelForm />],
+            ['/sms/furnace-motor-panel/history', <FurnaceMotorPanelHistory />],
+            ['/sms/furnace-motor-panel/:id/edit', <FurnaceMotorPanelForm />],
+            ['/sms/furnace-motor-panel/:id', <FurnaceMotorPanelView />],
+            ['/sms/dg/new', <DgForm />],
+            ['/sms/dg/history', <DgHistory />],
+            ['/sms/dg/:id/edit', <DgForm />],
+            ['/sms/dg/:id', <DgView />],
+            ['/sms/furnace-pollution-pm/new', <FurnacePollutionPmForm />],
+            ['/sms/furnace-pollution-pm/history', <FurnacePollutionPmHistory />],
+            ['/sms/furnace-pollution-pm/:id/edit', <FurnacePollutionPmForm />],
+            ['/sms/furnace-pollution-pm/:id', <FurnacePollutionPmView />],
+            ['/sms/lt-transformer/new', <LtTransformerForm />],
+            ['/sms/lt-transformer/history', <LtTransformerHistory />],
+            ['/sms/lt-transformer/:id/edit', <LtTransformerForm />],
+            ['/sms/lt-transformer/:id', <LtTransformerView />],
+            ['/sms/compressor-pm/new', <CompressorPmForm />],
+            ['/sms/compressor-pm/history', <CompressorPmHistory />],
+            ['/sms/compressor-pm/:id/edit', <CompressorPmForm />],
+            ['/sms/compressor-pm/:id', <CompressorPmView />],
+            ['/sms/furnace-pollution/new', <FurnacePollutionForm />],
+            ['/sms/furnace-pollution/history', <FurnacePollutionHistory />],
+            ['/sms/furnace-pollution/:id/edit', <FurnacePollutionForm />],
+            ['/sms/furnace-pollution/:id', <FurnacePollutionView />],
+            ['/sms/ccm-motor/new', <CcmMotorForm />],
+            ['/sms/ccm-motor/history', <CcmMotorHistory />],
+            ['/sms/ccm-motor/:id/edit', <CcmMotorForm />],
+            ['/sms/ccm-motor/:id', <CcmMotorView />],
+            ['/sms/pump-house-motor/new', <PumpHouseMotorForm />],
+            ['/sms/pump-house-motor/history', <PumpHouseMotorHistory />],
+            ['/sms/pump-house-motor/:id/edit', <PumpHouseMotorForm />],
+            ['/sms/pump-house-motor/:id', <PumpHouseMotorView />],
+          ].map(([path, page]) => (
+            <Route
+              key={path}
+              path={path}
+              element={
+                user && (isSMSUser || isAdminUser) ? (
+                  page
+                ) : user ? (
+                  <Navigate to="/sms/dashboard" replace />
+                ) : (
+                  <Navigate to="/login" replace />
+                )
+              }
+            />
+          ))}
           <Route
             path="/sms/dm-unit/new"
             element={

@@ -75,7 +75,6 @@ export default function PokerMaintenanceView() {
     ['Filled By', log.filled_by_name || '—'],
     ['Furnace', log.furnace || '—'],
     ['Crucible', log.crucible || '—'],
-    ['Coil', log.coil || '—'],
   ];
   const photosByItem = {};
   (log.images || []).forEach((img) => {

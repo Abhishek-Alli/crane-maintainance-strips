@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ModuleDashboard from '../shared/ModuleDashboard';
+import { Cog, Zap, Factory } from 'lucide-react';
 import { smsAPI } from '../../services/api';
 import {
   SCHEDULE_STATUS_STYLE,
@@ -11,7 +12,7 @@ import {
   todayISO,
 } from './eotCraneConfig';
 
-const EOT_ACTIONS = [
+export const MECHANICAL_ACTIONS = [
   {
     to: '/sms/eot-crane-maintenance/new',
     label: 'EOT Crane Maintenance',
@@ -156,7 +157,7 @@ const Spinner = () => (
   </div>
 );
 
-function TodaySchedule() {
+export function TodaySchedule() {
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -207,7 +208,7 @@ function TodaySchedule() {
   );
 }
 
-function RecentEotCrane() {
+export function RecentEotCrane() {
   const [recent, setRecent] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -255,13 +256,30 @@ function RecentEotCrane() {
   );
 }
 
+const DASHBOARD_ACTIONS = [
+  {
+    to: '/sms/mechanical',
+    label: 'MECHANICAL',
+    sub: 'EOT Crane · Crucible · Poker · Pump House · Scrap Trolly · Ladle Car · Pollution · DM Unit',
+    primary: true,
+    icon: Cog,
+  },
+  {
+    to: '/sms/electrical',
+    label: 'ELECTRICAL',
+    sub: 'Furnace Side · Main PCC Room · Pump House · Billet and Slab Caster',
+    primary: true,
+    icon: Zap,
+  },
+  {
+    to: '/sms/ccm',
+    label: 'CCM',
+    sub: 'CCM Combo · CCM Slab',
+    primary: true,
+    icon: Factory,
+  },
+];
+
 export default function SmsDashboard() {
-  return (
-    <ModuleDashboard module="sms" extraActions={EOT_ACTIONS}>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-5">
-        <TodaySchedule />
-        <RecentEotCrane />
-      </div>
-    </ModuleDashboard>
-  );
+  return <ModuleDashboard module="sms" extraActions={DASHBOARD_ACTIONS} />;
 }

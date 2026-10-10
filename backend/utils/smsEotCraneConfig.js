@@ -160,9 +160,6 @@ function findChecklistError(items, photoCounts = {}, sectionKeys) {
     if (p.required && !row.value) return `${where} is required`;
     if (isAlert(p, row.value)) {
       if (!row.remark) return `Remark is required for ${where} (${row.value})`;
-      if (p.action === REMARK_PHOTO && !(photoCounts[itemKey] > 0)) {
-        return `Photo is required for ${where} (${row.value})`;
-      }
     }
     if ((photoCounts[itemKey] || 0) > MAX_PHOTOS_PER_POINT) {
       return `Maximum ${MAX_PHOTOS_PER_POINT} photos allowed for ${where}`;

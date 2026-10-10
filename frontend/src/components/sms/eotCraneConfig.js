@@ -114,7 +114,7 @@ export function needsPhoto(p, value) {
 }
 
 export function actionLabel(p) {
-  return p.action === REMARK_PHOTO ? 'Remark + Photo' : 'Remark';
+  return 'Remark';
 }
 
 export function emptyChecklistItems() {
@@ -144,7 +144,6 @@ export function listChecklistIssues(items, photoCounts = {}, sectionKeys) {
     if (p.required && !row.value) add('Select a value');
     if (isAlert(p, row.value)) {
       if (!String(row.remark || '').trim()) add(`Remark required (${row.value})`);
-      if (p.action === REMARK_PHOTO && !(photoCounts[itemKey] > 0)) add(`Photo required (${row.value})`);
     }
     if ((photoCounts[itemKey] || 0) > MAX_PHOTOS_PER_POINT) add(`Maximum ${MAX_PHOTOS_PER_POINT} photos`);
   });

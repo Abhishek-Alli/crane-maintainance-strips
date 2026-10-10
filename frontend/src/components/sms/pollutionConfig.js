@@ -1,7 +1,7 @@
 /** SMS Pollution Daily Check Sheet — keep in sync with backend/utils/smsPollutionConfig.js */
 import { todayISO } from './eotCraneConfig';
 
-export const POLLUTION_FURNACES = ['50 MT', '26 MW'];
+export const POLLUTION_FURNACES = ['50 MT'];
 
 export const MAX_PHOTOS_PER_POINT = 3;
 
@@ -110,7 +110,7 @@ export function needsPhoto(p, value) {
 }
 
 export function actionLabel(p) {
-  return p.action === REMARK_PHOTO ? 'Remark + Photo' : 'Remark';
+  return 'Remark';
 }
 
 export function emptyChecklistItems() {
@@ -132,7 +132,6 @@ export function listChecklistIssues(items, photoCounts = {}) {
     else if (p.type === 'number' && hasValue(row.value) && !isNumeric(row.value)) add('Enter a valid number');
     if (isAlert(p, row.value)) {
       if (!String(row.remark || '').trim()) add(`Remark required (${row.value})`);
-      if (p.action === REMARK_PHOTO && !(photoCounts[p.key] > 0)) add(`Photo required (${row.value})`);
     }
     if ((photoCounts[p.key] || 0) > MAX_PHOTOS_PER_POINT) add(`Maximum ${MAX_PHOTOS_PER_POINT} photos`);
   });

@@ -531,7 +531,7 @@ export default function EotCraneMaintenanceForm() {
                               {itemPhotos.length < MAX_PHOTOS_PER_POINT && (
                                 <label className="w-20 h-20 flex flex-col items-center justify-center border-2 border-dashed border-red-300 rounded-lg cursor-pointer hover:bg-red-50 text-red-700">
                                   <span className="text-lg leading-none">+</span>
-                                  <span className="text-[10px] font-semibold mt-1">Photo *</span>
+                                  <span className="text-[10px] font-semibold mt-1 text-center leading-tight">Photo (optional)</span>
                                   <input
                                     type="file"
                                     accept="image/jpeg,image/png,image/webp,image/gif"
