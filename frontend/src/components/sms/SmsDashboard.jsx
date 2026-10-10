@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ModuleDashboard from '../shared/ModuleDashboard';
-import { Cog, Zap } from 'lucide-react';
+import { Cog, Zap, Factory } from 'lucide-react';
 import { smsAPI } from '../../services/api';
 import {
   SCHEDULE_STATUS_STYLE,
@@ -257,6 +257,13 @@ const DASHBOARD_ACTIONS = [
     sub: 'Furnace Side · Main PCC Room · Pump House · Billet and Slab Caster',
     primary: true,
     icon: Zap,
+  },
+  {
+    to: '/sms/ccm',
+    label: 'CCM',
+    sub: 'CCM Combo · CCM Slab',
+    primary: true,
+    icon: Factory,
   },
 ];
 

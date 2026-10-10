@@ -1,50 +1,29 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { Cog, CalendarDays, Flame, Wrench, Droplets, BrickWall, ShoppingCart, Train, Factory, Waves } from 'lucide-react';
-import CardIcon from './CardIcon';
-import { MECHANICAL_ACTIONS, TodaySchedule, RecentEotCrane } from './SmsDashboard';
-
-// Professional line icons, keyed by the emoji the dashboard config still carries
-const ICONS = {
-  '🏗️': Cog, '📅': CalendarDays, '🔥': Flame, '🛠️': Wrench, '💧': Droplets,
-  '🧱': BrickWall, '🛒': ShoppingCart, '🚃': Train, '🏭': Factory, '🚰': Waves,
-};
+import {
+  Cog, CalendarDays, Flame, Wrench, Droplets, BrickWall, ShoppingCart, Train, Factory, Waves,
+} from 'lucide-react';
+import SmsSheetCard, { SmsSheetPage } from './SmsSheetCard';
+import { TodaySchedule, RecentEotCrane } from './SmsDashboard';
 
 export default function SmsMechanical() {
   return (
-    <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">MECHANICAL</h1>
-          <Link to="/sms/dashboard" className="text-sm font-semibold text-amber-700 hover:opacity-80">
-            ← Dashboard
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
-          {MECHANICAL_ACTIONS.map((a) => (
-            <Link
-              key={a.to}
-              to={a.to}
-              className="flex flex-col bg-white border border-gray-200 rounded-xl p-5 transition-all hover:shadow-md hover:border-amber-300 hover:bg-amber-50"
-            >
-              <CardIcon icon={ICONS[a.icon]} label={a.label} />
-              <p className="font-semibold text-gray-900 text-sm leading-tight">{a.label}</p>
-              <p className="text-xs text-gray-500 mt-1">{a.sub}</p>
-              {a.primary && (
-                <span className="mt-3 inline-flex w-fit text-xs font-semibold text-amber-800 bg-amber-100 px-2 py-0.5 rounded">
-                  Fill new report
-                </span>
-              )}
-            </Link>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <TodaySchedule />
-          <RecentEotCrane />
-        </div>
+    <>
+      <SmsSheetPage title="MECHANICAL" back="Dashboard" backTo="/sms/dashboard">
+        <SmsSheetCard label="EOT Crane Maintenance" sub="Mechanical · LT · CT · Main Hoist" icon={Cog} color="indigo" sheet="eot-crane" fill="/sms/eot-crane-maintenance/new" history="/sms/eot-crane-maintenance/history" />
+        <SmsSheetCard to="/sms/eot-crane-maintenance/calendar" label="EOT Crane Schedule" sub="Calendar · plan cranes by date" icon={CalendarDays} color="violet" />
+        <SmsSheetCard label="Crucible Maintenance" sub="Furnace · Coating · Coil In / Coil Out" icon={Flame} color="orange" sheet="crucible" fill="/sms/crucible-maintenance/new" history="/sms/crucible-maintenance/history" />
+        <SmsSheetCard label="Hyd Poker Maintenance" sub="Furnace · Hydraulic Poker" icon={Wrench} color="cyan" sheet="poker" fill="/sms/poker-maintenance/new" history="/sms/poker-maintenance/history" />
+        <SmsSheetCard label="Pump House — Mechanical" sub="Furnace and CCM · Area · Pump" icon={Droplets} color="blue" sheet="pump-house" fill="/sms/pump-house/new" history="/sms/pump-house/history" />
+        <SmsSheetCard label="Patching" sub="Furnace · Lining · Air Pressure" icon={BrickWall} color="rose" sheet="patching" fill="/sms/patching/new" history="/sms/patching/history" />
+        <SmsSheetCard label="Scrap Transfer Trolly" sub="Furnace · Gear Box · Hydraulic Power Pack" icon={ShoppingCart} color="teal" sheet="scrap-trolly" fill="/sms/scrap-trolly/new" history="/sms/scrap-trolly/history" />
+        <SmsSheetCard label="Ladle Car — Mechanical" sub="Furnace · Gear Box 1 & 2 · Wheel" icon={Train} color="amber" sheet="ladle-car" fill="/sms/ladle-car/new" history="/sms/ladle-car/history" />
+        <SmsSheetCard label="Pollution — Daily Check Sheet" sub="Pollution Mechanical · Hoods · ID Fans · Dampers" icon={Factory} color="emerald" sheet="pollution" fill="/sms/pollution/new" history="/sms/pollution/history" />
+        <SmsSheetCard label="DM Unit Check List" sub="Furnace · DM Water · Heat Exchanger" icon={Waves} color="purple" sheet="dm-unit" fill="/sms/dm-unit/new" history="/sms/dm-unit/history" />
+      </SmsSheetPage>
+      <div className="max-w-6xl mx-auto px-4 pb-8 grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <TodaySchedule />
+        <RecentEotCrane />
       </div>
-    </div>
+    </>
   );
 }

@@ -152,6 +152,9 @@ import DmUnitView from './components/sms/DmUnitView';
 import BilletSlabCaster from './components/sms/BilletSlabCaster';
 import Electrical from './components/sms/Electrical';
 import SmsMechanical from './components/sms/SmsMechanical';
+import Ccm from './components/sms/Ccm';
+import CcmCombo from './components/sms/CcmCombo';
+import SmsDownload from './components/sms/SmsDownload';
 import FcCcmPumpHouse from './components/sms/FcCcmPumpHouse';
 import MainPccRoom from './components/sms/MainPccRoom';
 import FurnaceSide from './components/sms/FurnaceSide';
@@ -2131,6 +2134,9 @@ function App() {
           {[
             ['/sms/main-pcc-room', <MainPccRoom />],
             ['/sms/mechanical', <SmsMechanical />],
+            ['/sms/ccm', <Ccm />],
+            ['/sms/ccm-combo', <CcmCombo />],
+            ['/sms/download', <SmsDownload />],
             ['/sms/furnace-side', <FurnaceSide />],
             ['/sms/furnace-stand-by/new', <FurnaceStandByForm />],
             ['/sms/furnace-stand-by/history', <FurnaceStandByHistory />],
