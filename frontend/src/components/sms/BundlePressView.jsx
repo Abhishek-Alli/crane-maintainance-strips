@@ -87,16 +87,18 @@ export default function BundlePressView() {
           <div className="px-5 py-3 border-b border-amber-100 bg-amber-50/40">
             <h2 className="text-sm font-bold text-amber-800 uppercase tracking-wide">Motor Currents (R / Y / B)</h2>
           </div>
-          <table className="w-full text-sm">
-            <tbody className="divide-y divide-gray-100">
-              {BP_MOTORS.map((m) => (
-                <tr key={m.key}>
-                  <td className="px-4 py-2.5 text-gray-900 font-semibold">{m.label}</td>
-                  <td className="px-4 py-2.5 text-gray-700 whitespace-nowrap">{formatCurrents(log.currents, m.key)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <tbody className="divide-y divide-gray-100">
+                {BP_MOTORS.map((m) => (
+                  <tr key={m.key}>
+                    <td className="px-4 py-2.5 text-gray-900 font-semibold">{m.label}</td>
+                    <td className="px-4 py-2.5 text-gray-700 whitespace-nowrap">{formatCurrents(log.currents, m.key)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {BP_GROUPS.map((group) => (

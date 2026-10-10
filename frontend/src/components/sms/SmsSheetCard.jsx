@@ -24,7 +24,7 @@ function SheetIcon({ icon: Icon, color }) {
   );
 }
 
-const btnBase = 'flex h-8 w-full items-center justify-center whitespace-nowrap text-[11px] font-semibold px-1 rounded-lg border transition-colors';
+const btnBase = 'flex h-8 w-full items-center justify-center overflow-hidden text-[11px] font-semibold px-1 rounded-lg border transition-colors';
 const menuItem = 'block px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50';
 
 /**
@@ -75,7 +75,7 @@ export default function SmsSheetCard({ label, sub, icon, color = 'gray', fill, h
     <div className={`flex flex-col bg-white border rounded-xl p-4 shadow-sm ${c.border}`}>
       {head}
       <p className="text-xs text-gray-500 mt-1 mb-3">{sub}</p>
-      <div className="mt-auto grid grid-cols-[0.8fr_1fr_1.3fr] gap-1.5" ref={ref}>
+      <div className="mt-auto grid grid-cols-3 gap-1.5" ref={ref}>
         <Link to={fill} className={`${btnBase} bg-amber-600 text-white border-amber-600 hover:bg-amber-700`}>
           Fill
         </Link>
