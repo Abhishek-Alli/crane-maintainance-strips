@@ -5,12 +5,12 @@ export const LT_TRANSFORMERS = ['5 MVA'];
 export const LT_CHECKS = [
   { key: 'oil_level_in_mog', label: 'Oil Level in MOG', options: ['NORMAL', 'NOT NORMAL'] },
   { key: 'oil_leakages', label: 'Oil Leakages from any part', options: ['NO', 'YES'] },
-  { key: 'silica_gel_condition', label: 'Silica Gel Condition', options: ['BLUE', 'NOT BLUE'] },
+  { key: 'silica_gel_condition', label: 'Silica Gel Condition', options: ['BLUE', 'ORANGE', 'PINK'], noBad: true, colored: true },
   { key: 'oltc_condition', label: 'OLTC Condition', options: ['OKAY', 'NOT OKAY'] },
 ];
 
-/** The first option of each check is the healthy one */
-export const isBadValue = (check, value) => Boolean(value) && value !== check.options[0];
+/** The first option of each check is the healthy one (checks marked noBad have no bad option) */
+export const isBadValue = (check, value) => !check.noBad && Boolean(value) && value !== check.options[0];
 
 export function emptyLtTransformerForm() {
   const checks = {};

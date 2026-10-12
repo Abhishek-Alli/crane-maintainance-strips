@@ -5,7 +5,7 @@ const LT_TRANSFORMERS = ['5 MVA'];
 const LT_CHECKS = [
   { key: 'oil_level_in_mog', label: 'Oil Level in MOG', options: ['NORMAL', 'NOT NORMAL'] },
   { key: 'oil_leakages', label: 'Oil Leakages from any part', options: ['NO', 'YES'] },
-  { key: 'silica_gel_condition', label: 'Silica Gel Condition', options: ['BLUE', 'NOT BLUE'] },
+  { key: 'silica_gel_condition', label: 'Silica Gel Condition', options: ['BLUE', 'ORANGE', 'PINK'] },
   { key: 'oltc_condition', label: 'OLTC Condition', options: ['OKAY', 'NOT OKAY'] },
 ];
 

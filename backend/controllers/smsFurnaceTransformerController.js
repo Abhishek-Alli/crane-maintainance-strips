@@ -5,6 +5,8 @@ const {
 } = require('../utils/smsFurnaceTransformerConfig');
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const OTI_LIMIT = 90;
+const WTI_LIMIT = OTI_LIMIT;
 
 /** Validates the body. Returns { error } or { values } */
 function prepare(b) {
@@ -18,6 +20,14 @@ function prepare(b) {
   const oti = parseNumber(b.oti_temperature);
   const wti = parseNumber(b.wti_temperature);
   if (Number.isNaN(oti) || Number.isNaN(wti)) return { error: 'Temperatures must be numbers' };
+
+  if (oti > OTI_LIMIT && !nullIfEmpty(b.oti_remark)) {
+    return { error: `Remark is required when OTI Temperature is above ${OTI_LIMIT}` };
+  }
+
+  if (wti > WTI_LIMIT && !nullIfEmpty(b.wti_remark)) {
+    return { error: `Remark is required when WTI Temperature is above ${WTI_LIMIT}` };
+  }
 
   return {
     values: [

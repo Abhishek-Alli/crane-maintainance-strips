@@ -1,5 +1,7 @@
 /** SMS Compressor — Scheduled PM check sheet — keep in sync with frontend/src/components/sms/compressorPmConfig.js */
 
+const CP_COMPRESSORS = ['1', '2'];
+
 const CP_CHECKS = [
   { key: 'coolent_filter_condition', label: 'Coolent and Filter Condition', options: ['OKAY', 'NOT OKAY'] },
 ];
@@ -33,4 +35,4 @@ function normalizeChecks(raw) {
   return out;
 }
 
-module.exports = { CP_CHECKS, nullIfEmpty, parseNumber, normalizeChecks };
+module.exports = { CP_COMPRESSORS, CP_CHECKS, nullIfEmpty, parseNumber, normalizeChecks };

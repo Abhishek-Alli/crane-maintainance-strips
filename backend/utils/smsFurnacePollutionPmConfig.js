@@ -17,10 +17,8 @@ const FP_PM_GROUPS = [
       { key: 'side_hood_limit_switch', label: 'SIDE HOOD LIMIT SWITCH', options: OPTIONS },
     ],
   },
-  { title: 'RAV', checks: numbered('rav', 'RAV', 8) },
-  { title: 'Vibrator Motor', checks: numbered('vibrator_motor', 'VIBRATOR MOTOR', 8) },
-  { title: 'Solonoid Coil', checks: numbered('solonoid_coil', 'SOLONOID COIL', 8) },
-];
+  { title: 'RAV', checks: numbered('rav', 'RAV MOTOR', 8) },
+  { title: 'Vibrator Motor', checks: numbered('vibrator_motor', 'VIBRATOR MOTOR', 8) },];
 
 const FP_PM_CHECKS = FP_PM_GROUPS.flatMap((g) => g.checks);
 

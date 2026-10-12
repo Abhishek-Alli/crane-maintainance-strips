@@ -4,7 +4,7 @@ import { toast } from 'react-toastify';
 import { smsAPI } from '../../services/api';
 import { FT_TRANSFORMERS, FT_CHECKS, isBadValue, emptyFurnaceTransformerForm } from './furnaceTransformerConfig';
 import {
-  inputCls, Field, loggedInUsername, optionBtnCls, RemarkToggle, CheckRow, PageLoader,
+  inputCls, Field, loggedInUsername, optionBtnCls, CheckRow, TempRow, OTI_LIMIT, WTI_LIMIT, PageLoader,
 } from './checkFormParts';
 
 export default function FurnaceTransformerForm() {
@@ -142,25 +142,17 @@ export default function FurnaceTransformerForm() {
             ))}
 
             {temps.map(([label, valueKey, remarkKey, openKey]) => (
-              <div key={valueKey} className="rounded-lg p-3 border border-gray-100 bg-gray-50 space-y-2">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <p className="text-sm font-semibold text-gray-800">{label}</p>
-                  <input
-                    type="number"
-                    step="any"
-                    inputMode="decimal"
-                    value={form[valueKey]}
-                    onChange={(e) => set({ [valueKey]: e.target.value })}
-                    className="w-40 px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-amber-400"
-                  />
-                </div>
-                <RemarkToggle
-                  value={form[remarkKey]}
-                  open={openRemarks[openKey]}
-                  onToggle={() => toggleRemark(openKey)}
-                  onChange={(v) => set({ [remarkKey]: v })}
-                />
-              </div>
+              <TempRow
+                key={valueKey}
+                label={label}
+                value={form[valueKey]}
+                remark={form[remarkKey]}
+                open={openRemarks[openKey]}
+                limit={openKey === 'oti' ? OTI_LIMIT : WTI_LIMIT}
+                onToggle={() => toggleRemark(openKey)}
+                onValue={(v) => set({ [valueKey]: v })}
+                onRemark={(v) => set({ [remarkKey]: v })}
+              />
             ))}
           </div>
         </div>

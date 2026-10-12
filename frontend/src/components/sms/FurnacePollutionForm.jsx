@@ -3,10 +3,10 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { smsAPI } from '../../services/api';
 import {
-  FP_FURNACES, FP_CHECKS, FP_MOTORS, FP_PHASES, isBadValue, emptyFurnacePollutionForm,
+  FP_FURNACES, FP_CHECKS, FP_MOTORS, FP_PHASES, DRIVE_TEMP_LIMIT, isBadValue, emptyFurnacePollutionForm,
 } from './furnacePollutionConfig';
 import {
-  inputCls, Field, loggedInUsername, optionBtnCls, RemarkToggle, CheckRow, PageLoader,
+  inputCls, Field, loggedInUsername, optionBtnCls, CheckRow, TempRow, PageLoader,
 } from './checkFormParts';
 
 export default function FurnacePollutionForm() {
@@ -142,25 +142,16 @@ export default function FurnacePollutionForm() {
               />
             ))}
 
-            <div className="rounded-lg p-3 border border-gray-100 bg-gray-50 space-y-2">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <p className="text-sm font-semibold text-gray-800">Drive Temperature</p>
-                <input
-                  type="number"
-                  step="any"
-                  inputMode="decimal"
-                  value={form.drive_temperature}
-                  onChange={(e) => set({ drive_temperature: e.target.value })}
-                  className="w-40 px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-amber-400"
-                />
-              </div>
-              <RemarkToggle
-                value={form.drive_temperature_remark}
-                open={openRemarks.drive_temperature}
-                onToggle={() => toggleRemark('drive_temperature')}
-                onChange={(v) => set({ drive_temperature_remark: v })}
-              />
-            </div>
+            <TempRow
+              label="Drive Temperature"
+              value={form.drive_temperature}
+              remark={form.drive_temperature_remark}
+              open={openRemarks.drive_temperature}
+              limit={DRIVE_TEMP_LIMIT}
+              onToggle={() => toggleRemark('drive_temperature')}
+              onValue={(v) => set({ drive_temperature: v })}
+              onRemark={(v) => set({ drive_temperature_remark: v })}
+            />
           </div>
         </div>
 

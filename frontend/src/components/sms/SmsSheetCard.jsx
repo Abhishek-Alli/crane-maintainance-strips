@@ -30,12 +30,13 @@ const menuItem = 'block px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gra
 /**
  * Props: label, sub, icon, color,
  *  - fill / history  → sheet card with Fill · View ▾ · Download ▾
+ *  - fillOptions     → [{ label, to }]; Fill opens a menu of these instead of linking to `fill`
  *  - to              → plain link card (groups, calendar)
  *  - neither         → "Coming soon" card
  *  - sheet           → key in smsDownloadConfig; enables Single date / Monthly downloads
  */
-export default function SmsSheetCard({ label, sub, icon, color = 'gray', fill, history, to, sheet }) {
-  const [open, setOpen] = useState(null); // 'view' | 'download' | null
+export default function SmsSheetCard({ label, sub, icon, color = 'gray', fill, fillOptions, history, to, sheet }) {
+  const [open, setOpen] = useState(null); // 'fill' | 'view' | 'download' | null
   const ref = useRef(null);
   const c = COLORS[color] || COLORS.gray;
 
@@ -76,9 +77,24 @@ export default function SmsSheetCard({ label, sub, icon, color = 'gray', fill, h
       {head}
       <p className="text-xs text-gray-500 mt-1 mb-3">{sub}</p>
       <div className="mt-auto grid grid-cols-[0.8fr_1fr_1.3fr] gap-1.5" ref={ref}>
-        <Link to={fill} className={`${btnBase} bg-amber-600 text-white border-amber-600 hover:bg-amber-700`}>
-          Fill
-        </Link>
+        {fillOptions ? (
+          <div className="relative">
+            <button type="button" onClick={() => setOpen((m) => (m === 'fill' ? null : 'fill'))} className={`${btnBase} bg-amber-600 text-white border-amber-600 hover:bg-amber-700`}>
+              Fill ▾
+            </button>
+            {open === 'fill' && (
+              <div className="absolute left-0 bottom-full mb-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-20">
+                {fillOptions.map((o) => (
+                  <Link key={o.to} to={o.to} onClick={() => setOpen(null)} className={menuItem}>{o.label}</Link>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <Link to={fill} className={`${btnBase} bg-amber-600 text-white border-amber-600 hover:bg-amber-700`}>
+            Fill
+          </Link>
+        )}
 
         <div className="relative">
           <button type="button" onClick={() => setOpen((m) => (m === 'view' ? null : 'view'))} className={`${btnBase} bg-white text-amber-700 border-amber-300 hover:bg-amber-50`}>

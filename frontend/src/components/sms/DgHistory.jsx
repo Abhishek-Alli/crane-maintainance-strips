@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { smsAPI } from '../../services/api';
 import { formatDate } from './eotCraneConfig';
+import { DG_CHECKS, isBadValue } from './dgConfig';
 
 const filterCls =
   'px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400';
@@ -83,7 +84,7 @@ export default function DgHistory() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-200">
-                      {['#', 'Date', 'Diesel Refill', 'Air Cleaning', 'Running Hours (Mins)', 'Recorded By'].map((h) => (
+                      {['#', 'Date', 'Diesel Refill', 'Air Cleaning', 'Running Hours (Mins)', ...DG_CHECKS.map((c) => c.label), 'Recorded By'].map((h) => (
                         <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{h}</th>
                       ))}
                       <th className="px-4 py-3" />
@@ -97,6 +98,12 @@ export default function DgHistory() {
                         <td className="px-4 py-3 text-gray-700">{log.diesel_refill || '—'}</td>
                         <td className="px-4 py-3 text-gray-700 whitespace-nowrap">{log.air_cleaning || '—'}</td>
                         <td className="px-4 py-3 text-gray-700">{log.running_hours ?? '—'}</td>
+                        {DG_CHECKS.map((c) => {
+                          const v = log.checks?.[c.key]?.value;
+                          return (
+                            <td key={c.key} className={`px-4 py-3 whitespace-nowrap ${isBadValue(c, v) ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>{v || '—'}</td>
+                          );
+                        })}
                         <td className="px-4 py-3 text-gray-600">{log.recorded_by || '—'}</td>
                         <td className="px-4 py-3 text-right">
                           <Link to={`/sms/dg/${log.id}`} className="text-xs text-amber-700 hover:text-amber-900 font-semibold">

@@ -87,7 +87,7 @@ export default function CompressorPmHistory() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-200">
-                      {['#', 'Created', 'Schedule ID', 'Schedule Detail', 'R / Y / B', 'Not OK', 'Recorded By'].map((h) => (
+                      {['#', 'Created', 'Compressor', 'Schedule ID', 'Schedule Detail', 'R / Y / B', 'Not OK', 'Recorded By'].map((h) => (
                         <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{h}</th>
                       ))}
                       <th className="px-4 py-3" />
@@ -100,6 +100,7 @@ export default function CompressorPmHistory() {
                         <tr key={log.id} className="hover:bg-amber-50/40 transition-colors">
                           <td className="px-4 py-3 text-gray-500">{i + 1}</td>
                           <td className="px-4 py-3 font-semibold text-gray-900 whitespace-nowrap">{formatDate(log.created_at)}</td>
+                          <td className="px-4 py-3 text-gray-700">{log.compressor ? `Compressor ${log.compressor}` : '—'}</td>
                           <td className="px-4 py-3 text-gray-700">{log.schedule_id ?? '—'}</td>
                           <td className="px-4 py-3 text-gray-700">{log.schedule_detail || '—'}</td>
                           <td className="px-4 py-3 text-gray-700 whitespace-nowrap">

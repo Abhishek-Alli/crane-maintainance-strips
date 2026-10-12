@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { smsAPI } from '../../services/api';
-import { DIESEL_REFILL_OPTIONS, AIR_CLEANING_OPTIONS, emptyDgForm } from './dgConfig';
+import { DIESEL_REFILL_OPTIONS, AIR_CLEANING_OPTIONS, DG_CHECKS, isBadValue, emptyDgForm } from './dgConfig';
+import { CheckRow } from './checkFormParts';
 
 const inputCls =
   'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400';
@@ -84,6 +85,11 @@ export default function DgForm() {
           navigate(`/sms/dg/${editId}`);
           return;
         }
+        const checks = {};
+        DG_CHECKS.forEach((c) => {
+          const row = d.checks?.[c.key] || {};
+          checks[c.key] = { value: row.value || '', remark: row.remark || '' };
+        });
         setForm({
           report_date: String(d.report_date || '').slice(0, 10),
           recorded_by: d.recorded_by || '',
@@ -92,6 +98,7 @@ export default function DgForm() {
           air_cleaning: d.air_cleaning || '',
           running_hours: d.running_hours ?? '',
           running_hours_remark: d.running_hours_remark || '',
+          checks,
           remark: d.remark || '',
         });
       })
@@ -103,6 +110,8 @@ export default function DgForm() {
   }, [editId, navigate]);
 
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
+  const setCheck = (key, patch) =>
+    setForm((f) => ({ ...f, checks: { ...f.checks, [key]: { ...f.checks[key], ...patch } } }));
   const toggleRemark = (key) => setOpenRemarks((o) => ({ ...o, [key]: !o[key] }));
 
   const handleSubmit = async (e) => {
@@ -203,6 +212,18 @@ export default function DgForm() {
                 onChange={(v) => set({ running_hours_remark: v })}
               />
             </div>
+
+            {DG_CHECKS.map((c) => (
+              <CheckRow
+                key={c.key}
+                check={c}
+                row={form.checks[c.key]}
+                isBad={isBadValue}
+                open={openRemarks[c.key]}
+                onToggleRemark={() => toggleRemark(c.key)}
+                onChange={(patch) => setCheck(c.key, patch)}
+              />
+            ))}
           </div>
         </div>
 

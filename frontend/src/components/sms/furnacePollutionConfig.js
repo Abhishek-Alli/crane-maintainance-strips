@@ -2,6 +2,9 @@
 
 export const FP_FURNACES = ['50 MT'];
 
+/** Drive temperature above this needs a remark */
+export const DRIVE_TEMP_LIMIT = 55;
+
 export const FP_CHECKS = [
   { key: 'panel_condition', label: 'Panel Condition', options: ['OKAY', 'NOT OKAY'] },
   { key: 'drive_1_check', label: 'Drive-1 Check', options: ['OKAY', 'NOT OKAY'] },

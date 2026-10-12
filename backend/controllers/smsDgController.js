@@ -4,6 +4,13 @@ const { isWithinEditWindow, editWindowDeniedMessage } = require('../utils/editWi
 // Keep in sync with frontend/src/components/sms/dgConfig.js
 const DIESEL_REFILL_OPTIONS = ['YES', 'NO'];
 const AIR_CLEANING_OPTIONS = ['DONE', 'PREVIOUSLY DONE'];
+const DG_CHECK_OPTIONS = ['OK', 'NOT OK'];
+const DG_CHECKS = [
+  { key: 'battery_voltage', label: 'Battery Voltage' },
+  { key: 'coolant_motor_condition', label: 'Coolant Motor Condition' },
+  { key: 'coolant_level', label: 'Coolant Level' },
+  { key: 'battery_charger', label: 'Battery Charger' },
+];
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -12,6 +19,21 @@ const nullIfEmpty = (v) => {
   const s = String(v).trim();
   return s === '' ? null : s;
 };
+
+/** Keeps only known checks with a valid option; missing/invalid values become empty */
+function normalizeChecks(raw) {
+  const src = raw && typeof raw === 'object' ? raw : {};
+  const out = {};
+  DG_CHECKS.forEach((c) => {
+    const row = src[c.key] || {};
+    const value = nullIfEmpty(row.value);
+    out[c.key] = {
+      value: value && DG_CHECK_OPTIONS.includes(value) ? value : '',
+      remark: nullIfEmpty(row.remark) || '',
+    };
+  });
+  return out;
+}
 
 /** Validates the body. Returns { error } or { values } */
 function prepare(b) {
@@ -28,6 +50,10 @@ function prepare(b) {
   const hours = hoursRaw === null ? null : Number(hoursRaw);
   if (hours !== null && !Number.isFinite(hours)) return { error: 'Running Hours must be a number' };
 
+  const checks = normalizeChecks(b.checks);
+  const missing = DG_CHECKS.find((c) => checks[c.key].value === 'NOT OK' && !checks[c.key].remark);
+  if (missing) return { error: `Remark is required when ${missing.label} is NOT OK` };
+
   return {
     values: [
       b.report_date, recordedBy,
@@ -35,6 +61,7 @@ function prepare(b) {
       air,
       hours, nullIfEmpty(b.running_hours_remark),
       nullIfEmpty(b.remark),
+      JSON.stringify(checks),
     ],
   };
 }
@@ -64,7 +91,7 @@ class SmsDgController {
 
       const result = await query(
         `SELECT l.id, l.report_date, l.recorded_by, l.diesel_refill, l.air_cleaning,
-                l.running_hours, l.created_at, u.username AS filled_by_name
+                l.running_hours, l.checks, l.created_at, u.username AS filled_by_name
          FROM sms_dg_checklists l
          JOIN users u ON l.filled_by = u.id
          ${whereClause}
@@ -114,8 +141,8 @@ class SmsDgController {
       const result = await query(
         `INSERT INTO sms_dg_checklists (
            report_date, recorded_by, diesel_refill, diesel_refill_remark, air_cleaning,
-           running_hours, running_hours_remark, remark, filled_by
-         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+           running_hours, running_hours_remark, remark, checks, filled_by
+         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10)
          RETURNING id`,
         [...prep.values, req.user.id]
       );
@@ -140,8 +167,8 @@ class SmsDgController {
         `UPDATE sms_dg_checklists SET
            report_date = $1, recorded_by = $2, diesel_refill = $3, diesel_refill_remark = $4,
            air_cleaning = $5, running_hours = $6, running_hours_remark = $7, remark = $8,
-           updated_at = NOW()
-         WHERE id = $9
+           checks = $9::jsonb, updated_at = NOW()
+         WHERE id = $10
          RETURNING id`,
         [...prep.values, id]
       );

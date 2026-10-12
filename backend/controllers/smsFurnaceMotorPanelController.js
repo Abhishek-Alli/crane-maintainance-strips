@@ -32,7 +32,7 @@ function prepare(b) {
 class SmsFurnaceMotorPanelController {
   static async getLogs(req, res) {
     try {
-      const { date_from, date_to, area, limit } = req.query;
+      const { date_from, date_to, area, motor, limit } = req.query;
       const conditions = [];
       const params = [];
 
@@ -47,6 +47,10 @@ class SmsFurnaceMotorPanelController {
       if (area) {
         params.push(`%${String(area).trim()}%`);
         conditions.push(`l.area ILIKE $${params.length}`);
+      }
+      if (motor) {
+        params.push(String(motor).trim());
+        conditions.push(`l.motor = $${params.length}`);
       }
 
       const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -81,6 +85,43 @@ class SmsFurnaceMotorPanelController {
     } catch (error) {
       console.error('SMS Furnace Motor getLogs error:', error);
       res.status(500).json({ success: false, message: 'Failed to fetch furnace motor panel checklists' });
+    }
+  }
+
+  /** Record count per area + motor (optionally within a date range / area / motor) */
+  static async getOverall(req, res) {
+    try {
+      const { date_from, date_to, area, motor } = req.query;
+      const conditions = [];
+      const params = [];
+      if (date_from) {
+        params.push(date_from);
+        conditions.push(`report_date >= $${params.length}::date`);
+      }
+      if (date_to) {
+        params.push(date_to);
+        conditions.push(`report_date <= $${params.length}::date`);
+      }
+      if (area) {
+        params.push(String(area).trim());
+        conditions.push(`area = $${params.length}`);
+      }
+      if (motor) {
+        params.push(String(motor).trim());
+        conditions.push(`motor = $${params.length}`);
+      }
+      const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+      const result = await query(
+        `SELECT area, motor, COUNT(*)::int AS record_count
+         FROM sms_furnace_motor_panel_checklists
+         ${whereClause}
+         GROUP BY area, motor`,
+        params
+      );
+      res.json({ success: true, data: result.rows });
+    } catch (error) {
+      console.error('SMS Furnace Motor getOverall error:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch furnace motor panel overall report' });
     }
   }
 

@@ -9,6 +9,20 @@ export const FMP_CHECKS = [
   { key: 'panel_air_cleaning', label: 'Panel Air Cleaning', options: ['DONE', 'PREVIOUSLY DONE'], noBad: true },
 ];
 
+const motors = (count, hp) => Array.from({ length: count }, (_, i) => `MOTOR-${i + 1} (${hp} HP)`);
+
+/** Fixed Area → Motor list (17 motors) */
+export const FMP_AREA_MOTORS = {
+  'PSU DM WATER': ['MOTOR-1 (25 HP)', 'MOTOR-2 (25 HP)', 'MOTOR-3 (25 HP)', 'MOTOR 4 (25 HP)'],
+  'WCC DM WATER': motors(4, 20),
+  'FURNACE HYDRAULIC MOTOR': motors(3, 100),
+  'SINTERING PSU MOTOR': motors(2, 20),
+  'SINTERING CAP-RACK MOTOR': motors(2, 20),
+  'TRANSFORMER COOLING MOTOR': motors(2, 20),
+};
+
+export const FMP_AREAS = Object.keys(FMP_AREA_MOTORS);
+
 /** The first option of each check is the healthy one (checks marked noBad have no bad option) */
 export const isBadValue = (check, value) =>
   !check.noBad && Boolean(value) && value !== check.options[0];
