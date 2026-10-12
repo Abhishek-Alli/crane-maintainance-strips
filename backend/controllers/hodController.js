@@ -62,6 +62,15 @@ function isAdmin(user) {
   return role === 'ADMIN' || role === 'SUPER_ADMIN' || userType === 'ADMIN';
 }
 
+// Old SMS keys that were renamed to avoid collision with HSM keys
+const SMS_KEY_MIGRATIONS = {
+  'breakdown-analysis': 'sms-breakdown-analysis',
+  'pump-house':         'sms-pump-house',
+  'patching':           'sms-patching',
+  'pollution':          'sms-pollution',
+  'dg':                 'sms-dg',
+};
+
 /** Load a user's allowed_scope; null means "all allowed". */
 async function loadScope(userId) {
   const result = await query(
@@ -69,7 +78,13 @@ async function loadScope(userId) {
     [userId]
   );
   if (result.rows.length === 0) return null;
-  return result.rows[0].allowed_scope; // JSONB (object) or null
+  const scope = result.rows[0].allowed_scope; // JSONB (object) or null
+  if (!scope || !scope.SMS_CHECKSHEETS) return scope;
+  // Migrate any old SMS keys stored in DB to new prefixed keys
+  if (Array.isArray(scope.SMS_CHECKSHEETS)) {
+    scope.SMS_CHECKSHEETS = scope.SMS_CHECKSHEETS.map(k => SMS_KEY_MIGRATIONS[k] || k);
+  }
+  return scope;
 }
 
 /** True if the given user may view sheetKey within moduleCode. */
