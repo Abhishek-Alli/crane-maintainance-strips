@@ -136,6 +136,7 @@ router.put('/pump-house-motor/:id', SmsPumpHouseMotorController.update);
 router.delete('/pump-house-motor/:id', SmsPumpHouseMotorController.remove);
 
 router.get('/furnace-motor-panel', SmsFurnaceMotorPanelController.getLogs);
+router.get('/furnace-motor-panel/overall', SmsFurnaceMotorPanelController.getOverall);
 router.get('/furnace-motor-panel/:id', SmsFurnaceMotorPanelController.getById);
 router.post('/furnace-motor-panel', SmsFurnaceMotorPanelController.create);
 router.put('/furnace-motor-panel/:id', SmsFurnaceMotorPanelController.update);

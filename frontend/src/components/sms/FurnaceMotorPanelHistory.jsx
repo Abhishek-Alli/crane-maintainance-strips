@@ -3,12 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { smsAPI } from '../../services/api';
 import { formatDate } from './eotCraneConfig';
-import { FMP_CHECKS, isBadValue } from './furnaceMotorPanelConfig';
+import { FMP_CHECKS, FMP_AREAS, FMP_AREA_MOTORS, isBadValue } from './furnaceMotorPanelConfig';
 
 const filterCls =
   'px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400';
 
-const EMPTY_FILTERS = { date_from: '', date_to: '', area: '' };
+const EMPTY_FILTERS = { date_from: '', date_to: '', area: '', motor: '' };
 
 export default function FurnaceMotorPanelHistory() {
   const navigate = useNavigate();
@@ -16,14 +16,26 @@ export default function FurnaceMotorPanelHistory() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const [counts, setCounts] = useState([]);
+
+  // fixed 17 area/motor rows (filtered by selection) with their record counts
+  const overallRows = FMP_AREAS
+    .filter((a) => !filters.area || a === filters.area)
+    .flatMap((a) => FMP_AREA_MOTORS[a].map((m) => ({ area: a, motor: m })))
+    .filter((r) => !filters.motor || r.motor === filters.motor)
+    .map((r) => ({ ...r, count: counts.find((c) => c.area === r.area && c.motor === r.motor)?.record_count || 0 }));
 
   const fetchLogs = async (f = filters) => {
     setLoading(true);
     try {
       const params = Object.fromEntries(Object.entries(f).filter(([, v]) => v));
-      const res = await smsAPI.getFurnaceMotorPanelLogs(params);
+      const [res, overall] = await Promise.all([
+        smsAPI.getFurnaceMotorPanelLogs(params),
+        smsAPI.getFurnaceMotorPanelOverall(params),
+      ]);
       setLogs(res?.data || []);
       setTotal(res?.total ?? (res?.data || []).length);
+      setCounts(overall?.data || []);
     } catch {
       toast.error('Failed to load checklists');
     } finally {
@@ -75,10 +87,48 @@ export default function FurnaceMotorPanelHistory() {
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">Area</label>
-              <input type="text" value={filters.area} onChange={(e) => setFilters({ ...filters, area: e.target.value })} className={`${filterCls} w-full`} placeholder="Search area" />
+              <select value={filters.area} onChange={(e) => setFilters({ ...filters, area: e.target.value, motor: '' })} className={`${filterCls} w-full`}>
+                <option value="">All areas</option>
+                {FMP_AREAS.map((a) => <option key={a} value={a}>{a}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Motor</label>
+              <select value={filters.motor} onChange={(e) => setFilters({ ...filters, motor: e.target.value })} className={`${filterCls} w-full`} disabled={!filters.area}>
+                <option value="">All motors</option>
+                {(FMP_AREA_MOTORS[filters.area] || []).map((m) => <option key={m} value={m}>{m}</option>)}
+              </select>
             </div>
             <button type="button" onClick={() => fetchLogs()} className="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-medium hover:bg-gray-900">Search</button>
             <button type="button" onClick={clearFilters} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50">Clear</button>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-6">
+          <div className="px-5 py-3 border-b border-amber-100 bg-amber-50/40">
+            <h2 className="text-sm font-bold text-amber-800 uppercase tracking-wide">ELE - Furnace Motor Panel - Overall</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  {['#', 'Area', 'Motor'].map((h) => (
+                    <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">{h}</th>
+                  ))}
+                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Record Count</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {overallRows.map((r, i) => (
+                  <tr key={`${r.area}|${r.motor}`}>
+                    <td className="px-4 py-2 text-gray-500">{i + 1}.</td>
+                    <td className="px-4 py-2 text-gray-800">{r.area}</td>
+                    <td className="px-4 py-2 text-gray-800">{r.motor}</td>
+                    <td className="px-4 py-2 text-right text-gray-800">{r.count || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
 

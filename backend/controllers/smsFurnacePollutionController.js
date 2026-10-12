@@ -5,6 +5,7 @@ const {
 } = require('../utils/smsFurnacePollutionConfig');
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const DRIVE_TEMP_LIMIT = 55;
 
 /** Validates the body. Returns { error } or { values } */
 function prepare(b) {
@@ -17,6 +18,10 @@ function prepare(b) {
 
   const temperature = parseNumber(b.drive_temperature);
   if (Number.isNaN(temperature)) return { error: 'Drive Temperature must be a number' };
+
+  if (temperature > DRIVE_TEMP_LIMIT && !nullIfEmpty(b.drive_temperature_remark)) {
+    return { error: `Remark is required when Drive Temperature is above ${DRIVE_TEMP_LIMIT}` };
+  }
 
   const cur = normalizeCurrents(b.currents);
   if (cur.error) return { error: cur.error };

@@ -552,6 +552,7 @@ export const smsAPI = {
   deleteCcmMotor: (id) => api.delete(`/sms/ccm-motor/${id}`),
   getPumpHouseMotorLogs: (params) => api.get('/sms/pump-house-motor', { params }),
   getFurnaceMotorPanelLogs: (params) => api.get('/sms/furnace-motor-panel', { params }),
+  getFurnaceMotorPanelOverall: (params) => api.get('/sms/furnace-motor-panel/overall', { params }),
   getFurnaceMotorPanelById: (id) => api.get(`/sms/furnace-motor-panel/${id}`),
   createFurnaceMotorPanel: (data) => api.post('/sms/furnace-motor-panel', data),
   updateFurnaceMotorPanel: (id, data) => api.put(`/sms/furnace-motor-panel/${id}`, data),

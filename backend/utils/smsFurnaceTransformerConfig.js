@@ -6,7 +6,7 @@ const FT_TRANSFORMERS = ['16 MVA (A)', '16 MVA (B)', '10 MVA (SINTER)'];
 const FT_CHECKS = [
   { key: 'oil_level_in_mog', label: 'Oil Level in MOG', options: ['NORMAL', 'NOT NORMAL'] },
   { key: 'oil_leakages', label: 'Oil Leakages from any part', options: ['NO', 'YES'] },
-  { key: 'silica_gel_condition', label: 'Silica Gel Condition', options: ['BLUE', 'NOT BLUE'] },
+  { key: 'silica_gel_condition', label: 'Silica Gel Condition', options: ['BLUE', 'ORANGE', 'PINK'] },
   { key: 'announciator_condition', label: 'Announciator Condition', options: ['OKAY', 'NOT OKAY'] },
   { key: 'oil_pump_condition', label: 'Oil Pump Condition', options: ['OKAY', 'NOT OKAY'] },
   { key: 'oil_pressure_switch_condition', label: 'Oil Pressure Switch Condition', options: ['OKAY', 'NOT OKAY'] },

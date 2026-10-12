@@ -1,15 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { smsAPI } from '../../services/api';
-import { CP_CHECKS, isBadValue, emptyCompressorPmForm } from './compressorPmConfig';
-import { inputCls, Field, loggedInUsername, CheckRow, PageLoader } from './checkFormParts';
+import { CP_COMPRESSORS, CP_CHECKS, isBadValue, emptyCompressorPmForm } from './compressorPmConfig';
+import { inputCls, Field, loggedInUsername, optionBtnCls, CheckRow, PageLoader } from './checkFormParts';
 
 export default function CompressorPmForm() {
   const { id: editId } = useParams();
   const isEdit = Boolean(editId);
   const navigate = useNavigate();
-  const [form, setForm] = useState(() => ({ ...emptyCompressorPmForm(), recorded_by: isEdit ? '' : loggedInUsername() }));
+  const [searchParams] = useSearchParams();
+  const presetCompressor = CP_COMPRESSORS.includes(searchParams.get('compressor')) ? searchParams.get('compressor') : '';
+  const [form, setForm] = useState(() => ({
+    ...emptyCompressorPmForm(),
+    recorded_by: isEdit ? '' : loggedInUsername(),
+    compressor: isEdit ? '' : presetCompressor,
+  }));
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [openRemarks, setOpenRemarks] = useState({});
@@ -32,6 +38,7 @@ export default function CompressorPmForm() {
         setForm({
           schedule_id: d.schedule_id ?? '',
           schedule_detail: d.schedule_detail || '',
+          compressor: d.compressor || '',
           recorded_by: d.recorded_by || '',
           checks,
           current_r: d.current_r ?? '',
@@ -93,6 +100,22 @@ export default function CompressorPmForm() {
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="sm:col-span-2">
+            <Field label="Compressor">
+              <div className="flex flex-wrap gap-2">
+                {CP_COMPRESSORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => set({ compressor: form.compressor === c ? '' : c })}
+                    className={optionBtnCls(form.compressor === c, false)}
+                  >
+                    Compressor {c}
+                  </button>
+                ))}
+              </div>
+            </Field>
+          </div>
           <Field label="Schedule ID">
             <input type="number" step="1" value={form.schedule_id} onChange={(e) => set({ schedule_id: e.target.value })} className={inputCls} />
           </Field>

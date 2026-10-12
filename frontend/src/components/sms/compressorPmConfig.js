@@ -1,5 +1,7 @@
 /** SMS Compressor — Scheduled PM check sheet — keep in sync with backend/utils/smsCompressorPmConfig.js */
 
+export const CP_COMPRESSORS = ['1', '2'];
+
 export const CP_CHECKS = [
   { key: 'coolent_filter_condition', label: 'Coolent and Filter Condition', options: ['OKAY', 'NOT OKAY'] },
 ];
@@ -13,6 +15,7 @@ export function emptyCompressorPmForm() {
   return {
     schedule_id: '',
     schedule_detail: '',
+    compressor: '',
     recorded_by: '',
     checks,
     current_r: '',

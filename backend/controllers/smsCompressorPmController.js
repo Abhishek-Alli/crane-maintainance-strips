@@ -1,6 +1,6 @@
 const { query } = require('../config/database');
 const { isWithinEditWindow, editWindowDeniedMessage } = require('../utils/editWindow');
-const { nullIfEmpty, parseNumber, normalizeChecks } = require('../utils/smsCompressorPmConfig');
+const { CP_COMPRESSORS, nullIfEmpty, parseNumber, normalizeChecks } = require('../utils/smsCompressorPmConfig');
 
 /** Validates the body. Returns { error } or { values } */
 function prepare(b) {
@@ -10,6 +10,9 @@ function prepare(b) {
   const scheduleRaw = nullIfEmpty(b.schedule_id);
   const scheduleId = scheduleRaw === null ? null : Number(scheduleRaw);
   if (scheduleId !== null && !Number.isInteger(scheduleId)) return { error: 'Schedule ID must be a whole number' };
+
+  const compressor = nullIfEmpty(b.compressor);
+  if (compressor && !CP_COMPRESSORS.includes(compressor)) return { error: 'Invalid compressor' };
 
   const currents = [parseNumber(b.current_r), parseNumber(b.current_y), parseNumber(b.current_b)];
   if (currents.some((c) => Number.isNaN(c))) return { error: 'Current values must be numbers' };
@@ -22,6 +25,7 @@ function prepare(b) {
       JSON.stringify(normalizeChecks(b.checks)),
       ...currents,
       nullIfEmpty(b.remark),
+      compressor,
     ],
   };
 }
@@ -50,7 +54,7 @@ class SmsCompressorPmController {
       params.push(rowLimit);
 
       const result = await query(
-        `SELECT l.id, l.schedule_id, l.schedule_detail, l.recorded_by, l.checks,
+        `SELECT l.id, l.schedule_id, l.schedule_detail, l.compressor, l.recorded_by, l.checks,
                 l.current_r, l.current_y, l.current_b, l.created_at,
                 u.username AS filled_by_name
          FROM sms_compressor_pm_checklists l
@@ -101,8 +105,8 @@ class SmsCompressorPmController {
       if (prep.error) return res.status(400).json({ success: false, message: prep.error });
       const result = await query(
         `INSERT INTO sms_compressor_pm_checklists (
-           schedule_id, schedule_detail, recorded_by, checks, current_r, current_y, current_b, remark, filled_by
-         ) VALUES ($1,$2,$3,$4::jsonb,$5,$6,$7,$8,$9)
+           schedule_id, schedule_detail, recorded_by, checks, current_r, current_y, current_b, remark, compressor, filled_by
+         ) VALUES ($1,$2,$3,$4::jsonb,$5,$6,$7,$8,$9,$10)
          RETURNING id`,
         [...prep.values, req.user.id]
       );
@@ -128,8 +132,8 @@ class SmsCompressorPmController {
       const result = await query(
         `UPDATE sms_compressor_pm_checklists SET
            schedule_id = $1, schedule_detail = $2, recorded_by = $3, checks = $4::jsonb,
-           current_r = $5, current_y = $6, current_b = $7, remark = $8, updated_at = NOW()
-         WHERE id = $9
+           current_r = $5, current_y = $6, current_b = $7, remark = $8, compressor = $9, updated_at = NOW()
+         WHERE id = $10
          RETURNING id`,
         [...prep.values, id]
       );

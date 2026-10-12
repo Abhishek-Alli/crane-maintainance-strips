@@ -20,17 +20,33 @@ export const loggedInUsername = () => {
   }
 };
 
-export const optionBtnCls = (selected, bad) =>
-  `px-3 py-1.5 rounded-lg text-xs font-semibold border ${
-    selected
-      ? bad
-        ? 'bg-red-600 text-white border-red-600'
-        : 'bg-emerald-600 text-white border-emerald-600'
-      : 'bg-white text-gray-700 border-gray-300 hover:border-amber-300'
+/** Options that are literally a colour (e.g. silica gel) are shown in that colour */
+const COLOR_OPTION_CLS = {
+  BLUE: { selected: 'bg-blue-600 text-white border-blue-600', idle: 'bg-white text-blue-700 border-blue-300 hover:border-blue-500' },
+  ORANGE: { selected: 'bg-orange-500 text-white border-orange-500', idle: 'bg-white text-orange-600 border-orange-300 hover:border-orange-500' },
+  PINK: { selected: 'bg-pink-500 text-white border-pink-500', idle: 'bg-white text-pink-600 border-pink-300 hover:border-pink-500' },
+};
+
+export const optionBtnCls = (selected, bad, colorOption) => {
+  const color = COLOR_OPTION_CLS[colorOption];
+  return `px-3 py-1.5 rounded-lg text-xs font-semibold border ${
+    color
+      ? (selected ? color.selected : color.idle)
+      : selected
+        ? bad
+          ? 'bg-red-600 text-white border-red-600'
+          : 'bg-emerald-600 text-white border-emerald-600'
+        : 'bg-white text-gray-700 border-gray-300 hover:border-amber-300'
   }`;
+};
+
+/** OTI temperature above this needs a remark and is highlighted red */
+export const OTI_LIMIT = 90;
+/** WTI uses the same limit as OTI */
+export const WTI_LIMIT = OTI_LIMIT;
 
 /** Remark that opens from a toggle, stays open once it has text, and is forced open when `forceOpen` is set */
-export const RemarkToggle = ({ value, open, forceOpen, onToggle, onChange }) => (
+export const RemarkToggle = ({ value, open, forceOpen, required, onToggle, onChange }) => (
   <>
     {!forceOpen && (
       <button type="button" onClick={onToggle} className="text-xs font-semibold text-gray-500 hover:text-amber-700">
@@ -42,6 +58,7 @@ export const RemarkToggle = ({ value, open, forceOpen, onToggle, onChange }) => 
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        required={required}
         className={inputCls}
         placeholder={forceOpen ? 'Remark / Action' : 'Remark (optional)'}
       />
@@ -64,7 +81,7 @@ export const CheckRow = ({ check, row, isBad, open, onToggleRemark, onChange }) 
                 key={opt}
                 type="button"
                 onClick={() => onChange({ value: selected ? '' : opt })}
-                className={optionBtnCls(selected, isBad(check, opt))}
+                className={optionBtnCls(selected, isBad(check, opt), check.colored ? opt : undefined)}
               >
                 {opt}
               </button>
@@ -76,9 +93,33 @@ export const CheckRow = ({ check, row, isBad, open, onToggleRemark, onChange }) 
         value={row.remark}
         open={open}
         forceOpen={bad}
+        required={bad && check.requireRemark}
         onToggle={onToggleRemark}
         onChange={(v) => onChange({ remark: v })}
       />
+    </div>
+  );
+};
+
+/** Temperature row; with `limit` set, a value above it turns the row red and makes the remark required */
+export const TempRow = ({ label, value, remark, open, limit, onToggle, onValue, onRemark }) => {
+  const high = limit !== undefined && limit !== null && value !== '' && Number(value) > limit;
+  return (
+    <div className={`rounded-lg p-3 border space-y-2 ${high ? 'border-red-200 bg-red-50/50' : 'border-gray-100 bg-gray-50'}`}>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <p className="text-sm font-semibold text-gray-800">{label}</p>
+        <input
+          type="number"
+          step="any"
+          inputMode="decimal"
+          value={value}
+          onChange={(e) => onValue(e.target.value)}
+          className={`w-40 px-3 py-1.5 border rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 ${
+            high ? 'border-red-300 text-red-700 focus:ring-red-400' : 'border-gray-300 focus:ring-amber-400'
+          }`}
+        />
+      </div>
+      <RemarkToggle value={remark} open={open} forceOpen={high} required={high} onToggle={onToggle} onChange={onRemark} />
     </div>
   );
 };

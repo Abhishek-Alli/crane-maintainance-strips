@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { smsAPI } from '../../services/api';
 import {
@@ -13,7 +13,13 @@ export default function FurnacePokerForm() {
   const { id: editId } = useParams();
   const isEdit = Boolean(editId);
   const navigate = useNavigate();
-  const [form, setForm] = useState(() => ({ ...emptyFurnacePokerForm(), recorded_by: isEdit ? '' : loggedInUsername() }));
+  const [searchParams] = useSearchParams();
+  const presetCrucible = FPK_CRUCIBLES.includes(searchParams.get('crucible')) ? searchParams.get('crucible') : '';
+  const [form, setForm] = useState(() => ({
+    ...emptyFurnacePokerForm(),
+    recorded_by: isEdit ? '' : loggedInUsername(),
+    crucible: isEdit ? '' : presetCrucible,
+  }));
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [openRemarks, setOpenRemarks] = useState({});

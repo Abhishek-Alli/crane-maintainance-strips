@@ -45,6 +45,7 @@ export default function CompressorPmView() {
   const canModify = log.can_modify ?? isWithinEditWindow(log.created_at);
   const checks = log.checks || {};
   const info = [
+    ['Compressor', log.compressor ? `Compressor ${log.compressor}` : '—'],
     ['Schedule ID', log.schedule_id ?? '—'],
     ['Recorded By', log.recorded_by || '—'],
     ['Filled By', log.filled_by_name || '—'],

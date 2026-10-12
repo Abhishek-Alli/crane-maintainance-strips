@@ -6,14 +6,14 @@ export const FT_TRANSFORMERS = ['16 MVA (A)', '16 MVA (B)', '10 MVA (SINTER)'];
 export const FT_CHECKS = [
   { key: 'oil_level_in_mog', label: 'Oil Level in MOG', options: ['NORMAL', 'NOT NORMAL'] },
   { key: 'oil_leakages', label: 'Oil Leakages from any part', options: ['NO', 'YES'] },
-  { key: 'silica_gel_condition', label: 'Silica Gel Condition', options: ['BLUE', 'NOT BLUE'] },
+  { key: 'silica_gel_condition', label: 'Silica Gel Condition', options: ['BLUE', 'ORANGE', 'PINK'], noBad: true, colored: true },
   { key: 'announciator_condition', label: 'Announciator Condition', options: ['OKAY', 'NOT OKAY'] },
   { key: 'oil_pump_condition', label: 'Oil Pump Condition', options: ['OKAY', 'NOT OKAY'] },
   { key: 'oil_pressure_switch_condition', label: 'Oil Pressure Switch Condition', options: ['OKAY', 'NOT OKAY'] },
 ];
 
-/** The first option of each check is the healthy one */
-export const isBadValue = (check, value) => Boolean(value) && value !== check.options[0];
+/** The first option of each check is the healthy one (checks marked noBad have no bad option) */
+export const isBadValue = (check, value) => !check.noBad && Boolean(value) && value !== check.options[0];
 
 export function emptyFurnaceTransformerForm() {
   const checks = {};

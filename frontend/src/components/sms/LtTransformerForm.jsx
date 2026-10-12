@@ -4,45 +4,7 @@ import { toast } from 'react-toastify';
 import { smsAPI } from '../../services/api';
 import { LT_TRANSFORMERS, LT_CHECKS, isBadValue, emptyLtTransformerForm } from './ltTransformerConfig';
 
-const inputCls =
-  'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400';
-
-const Field = ({ label, required, children }) => (
-  <div>
-    <label className="block text-xs font-semibold text-gray-600 mb-1">
-      {label}{required ? ' *' : ''}
-    </label>
-    {children}
-  </div>
-);
-
-const loggedInUsername = () => {
-  try {
-    return JSON.parse(localStorage.getItem('user'))?.username || '';
-  } catch {
-    return '';
-  }
-};
-
-/** Remark that opens from a toggle, and stays open once it has text (or is forced open) */
-const RemarkToggle = ({ value, open, forceOpen, onToggle, onChange }) => (
-  <>
-    {!forceOpen && (
-      <button type="button" onClick={onToggle} className="text-xs font-semibold text-gray-500 hover:text-amber-700">
-        Remark {open || value ? '▴' : '▾'}
-      </button>
-    )}
-    {(forceOpen || open || value) && (
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={inputCls}
-        placeholder={forceOpen ? 'Remark / Action' : 'Remark (optional)'}
-      />
-    )}
-  </>
-);
+import { inputCls, Field, loggedInUsername, CheckRow, TempRow, OTI_LIMIT, WTI_LIMIT } from './checkFormParts';
 
 export default function LtTransformerForm() {
   const { id: editId } = useParams();
@@ -177,60 +139,30 @@ export default function LtTransformerForm() {
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-5">
           <h2 className="text-sm font-bold text-amber-800 uppercase tracking-wide mb-3">Checklist</h2>
           <div className="space-y-3">
-            {LT_CHECKS.map((c) => {
-              const row = form.checks[c.key];
-              const bad = isBadValue(c, row.value);
-              return (
-                <div key={c.key} className={`rounded-lg p-3 border space-y-2 ${bad ? 'border-red-200 bg-red-50/50' : 'border-gray-100 bg-gray-50'}`}>
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                    <p className="text-sm font-semibold text-gray-800">{c.label}</p>
-                    <div className="flex flex-wrap gap-2 sm:justify-end">
-                      {c.options.map((opt) => {
-                        const selected = row.value === opt;
-                        return (
-                          <button
-                            key={opt}
-                            type="button"
-                            onClick={() => setCheck(c.key, { value: selected ? '' : opt })}
-                            className={btnCls(selected, isBadValue(c, opt))}
-                          >
-                            {opt}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <RemarkToggle
-                    value={row.remark}
-                    open={openRemarks[c.key]}
-                    forceOpen={bad}
-                    onToggle={() => toggleRemark(c.key)}
-                    onChange={(v) => setCheck(c.key, { remark: v })}
-                  />
-                </div>
-              );
-            })}
+            {LT_CHECKS.map((c) => (
+              <CheckRow
+                key={c.key}
+                check={c}
+                row={form.checks[c.key]}
+                isBad={isBadValue}
+                open={openRemarks[c.key]}
+                onToggleRemark={() => toggleRemark(c.key)}
+                onChange={(patch) => setCheck(c.key, patch)}
+              />
+            ))}
 
             {temps.map(([label, valueKey, remarkKey, openKey]) => (
-              <div key={valueKey} className="rounded-lg p-3 border border-gray-100 bg-gray-50 space-y-2">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <p className="text-sm font-semibold text-gray-800">{label}</p>
-                  <input
-                    type="number"
-                    step="any"
-                    inputMode="decimal"
-                    value={form[valueKey]}
-                    onChange={(e) => set({ [valueKey]: e.target.value })}
-                    className="w-40 px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-amber-400"
-                  />
-                </div>
-                <RemarkToggle
-                  value={form[remarkKey]}
-                  open={openRemarks[openKey]}
-                  onToggle={() => toggleRemark(openKey)}
-                  onChange={(v) => set({ [remarkKey]: v })}
-                />
-              </div>
+              <TempRow
+                key={valueKey}
+                label={label}
+                value={form[valueKey]}
+                remark={form[remarkKey]}
+                open={openRemarks[openKey]}
+                limit={openKey === 'oti' ? OTI_LIMIT : WTI_LIMIT}
+                onToggle={() => toggleRemark(openKey)}
+                onValue={(v) => set({ [valueKey]: v })}
+                onRemark={(v) => set({ [remarkKey]: v })}
+              />
             ))}
           </div>
         </div>

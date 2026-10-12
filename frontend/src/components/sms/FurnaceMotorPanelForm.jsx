@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { smsAPI } from '../../services/api';
-import { FMP_CHECKS, isBadValue, emptyFurnaceMotorPanelForm } from './furnaceMotorPanelConfig';
+import { FMP_CHECKS, FMP_AREAS, FMP_AREA_MOTORS, isBadValue, emptyFurnaceMotorPanelForm } from './furnaceMotorPanelConfig';
 
 const inputCls =
   'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400';
@@ -67,6 +67,11 @@ export default function FurnaceMotorPanelForm() {
       })
       .finally(() => setLoading(false));
   }, [editId, navigate]);
+
+  // keep a legacy (free-text) saved value selectable when editing old records
+  const areaOptions = form.area && !FMP_AREAS.includes(form.area) ? [form.area, ...FMP_AREAS] : FMP_AREAS;
+  const baseMotors = FMP_AREA_MOTORS[form.area] || [];
+  const motorOptions = form.motor && !baseMotors.includes(form.motor) && form.area ? [form.motor, ...baseMotors] : baseMotors;
 
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
   const setCheck = (key, patch) =>
@@ -133,13 +138,25 @@ export default function FurnaceMotorPanelForm() {
             <input type="text" value={form.recorded_by} onChange={(e) => set({ recorded_by: e.target.value })} className={inputCls} required />
           </Field>
           <Field label="Area" required>
-            <input type="text" value={form.area} onChange={(e) => set({ area: e.target.value })} className={inputCls} />
+            <select value={form.area} onChange={(e) => set({ area: e.target.value, motor: '' })} className={inputCls}>
+              <option value="">Select area</option>
+              {areaOptions.map((a) => <option key={a} value={a}>{a}</option>)}
+            </select>
           </Field>
           <Field label="Motor" required>
-            <input type="text" value={form.motor} onChange={(e) => set({ motor: e.target.value })} className={inputCls} />
+            <select value={form.motor} onChange={(e) => set({ motor: e.target.value })} className={inputCls} disabled={!form.area}>
+              <option value="">{form.area ? 'Select motor' : 'Select area first'}</option>
+              {motorOptions.map((m) => <option key={m} value={m}>{m}</option>)}
+            </select>
           </Field>
         </div>
 
+        {!(form.area && form.motor) && (
+          <p className="text-sm text-gray-500 text-center py-6">Select Area and Motor to fill the checklist.</p>
+        )}
+
+        {form.area && form.motor && (
+        <>
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-5">
           <h2 className="text-sm font-bold text-amber-800 uppercase tracking-wide mb-3">Current</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -220,6 +237,8 @@ export default function FurnaceMotorPanelForm() {
             {saving ? 'Saving…' : isEdit ? 'Update' : 'Save'}
           </button>
         </div>
+        </>
+        )}
       </form>
     </div>
   );

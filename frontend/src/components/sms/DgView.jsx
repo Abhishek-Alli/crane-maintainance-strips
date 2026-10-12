@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import { smsAPI } from '../../services/api';
 import { isWithinEditWindow, editWindowLabel } from '../../utils/editWindow';
 import { formatDate } from './eotCraneConfig';
+import { DG_CHECKS, isBadValue } from './dgConfig';
 
 export default function DgView() {
   const { id } = useParams();
@@ -55,6 +56,10 @@ export default function DgView() {
     ['Diesel Refill', log.diesel_refill, log.diesel_refill_remark],
     ['Air Cleaning', log.air_cleaning, null],
     ['Running Hours in Mins', log.running_hours, log.running_hours_remark],
+    ...DG_CHECKS.map((c) => {
+      const row = log.checks?.[c.key] || {};
+      return [c.label, row.value, row.remark, isBadValue(c, row.value)];
+    }),
   ];
 
   return (
@@ -105,13 +110,13 @@ export default function DgView() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {rows.map(([label, value, remark], i) => (
-                  <tr key={label}>
+                {rows.map(([label, value, remark, bad], i) => (
+                  <tr key={label} className={bad ? 'bg-red-50/60' : ''}>
                     <td className="px-4 py-2.5 text-gray-500">{i + 1}</td>
                     <td className="px-4 py-2.5 text-gray-900 font-semibold">{label}</td>
                     <td className="px-4 py-2.5">
                       <span className={`text-xs font-semibold px-2 py-0.5 rounded whitespace-nowrap ${
-                        value !== null && value !== undefined && value !== '' ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500'
+                        bad ? 'bg-red-100 text-red-800' : value !== null && value !== undefined && value !== '' ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500'
                       }`}
                       >
                         {value !== null && value !== undefined && value !== '' ? value : '—'}
