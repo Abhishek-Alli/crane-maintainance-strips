@@ -2,7 +2,7 @@
 
 const PATCHING_DEPARTMENT_NAME = 'FURNACE';
 const PATCHING_FURNACES = ['50 MT'];
-const PATCHING_CRUCIBLES = ['1', '2'];
+const PATCHING_CRUCIBLES = ['A', 'B'];
 
 const OKAY_NOT_OK = ['OKAY', 'NOT OK'];
 

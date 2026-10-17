@@ -1,7 +1,7 @@
 /** SMS Furnace Stand By check sheet — keep in sync with backend/utils/smsFurnaceStandByConfig.js */
 
 export const FSB_FURNACES = ['50 MT'];
-export const FSB_CRUCIBLES = ['1', '2'];
+export const FSB_CRUCIBLES = ['A', 'B'];
 
 export const FSB_CHECKS = [
   { key: 'lamination_sensor', label: 'Lamination Sensor', options: ['OKAY', 'NOT OKAY'] },

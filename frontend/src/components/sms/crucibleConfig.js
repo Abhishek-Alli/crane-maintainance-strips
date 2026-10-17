@@ -2,7 +2,7 @@
 import { todayISO } from './eotCraneConfig';
 
 export const CRUCIBLE_FURNACES = ['26 MW'];
-export const CRUCIBLE_NUMBERS = ['1', '2'];
+export const CRUCIBLE_NUMBERS = ['A', 'B'];
 
 export const MAX_PHOTOS_PER_POINT = 3;
 

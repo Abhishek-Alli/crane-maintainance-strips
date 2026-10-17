@@ -5,7 +5,7 @@ const FMP_CHECKS = [
   { key: 'drive_cooling_fan_running', label: 'Drive Cooling Fan Running', options: ['YES', 'NO'] },
   { key: 'motor_temperature', label: 'Motor Temperature', options: ['NORMAL', 'NOT NORMAL'] },
   { key: 'any_abnormality', label: 'Any Abnormality', options: ['NO', 'YES'] },
-  { key: 'starter_checking', label: 'Starter Checking', options: ['OKAY', 'NOT OKAY'] },
+  { key: 'starter_checking', label: 'Starter Condition', options: ['OKAY', 'NOT OKAY'] },
   { key: 'panel_air_cleaning', label: 'Panel Air Cleaning', options: ['DONE', 'PREVIOUSLY DONE'], noBad: true },
 ];
 

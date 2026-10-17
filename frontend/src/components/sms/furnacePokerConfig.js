@@ -1,7 +1,7 @@
 /** SMS Furnace Poker check sheet — keep in sync with backend/utils/smsFurnacePokerConfig.js */
 
 export const FPK_FURNACES = ['50 MT'];
-export const FPK_CRUCIBLES = ['1', '2'];
+export const FPK_CRUCIBLES = ['A', 'B'];
 
 export const FPK_CHECKS = [
   { key: 'panel_air_cleaning', label: 'Panel Air Cleaning', options: ['DONE', 'PREVIOUSLY DONE'], noBad: true },

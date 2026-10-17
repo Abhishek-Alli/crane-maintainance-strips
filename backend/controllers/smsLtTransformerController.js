@@ -1,6 +1,6 @@
 const { query } = require('../config/database');
 const { isWithinEditWindow, editWindowDeniedMessage } = require('../utils/editWindow');
-const { LT_TRANSFORMERS, nullIfEmpty, parseNumber, normalizeChecks } = require('../utils/smsLtTransformerConfig');
+const { LT_TRANSFORMERS, nullIfEmpty, parseNumber, normalizeChecks, findMissingRemark } = require('../utils/smsLtTransformerConfig');
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const OTI_LIMIT = 90;
@@ -27,10 +27,14 @@ function prepare(b) {
     return { error: `Remark is required when WTI Temperature is above ${WTI_LIMIT}` };
   }
 
+  const checks = normalizeChecks(b.checks);
+  const missing = findMissingRemark(checks);
+  if (missing) return { error: `Remark is required when ${missing.label} is ${checks[missing.key].value}` };
+
   return {
     values: [
       b.report_date, recordedBy, transformer,
-      JSON.stringify(normalizeChecks(b.checks)),
+      JSON.stringify(checks),
       oti, nullIfEmpty(b.oti_remark),
       wti, nullIfEmpty(b.wti_remark),
       nullIfEmpty(b.remark),
