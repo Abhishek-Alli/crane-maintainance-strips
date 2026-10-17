@@ -6,8 +6,8 @@ export const FSB_CRUCIBLES = ['1', '2'];
 export const FSB_CHECKS = [
   { key: 'lamination_sensor', label: 'Lamination Sensor', options: ['OKAY', 'NOT OKAY'] },
   { key: 'coil_cooling_sensor', label: 'Coil Cooling Sensor', options: ['OKAY', 'NOT OKAY'] },
-  { key: 'furnace_hydraulic_limit', label: 'Furnace Hydraulic Limit', options: ['OKAY', 'NOT OKAY'] },
-  { key: 'all_rtd_checking', label: 'All RTD Checking', options: ['OKAY', 'NOT OKAY'] },
+  { key: 'furnace_hydraulic_limit', label: 'Furnace Hydraulic Limit Switch', options: ['OKAY', 'NOT OKAY'] },
+  { key: 'all_rtd_checking', label: 'RTD Checking', options: ['YES', 'NO'] },
 ];
 
 /** The first option of each check is the healthy one */
