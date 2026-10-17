@@ -13,6 +13,7 @@ export const SMS_DOWNLOAD_SHEETS = {
   'dm-unit': { label: 'DM Unit Check List', list: smsAPI.getDmUnitLogs, get: smsAPI.getDmUnitById },
   'ccm-motor': { label: 'CCM Motor', list: smsAPI.getCcmMotorLogs, get: smsAPI.getCcmMotorById },
   'pump-house-motor': { label: 'Pump House Motor Panel', list: smsAPI.getPumpHouseMotorLogs, get: smsAPI.getPumpHouseMotorById },
+  'ccm-pump-house': { label: 'CCM Pump House', list: smsAPI.getCcmPumpHouseLogs, get: smsAPI.getCcmPumpHouseById },
   'furnace-motor-panel': { label: 'Furnace Motor Panel', list: smsAPI.getFurnaceMotorPanelLogs, get: smsAPI.getFurnaceMotorPanelById },
   dg: { label: 'DG', list: smsAPI.getDgLogs, get: smsAPI.getDgById },
   'furnace-pollution-pm': { label: 'Furnace Pollution - Scheduled', list: smsAPI.getFurnacePollutionPmLogs, get: smsAPI.getFurnacePollutionPmById },

@@ -28,6 +28,7 @@ const SmsCompressorPmController = require('../controllers/smsCompressorPmControl
 const SmsDgController = require('../controllers/smsDgController');
 const SmsLtTransformerController = require('../controllers/smsLtTransformerController');
 const SmsPumpHouseMotorController = require('../controllers/smsPumpHouseMotorController');
+const SmsCcmPumpHouseController = require('../controllers/smsCcmPumpHouseController');
 const SmsCcmMotorController = require('../controllers/smsCcmMotorController');
 
 router.use(authenticate);
@@ -177,6 +178,8 @@ router.get('/sheets/lt-transformer/:id',          smsScope('lt-transformer'),   
 
 router.get('/sheets/pump-house-motor',            smsScope('pump-house-motor'),        SmsPumpHouseMotorController.getLogs);
 router.get('/sheets/pump-house-motor/:id',        smsScope('pump-house-motor'),        SmsPumpHouseMotorController.getById);
+router.get('/sheets/ccm-pump-house',               smsScope('ccm-pump-house'),          SmsCcmPumpHouseController.getLogs);
+router.get('/sheets/ccm-pump-house/:id',           smsScope('ccm-pump-house'),          SmsCcmPumpHouseController.getById);
 
 router.get('/sheets/ccm-motor',                   smsScope('ccm-motor'),               SmsCcmMotorController.getLogs);
 router.get('/sheets/ccm-motor/:id',               smsScope('ccm-motor'),               SmsCcmMotorController.getById);

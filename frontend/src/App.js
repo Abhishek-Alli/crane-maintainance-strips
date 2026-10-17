@@ -195,6 +195,9 @@ import FurnacePollutionView from './components/sms/FurnacePollutionView';
 import PumpHouseMotorForm from './components/sms/PumpHouseMotorForm';
 import PumpHouseMotorHistory from './components/sms/PumpHouseMotorHistory';
 import PumpHouseMotorView from './components/sms/PumpHouseMotorView';
+import CcmPumpHouseForm from './components/sms/CcmPumpHouseForm';
+import CcmPumpHouseHistory from './components/sms/CcmPumpHouseHistory';
+import CcmPumpHouseView from './components/sms/CcmPumpHouseView';
 import CcmMotorForm from './components/sms/CcmMotorForm';
 import CcmMotorHistory from './components/sms/CcmMotorHistory';
 import CcmMotorView from './components/sms/CcmMotorView';
@@ -1864,6 +1867,10 @@ function App() {
             ['/sms/pump-house-motor/history', <PumpHouseMotorHistory />],
             ['/sms/pump-house-motor/:id/edit', <PumpHouseMotorForm />],
             ['/sms/pump-house-motor/:id', <PumpHouseMotorView />],
+            ['/sms/ccm-pump-house/new', <CcmPumpHouseForm />],
+            ['/sms/ccm-pump-house/history', <CcmPumpHouseHistory />],
+            ['/sms/ccm-pump-house/:id/edit', <CcmPumpHouseForm />],
+            ['/sms/ccm-pump-house/:id', <CcmPumpHouseView />],
           ].map(([path, page]) => (
             <Route
               key={path}

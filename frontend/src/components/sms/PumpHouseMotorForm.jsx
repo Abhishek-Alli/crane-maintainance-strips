@@ -16,6 +16,18 @@ const Field = ({ label, required, children }) => (
   </div>
 );
 
+const AREA_MOTORS = {
+  'Furnace Coil': { motors: ['MOTOR-1', 'MOTOR-2', 'MOTOR-3'], max: 125 },
+  'Heat Exchanger': { motors: ['MOTOR-1', 'MOTOR-2', 'MOTOR-3'], max: 125 },
+  'Transformer Cooling': { motors: ['MOTOR-1', 'MOTOR-2'], max: 27 },
+  'AC Cooling': { motors: ['MOTOR-1', 'MOTOR-2'], max: 27 },
+  'Coil Cooling Fan': { motors: ['MOTOR-1', 'MOTOR-2'], max: 24.5 },
+  'Heat Ex. Cooling Fan': { motors: ['MOTOR-1', 'MOTOR-2'], max: 30.5 },
+  'RO Water Feeling Motor': { motors: ['MOTOR-1 (10 HP)'], max: 19.5 },
+  'Emergency': { motors: ['MOTOR-1'], max: 53 },
+  'RO High Pressure Pump': { motors: ['MOTOR-1 (40 HP)', 'MOTOR-2 (40 HP)'], max: 55.7 },
+};
+
 const loggedInUsername = () => {
   try {
     return JSON.parse(localStorage.getItem('user'))?.username || '';
@@ -72,6 +84,13 @@ export default function PumpHouseMotorForm() {
   const setCheck = (key, patch) =>
     setForm((f) => ({ ...f, checks: { ...f.checks, [key]: { ...f.checks[key], ...patch } } }));
 
+  const areaCfg = AREA_MOTORS[form.area];
+  const maxCurrent = areaCfg?.max;
+  const isOver = (v) => maxCurrent != null && v !== '' && Number(v) > maxCurrent;
+  const overLimit = ['current_r', 'current_y', 'current_b'].some((k) => isOver(form[k]));
+  const motorOptions = areaCfg ? [...areaCfg.motors] : [];
+  if (form.motor && !motorOptions.includes(form.motor)) motorOptions.push(form.motor);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.area.trim()) return toast.error('Area is required');
@@ -118,7 +137,7 @@ export default function PumpHouseMotorForm() {
             <h1 className="text-2xl font-bold text-gray-900">
               {isEdit ? 'Edit Pump House Motor Panel' : 'Pump House Motor Panel'}
             </h1>
-            <p className="text-sm text-gray-500 mt-1">FC and CCM Pump House</p>
+            <p className="text-sm text-gray-500 mt-1">Furnace Pump House</p>
           </div>
           <Link to="/sms/pump-house-motor/history" className="text-sm font-semibold text-amber-700 hover:opacity-80">
             History →
@@ -133,22 +152,37 @@ export default function PumpHouseMotorForm() {
             <input type="text" value={form.recorded_by} onChange={(e) => set({ recorded_by: e.target.value })} className={inputCls} required />
           </Field>
           <Field label="Area" required>
-            <input type="text" value={form.area} onChange={(e) => set({ area: e.target.value })} className={inputCls} />
+            <select value={form.area} onChange={(e) => set({ area: e.target.value, motor: '' })} className={inputCls}>
+              <option value="">Select area</option>
+              {form.area && !areaCfg && <option value={form.area}>{form.area}</option>}
+              {Object.keys(AREA_MOTORS).map((a) => <option key={a} value={a}>{a}</option>)}
+            </select>
           </Field>
           <Field label="Motor" required>
-            <input type="text" value={form.motor} onChange={(e) => set({ motor: e.target.value })} className={inputCls} />
+            <select value={form.motor} onChange={(e) => set({ motor: e.target.value })} className={inputCls} disabled={!form.area}>
+              <option value="">Select motor</option>
+              {motorOptions.map((m) => <option key={m} value={m}>{m}</option>)}
+            </select>
           </Field>
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-5">
-          <h2 className="text-sm font-bold text-amber-800 uppercase tracking-wide mb-3">Current</h2>
+          <h2 className="text-sm font-bold text-amber-800 uppercase tracking-wide mb-3">
+            Current{maxCurrent != null && <span className="ml-2 normal-case text-gray-500">(Max: {maxCurrent} A)</span>}
+          </h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[['current_r', 'Current - R'], ['current_y', 'Current - Y'], ['current_b', 'Current - B']].map(([k, label]) => (
               <Field key={k} label={label}>
-                <input type="number" step="any" value={form[k]} onChange={(e) => set({ [k]: e.target.value })} className={inputCls} />
+                <input type="number" step="any" value={form[k]} onChange={(e) => set({ [k]: e.target.value })}
+                  className={`${inputCls} ${isOver(form[k]) ? 'border-red-500 bg-red-50' : ''}`} />
               </Field>
             ))}
           </div>
+          {overLimit && (
+            <p className="text-xs font-semibold text-red-600 mt-2">
+              Current max limit ({maxCurrent} A) se zyada hai. Neeche Remark mein reason likhein.
+            </p>
+          )}
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-5">
@@ -210,7 +244,13 @@ export default function PumpHouseMotorForm() {
 
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-5">
           <Field label="Remark (if any)">
-            <textarea rows={3} value={form.remark} onChange={(e) => set({ remark: e.target.value })} className={inputCls} />
+            <textarea
+              rows={3}
+              value={form.remark}
+              onChange={(e) => set({ remark: e.target.value })}
+              className={`${inputCls} ${overLimit && !form.remark.trim() ? 'border-red-500 bg-red-50' : ''}`}
+              placeholder={overLimit ? 'Current limit cross hui, remark likhein' : ''}
+            />
           </Field>
         </div>
 

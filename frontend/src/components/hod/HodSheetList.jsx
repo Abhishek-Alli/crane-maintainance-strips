@@ -46,6 +46,7 @@ const SHEET_MODULE = {
   'sms-dg':                 'SMS_CHECKSHEETS',
   'lt-transformer':         'SMS_CHECKSHEETS',
   'pump-house-motor':       'SMS_CHECKSHEETS',
+  'ccm-pump-house':         'SMS_CHECKSHEETS',
   'ccm-motor':              'SMS_CHECKSHEETS',
 };
 

@@ -48,6 +48,7 @@ const HOD_SHEETS = {
     { key: 'sms-dg',                 label: 'DG' },
     { key: 'lt-transformer',         label: 'LT Transformer' },
     { key: 'pump-house-motor',       label: 'Pump House Motor Panel' },
+    { key: 'ccm-pump-house',         label: 'CCM Pump House' },
     { key: 'ccm-motor',              label: 'CCM Motor' },
   ],
   PTM_CHECKSHEETS: [

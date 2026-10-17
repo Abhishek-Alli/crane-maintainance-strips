@@ -7,6 +7,9 @@ import {
 } from './bundlePressConfig';
 import { inputCls, Field, loggedInUsername, CheckRow, PageLoader } from './checkFormParts';
 
+const MAX_CURRENT = 73.75;
+const isOver = (v) => v !== '' && v !== null && v !== undefined && Number(v) > MAX_CURRENT;
+
 export default function BundlePressForm() {
   const { id: editId } = useParams();
   const isEdit = Boolean(editId);
@@ -57,8 +60,13 @@ export default function BundlePressForm() {
   const setCurrent = (motorKey, phase, value) =>
     setForm((f) => ({ ...f, currents: { ...f.currents, [motorKey]: { ...f.currents[motorKey], [phase]: value } } }));
 
+  const overLimit = BP_MOTORS.some((m) => BP_PHASES.some((p) => isOver(form.currents[m.key][p.key])));
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (overLimit && !form.remark.trim()) {
+      return toast.error(`Current ${MAX_CURRENT} A se zyada hai, Remark likhna zaroori hai`);
+    }
     setSaving(true);
     try {
       if (isEdit) {
@@ -106,7 +114,9 @@ export default function BundlePressForm() {
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-5">
-          <h2 className="text-sm font-bold text-amber-800 uppercase tracking-wide mb-3">Motor Currents</h2>
+          <h2 className="text-sm font-bold text-amber-800 uppercase tracking-wide mb-3">
+            Motor Currents<span className="ml-2 normal-case text-gray-500">(Max: {MAX_CURRENT} A)</span>
+          </h2>
           <div className="space-y-4">
             {BP_MOTORS.map((m) => (
               <div key={m.key}>
@@ -119,7 +129,7 @@ export default function BundlePressForm() {
                         step="any"
                         value={form.currents[m.key][p.key]}
                         onChange={(e) => setCurrent(m.key, p.key, e.target.value)}
-                        className={inputCls}
+                        className={`${inputCls} ${isOver(form.currents[m.key][p.key]) ? 'border-red-500 bg-red-50' : ''}`}
                       />
                     </Field>
                   ))}
@@ -127,6 +137,11 @@ export default function BundlePressForm() {
               </div>
             ))}
           </div>
+          {overLimit && (
+            <p className="text-xs font-semibold text-red-600 mt-3">
+              Current max limit ({MAX_CURRENT} A) se zyada hai. Neeche Remark likhna zaroori hai.
+            </p>
+          )}
         </div>
 
         {BP_GROUPS.map((group) => (
@@ -149,8 +164,15 @@ export default function BundlePressForm() {
         ))}
 
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-5">
-          <Field label="Remark (if any)">
-            <textarea rows={3} value={form.remark} onChange={(e) => set({ remark: e.target.value })} className={inputCls} />
+          <Field label={overLimit ? 'Remark *' : 'Remark (if any)'}>
+            <textarea
+              rows={3}
+              value={form.remark}
+              onChange={(e) => set({ remark: e.target.value })}
+              className={`${inputCls} ${overLimit && !form.remark.trim() ? 'border-red-500 bg-red-50' : ''}`}
+              placeholder={overLimit ? 'Current limit cross hui, remark likhein' : ''}
+              required={overLimit}
+            />
           </Field>
         </div>
 
