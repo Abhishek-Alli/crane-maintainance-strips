@@ -5,7 +5,7 @@ const LT_TRANSFORMERS = ['5 MVA'];
 const LT_CHECKS = [
   { key: 'oil_level_in_mog', label: 'Oil Level in MOG', options: ['NORMAL', 'NOT NORMAL'] },
   { key: 'oil_leakages', label: 'Oil Leakages from any part', options: ['NO', 'YES'] },
-  { key: 'silica_gel_condition', label: 'Silica Gel Condition', options: ['BLUE', 'ORANGE', 'PINK'] },
+  { key: 'silica_gel_condition', label: 'Silica Gel Condition', options: ['BLUE', 'ORANGE', 'PINK'], remarkOn: ['ORANGE'] },
   { key: 'oltc_condition', label: 'OLTC Condition', options: ['OKAY', 'NOT OKAY'] },
 ];
 
@@ -38,4 +38,9 @@ function normalizeChecks(raw) {
   return out;
 }
 
-module.exports = { LT_TRANSFORMERS, LT_CHECKS, nullIfEmpty, parseNumber, normalizeChecks };
+/** First check with a remark-required value picked but no remark, or undefined */
+function findMissingRemark(checks) {
+  return LT_CHECKS.find((c) => c.remarkOn && c.remarkOn.includes(checks[c.key].value) && !checks[c.key].remark);
+}
+
+module.exports = { LT_TRANSFORMERS, LT_CHECKS, nullIfEmpty, parseNumber, normalizeChecks, findMissingRemark };

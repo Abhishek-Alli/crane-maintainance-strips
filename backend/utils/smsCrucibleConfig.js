@@ -2,7 +2,7 @@
 
 const CRUCIBLE_DEPARTMENT_NAME = 'FURNACE';
 const CRUCIBLE_FURNACES = ['26 MW'];
-const CRUCIBLE_NUMBERS = ['1', '2'];
+const CRUCIBLE_NUMBERS = ['A', 'B'];
 
 const MAX_PHOTOS_PER_POINT = 3;
 

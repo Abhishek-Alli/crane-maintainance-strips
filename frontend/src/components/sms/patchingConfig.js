@@ -2,7 +2,7 @@
 import { todayISO } from './eotCraneConfig';
 
 export const PATCHING_FURNACES = ['50 MT'];
-export const PATCHING_CRUCIBLES = ['1', '2'];
+export const PATCHING_CRUCIBLES = ['A', 'B'];
 
 const OKAY_NOT_OK = ['OKAY', 'NOT OK'];
 
