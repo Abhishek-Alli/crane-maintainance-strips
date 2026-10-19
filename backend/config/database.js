@@ -8,10 +8,13 @@ types.setTypeParser(1082, (val) => val);
 // Support both DATABASE_URL (Vercel/Supabase/Neon) and individual vars (local)
 const isLocal = process.env.NODE_ENV === 'development';
 
-const poolConfig = process.env.DATABASE_URL
+const dbUrl = process.env.DATABASE_URL || '';
+const sslDisabled = dbUrl.includes('sslmode=disable');
+
+const poolConfig = dbUrl
   ? {
-      connectionString: process.env.DATABASE_URL,
-      ssl: isLocal ? false : { rejectUnauthorized: false },
+      connectionString: dbUrl,
+      ssl: sslDisabled ? false : { rejectUnauthorized: false },
       max: isLocal ? 20 : 1,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 10000,
