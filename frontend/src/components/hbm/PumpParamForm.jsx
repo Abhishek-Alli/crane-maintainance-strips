@@ -39,6 +39,7 @@ const PUMP_GROUPS = [
       { name: 'ICW Pump-3', kw_max: 45, amp_max: 81, rpm_max: 1475 },
       { name: 'ICW Pump-4', kw_max: 45, amp_max: 81, rpm_max: 1475 },
       { name: 'ICW Pump-5', kw_max: 45, amp_max: 81, rpm_max: 1475 },
+      { name: 'ICW Pump-6', kw_max: 45, amp_max: 81, rpm_max: 1475 },
     ],
   },
   {
@@ -115,7 +116,7 @@ const PUMP_GROUPS = [
       { name: 'Compressor-1', kw_max: 160, amp_max: 277, rpm_max: 1489 },
       { name: 'Compressor-2', kw_max: 160, amp_max: 277, rpm_max: 1489 },
       { name: 'Compressor-3', kw_max: 160, amp_max: 277, rpm_max: 1489 },
-      { name: 'Compressor-4', kw_max: 160, amp_max: 277, rpm_max: 1489 },
+      { name: 'Compressor-4', kw_max: 160, amp_max: 308, rpm_max: 1489 },
     ],
   },
   {

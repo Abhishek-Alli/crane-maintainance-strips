@@ -9,7 +9,7 @@ const GROUP_ORDER = [
   'TMT Water Pump-1', 'TMT Water Pump-2',
   'Mill Water Pump-1', 'Mill Water Pump-2',
   'DCW Pump-1', 'DCW Pump-2', 'DCW Pump-3', 'DCW Pump-4', 'DCW Pump-5',
-  'ICW Pump-1', 'ICW Pump-2', 'ICW Pump-3', 'ICW Pump-4', 'ICW Pump-5',
+  'ICW Pump-1', 'ICW Pump-2', 'ICW Pump-3', 'ICW Pump-4', 'ICW Pump-5', 'ICW Pump-6',
   'LHW Pump-1', 'LHW Pump-2', 'LHW Pump-3', 'LHW Pump-4',
   'LCW Pump-1', 'LCW Pump-2', 'LCW Pump-3',
   'Back Wash Pump',
@@ -21,6 +21,8 @@ const GROUP_ORDER = [
   'LC SPRAY PUMP-1', 'LC SPRAY PUMP-2',
   'Compressor-1',
   'Compressor-2',
+  'Compressor-3',
+  'Compressor-4',
   'TMT CT',
 ];
 
@@ -40,6 +42,7 @@ const THRESHOLDS = {
   'ICW Pump-3':        { kw: 45,  amp: 81,  rpm: 1475 },
   'ICW Pump-4':        { kw: 45,  amp: 81,  rpm: 1475 },
   'ICW Pump-5':        { kw: 45,  amp: 81,  rpm: 1475 },
+  'ICW Pump-6':        { kw: 45,  amp: 81,  rpm: 1475 },
   'LHW Pump-1':        { kw: 55,  amp: 97,  rpm: 1480 },
   'LHW Pump-2':        { kw: 55,  amp: 97,  rpm: 1480 },
   'LHW Pump-3':        { kw: 55,  amp: 97,  rpm: 1480 },
@@ -69,6 +72,8 @@ const THRESHOLDS = {
   'LC SPRAY PUMP-2':   { kw: 90,  amp: 149, rpm: 1480 },
   'Compressor-1':      { kw: 160, amp: 277, rpm: 1489 },
   'Compressor-2':      { kw: 160, amp: 277, rpm: 1489 },
+  'Compressor-3':      { kw: 160, amp: 277, rpm: 1489 },
+  'Compressor-4':      { kw: 160, amp: 308, rpm: 1489 },
   'TMT CT':            { kw: 15,  amp: 32,  rpm: 410  },
 };
 
