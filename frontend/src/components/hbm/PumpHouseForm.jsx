@@ -155,6 +155,7 @@ const SHEET_CONFIG = {
       'ICW PUMP-3': ICW_DCW_ITEMS,
       'ICW PUMP-4': ICW_DCW_ITEMS,
       'ICW PUMP-5': ICW_DCW_ITEMS,
+      'ICW PUMP-6': ICW_DCW_ITEMS,
     },
   },
   'SECTION-4': {
