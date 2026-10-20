@@ -70,9 +70,9 @@ const THRESHOLDS = {
   'LAMINAR CT Fan-3':  { kw: 15,  amp: 38,  rpm: 285  },
   'LC SPRAY PUMP-1':   { kw: 90,  amp: 149, rpm: 1480 },
   'LC SPRAY PUMP-2':   { kw: 90,  amp: 149, rpm: 1480 },
-  'Compressor-1':      { kw: 160, amp: 277, rpm: 1489 },
-  'Compressor-2':      { kw: 160, amp: 277, rpm: 1489 },
-  'Compressor-3':      { kw: 160, amp: 277, rpm: 1489 },
+  'Compressor-1':      { kw: 160, amp: 308, rpm: 1489 },
+  'Compressor-2':      { kw: 160, amp: 308, rpm: 1489 },
+  'Compressor-3':      { kw: 160, amp: 308, rpm: 1489 },
   'Compressor-4':      { kw: 160, amp: 308, rpm: 1489 },
   'TMT CT':            { kw: 15,  amp: 32,  rpm: 410  },
 };
