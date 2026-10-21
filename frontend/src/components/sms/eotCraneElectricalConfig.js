@@ -104,7 +104,7 @@ const CRANE_SPECS = {
   'SHED-B|4': buildSpec({ mh: [344], aux: 158, ct: [15.6, 15.6], ctMotors: 2, lt: [29, 29, 29, 29] }),
   'SHED-C|1': buildSpec({ mh: [141, 141], ct: [10, 10], lt: [19, 19] }),
   'SHED-C|2': buildSpec({ mh: [141], ct: [10], lt: [15.6, 15.6] }),
-  'SHED-C|3': buildSpec({ mh: [204], ct: [20], lt: [35, 35], hasAux: true }),
+  'SHED-C|3': buildSpec({ mh: [204], ct: [20], lt: [35, 35] }),
   'SHED-D|1': buildSpec({ mh: [141], ct: [10], lt: [15.6, 15.6] }),
   'SHED-D|2': buildSpec({ mh: [141, 141], ct: [10.4, 10.4], lt: [19, 19] }),
 };
