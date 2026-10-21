@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { smsAPI } from '../../services/api';
-import { CP_COMPRESSORS, CP_CHECKS, isBadValue, emptyCompressorPmForm } from './compressorPmConfig';
+import { CP_COMPRESSORS, CP_CHECKS, CP_CURRENT_LIMIT, isBadValue, emptyCompressorPmForm } from './compressorPmConfig';
 import { inputCls, Field, loggedInUsername, optionBtnCls, CheckRow, PageLoader } from './checkFormParts';
 
 export default function CompressorPmForm() {
@@ -81,6 +81,9 @@ export default function CompressorPmForm() {
 
   if (loading) return <PageLoader />;
 
+  const isOver = (k) => form[k] !== '' && Number(form[k]) > CP_CURRENT_LIMIT;
+  const anyOver = ['current_r', 'current_y', 'current_b'].some(isOver);
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
       <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
@@ -153,19 +156,21 @@ export default function CompressorPmForm() {
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-5">
-          <h2 className="text-sm font-bold text-amber-800 uppercase tracking-wide mb-3">Motor (100 HP) — Current</h2>
+          <h2 className="text-sm font-bold text-amber-800 uppercase tracking-wide mb-3">
+            Motor (100 HP) — Current <span className="text-xs font-normal text-gray-500 normal-case">(limit {CP_CURRENT_LIMIT} A)</span>
+          </h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[['current_r', 'Current - R'], ['current_y', 'Current - Y'], ['current_b', 'Current - B']].map(([k, label]) => (
               <Field key={k} label={label}>
-                <input type="number" step="any" value={form[k]} onChange={(e) => set({ [k]: e.target.value })} className={inputCls} />
+                <input type="number" step="any" value={form[k]} onChange={(e) => set({ [k]: e.target.value })} className={`${inputCls} ${isOver(k) ? 'border-red-500 bg-red-50 text-red-700' : ''}`} />
               </Field>
             ))}
           </div>
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-5">
-          <Field label="Remark (if any)">
-            <textarea rows={3} value={form.remark} onChange={(e) => set({ remark: e.target.value })} className={inputCls} />
+          <Field label={anyOver ? `Remark (current above ${CP_CURRENT_LIMIT} A)` : 'Remark (if any)'} required={anyOver}>
+            <textarea rows={3} value={form.remark} onChange={(e) => set({ remark: e.target.value })} className={inputCls} required={anyOver} />
           </Field>
         </div>
 

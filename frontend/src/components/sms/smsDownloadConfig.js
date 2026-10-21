@@ -14,6 +14,7 @@ export const SMS_DOWNLOAD_SHEETS = {
   'ccm-motor': { label: 'CCM Motor', list: smsAPI.getCcmMotorLogs, get: smsAPI.getCcmMotorById },
   'pump-house-motor': { label: 'Pump House Motor Panel', list: smsAPI.getPumpHouseMotorLogs, get: smsAPI.getPumpHouseMotorById },
   'ccm-pump-house': { label: 'CCM Pump House', list: smsAPI.getCcmPumpHouseLogs, get: smsAPI.getCcmPumpHouseById },
+  'eot-crane-electrical': { label: 'EOT Crane — Electrical', list: smsAPI.getEotCraneElectricalLogs, get: smsAPI.getEotCraneElectricalById },
   'furnace-motor-panel': { label: 'Furnace Motor Panel', list: smsAPI.getFurnaceMotorPanelLogs, get: smsAPI.getFurnaceMotorPanelById },
   dg: { label: 'DG', list: smsAPI.getDgLogs, get: smsAPI.getDgById },
   'furnace-pollution-pm': { label: 'Furnace Pollution - Scheduled', list: smsAPI.getFurnacePollutionPmLogs, get: smsAPI.getFurnacePollutionPmById },

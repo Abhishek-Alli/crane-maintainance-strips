@@ -2,6 +2,9 @@
 
 const CP_COMPRESSORS = ['1', '2'];
 
+/** Motor (100 HP) current above this (any phase) needs a remark */
+const CP_CURRENT_LIMIT = 125;
+
 const CP_CHECKS = [
   { key: 'coolent_filter_condition', label: 'Coolent and Filter Condition', options: ['OKAY', 'NOT OKAY'] },
 ];
@@ -35,4 +38,4 @@ function normalizeChecks(raw) {
   return out;
 }
 
-module.exports = { CP_COMPRESSORS, CP_CHECKS, nullIfEmpty, parseNumber, normalizeChecks };
+module.exports = { CP_COMPRESSORS, CP_CURRENT_LIMIT, CP_CHECKS, nullIfEmpty, parseNumber, normalizeChecks };

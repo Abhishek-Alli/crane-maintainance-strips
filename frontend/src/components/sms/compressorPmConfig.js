@@ -2,6 +2,9 @@
 
 export const CP_COMPRESSORS = ['1', '2'];
 
+/** Motor (100 HP) current above this (any phase) needs a remark */
+export const CP_CURRENT_LIMIT = 125;
+
 export const CP_CHECKS = [
   { key: 'coolent_filter_condition', label: 'Coolent and Filter Condition', options: ['OKAY', 'NOT OKAY'] },
 ];

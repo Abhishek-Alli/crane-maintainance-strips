@@ -4,7 +4,13 @@ const { nullIfEmpty, parseCurrent, normalizeChecks } = require('../utils/smsCcmP
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-const withAreaMotor = (row) => ({ ...row, area_motor: `${row.area} - ${row.sub_area} - ${row.motor}` });
+/** Area that has no sub-area */
+const NO_SUB_AREA_AREA = 'SCALE PIT';
+
+const withAreaMotor = (row) => ({
+  ...row,
+  area_motor: [row.area, row.sub_area, row.motor].filter(Boolean).join(' - '),
+});
 
 /** Validates the body. Returns { error } or { values } */
 function prepare(b) {
@@ -13,8 +19,8 @@ function prepare(b) {
   if (!recordedBy) return { error: 'Recorded By is required' };
   const area = nullIfEmpty(b.area);
   if (!area) return { error: 'Area is required' };
-  const subArea = nullIfEmpty(b.sub_area);
-  if (!subArea) return { error: 'Sub-area is required' };
+  const subArea = nullIfEmpty(b.sub_area) || '';
+  if (!subArea && area !== NO_SUB_AREA_AREA) return { error: 'Sub-area is required' };
   const motor = nullIfEmpty(b.motor);
   if (!motor) return { error: 'Motor is required' };
 

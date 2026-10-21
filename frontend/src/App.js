@@ -198,6 +198,9 @@ import PumpHouseMotorView from './components/sms/PumpHouseMotorView';
 import CcmPumpHouseForm from './components/sms/CcmPumpHouseForm';
 import CcmPumpHouseHistory from './components/sms/CcmPumpHouseHistory';
 import CcmPumpHouseView from './components/sms/CcmPumpHouseView';
+import EotCraneElectricalForm from './components/sms/EotCraneElectricalForm';
+import EotCraneElectricalHistory from './components/sms/EotCraneElectricalHistory';
+import EotCraneElectricalView from './components/sms/EotCraneElectricalView';
 import CcmMotorForm from './components/sms/CcmMotorForm';
 import CcmMotorHistory from './components/sms/CcmMotorHistory';
 import CcmMotorView from './components/sms/CcmMotorView';
@@ -1871,6 +1874,10 @@ function App() {
             ['/sms/ccm-pump-house/history', <CcmPumpHouseHistory />],
             ['/sms/ccm-pump-house/:id/edit', <CcmPumpHouseForm />],
             ['/sms/ccm-pump-house/:id', <CcmPumpHouseView />],
+            ['/sms/eot-crane-electrical/new', <EotCraneElectricalForm />],
+            ['/sms/eot-crane-electrical/history', <EotCraneElectricalHistory />],
+            ['/sms/eot-crane-electrical/:id/edit', <EotCraneElectricalForm />],
+            ['/sms/eot-crane-electrical/:id', <EotCraneElectricalView />],
           ].map(([path, page]) => (
             <Route
               key={path}

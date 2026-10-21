@@ -1,5 +1,5 @@
 import React from 'react';
-import { Flame, Factory, Plug, Cog } from 'lucide-react';
+import { Flame, Factory, Plug, Cog, Construction } from 'lucide-react';
 import SmsSheetCard, { SmsSheetPage } from './SmsSheetCard';
 
 export default function Electrical() {
@@ -9,6 +9,7 @@ export default function Electrical() {
       <SmsSheetCard to="/sms/main-pcc-room" label="MAIN PCC ROOM" sub="Furnace Pollution · DG · LT Transformer" icon={Factory} color="indigo" />
       <SmsSheetCard to="/sms/fc-ccm-pump-house" label="FURNACE PUMP HOUSE" sub="Pump House Motor Panel" icon={Plug} color="blue" />
       <SmsSheetCard to="/sms/billet-slab-caster" label="BILLET AND SLAB CASTER" sub="CCM Motor" icon={Cog} color="teal" />
+      <SmsSheetCard label="EOT Crane" sub="Electrical maintenance · cabin · hoist · LT · CT" icon={Construction} color="purple" sheet="eot-crane-electrical" fill="/sms/eot-crane-electrical/new" history="/sms/eot-crane-electrical/history" />
     </SmsSheetPage>
   );
 }
