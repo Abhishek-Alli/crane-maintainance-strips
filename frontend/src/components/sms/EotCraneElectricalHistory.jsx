@@ -105,7 +105,7 @@ export default function EotCraneElectricalHistory() {
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {logs.map((log, i) => {
-                      const issues = countNotOkay(log.items, log.skipped_sections);
+                      const issues = countNotOkay(log.items, log.skipped_sections, log.shed_name, log.crane_number);
                       const cap = craneCapacity(log.shed_name, log.crane_number);
                       return (
                         <tr key={log.id} className="hover:bg-amber-50/40 transition-colors">

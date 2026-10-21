@@ -2,7 +2,7 @@ const { query } = require('../config/database');
 const { isWithinEditWindow, editWindowDeniedMessage } = require('../utils/editWindow');
 const { findCrane } = require('../utils/smsEotCraneConfig');
 const {
-  DATETIME, nullIfEmpty, normalizeSkipped, normalizeItems,
+  DATETIME, getSections, nullIfEmpty, normalizeSkipped, normalizeItems,
 } = require('../utils/smsEotCraneElectricalConfig');
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -24,8 +24,9 @@ function prepare(b) {
   if (!end || !DATETIME.test(end)) return { error: 'Maintenance End date & time is required' };
   if (end < start) return { error: 'Maintenance End must be after Maintenance Start' };
 
-  const skipped = normalizeSkipped(b.skipped_sections);
-  const norm = normalizeItems(b.items, skipped);
+  const sections = getSections(shed, craneNumber);
+  const skipped = normalizeSkipped(b.skipped_sections, sections);
+  const norm = normalizeItems(b.items, skipped, sections);
   if (norm.error) return { error: norm.error };
 
   return {
