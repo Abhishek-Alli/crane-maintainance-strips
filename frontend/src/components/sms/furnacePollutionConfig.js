@@ -12,10 +12,10 @@ export const FP_CHECKS = [
 ];
 
 export const FP_MOTORS = [
-  { key: 'motor_737_1', label: 'Motor (737 HP)-1' },
-  { key: 'motor_737_2', label: 'Motor (737 HP)-2' },
-  { key: 'top_hood_15', label: 'Top Hood Motor (15 HP)' },
-  { key: 'side_hood_15', label: 'Side Hood Motor (15 HP)' },
+  { key: 'motor_737_1', label: 'Motor (737 HP)-1', limit: 994.5 },
+  { key: 'motor_737_2', label: 'Motor (737 HP)-2', limit: 994.5 },
+  { key: 'top_hood_15', label: 'Top Hood Motor (15 HP)', limit: 22 },
+  { key: 'side_hood_15', label: 'Side Hood Motor (15 HP)', limit: 22 },
 ];
 
 export const FP_PHASES = [
@@ -27,6 +27,9 @@ export const FP_PHASES = [
 /** The first option of each check is the healthy one */
 export const isBadValue = (check, value) => Boolean(value) && value !== check.options[0];
 
+export const isCurrentOver = (motor, row) =>
+  FP_PHASES.some((p) => row?.[p.key] !== '' && row?.[p.key] != null && Number(row[p.key]) > motor.limit);
+
 export const formatCurrents = (currents, motorKey) =>
   FP_PHASES.map((p) => currents?.[motorKey]?.[p.key] ?? '—').join(' / ');
 
@@ -34,7 +37,7 @@ export function emptyFurnacePollutionForm() {
   const checks = {};
   FP_CHECKS.forEach((c) => { checks[c.key] = { value: c.options[0], remark: '' }; });
   const currents = {};
-  FP_MOTORS.forEach((m) => { currents[m.key] = { r: '', y: '', b: '' }; });
+  FP_MOTORS.forEach((m) => { currents[m.key] = { r: '', y: '', b: '', remark: '' }; });
   return {
     report_date: new Date().toISOString().slice(0, 10),
     recorded_by: '',

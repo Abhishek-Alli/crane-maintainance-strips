@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { smsAPI } from '../../services/api';
-import { PUMP_HOUSE_CHECKS, CCM_AREAS, isBadValue, emptyCcmPumpHouseForm } from './ccmPumpHouseConfig';
+import { PUMP_HOUSE_CHECKS, CCM_AREAS, NO_SUB_AREA, isBadValue, emptyCcmPumpHouseForm } from './ccmPumpHouseConfig';
 
 const inputCls =
   'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400';
@@ -77,15 +77,16 @@ export default function CcmPumpHouseForm() {
   const maxCurrent = subAreaCfg?.max;
   const isOver = (v) => maxCurrent != null && v !== '' && Number(v) > maxCurrent;
   const overLimit = ['current_r', 'current_y', 'current_b'].some((k) => isOver(form[k]));
+  const hasSubArea = !(NO_SUB_AREA in (CCM_AREAS[form.area] || {}));
   const subAreaOptions = Object.keys(CCM_AREAS[form.area] || {});
   if (form.sub_area && form.area && !subAreaOptions.includes(form.sub_area)) subAreaOptions.push(form.sub_area);
   const motorOptions = subAreaCfg ? [...subAreaCfg.motors] : [];
-  if (form.motor && form.sub_area && !motorOptions.includes(form.motor)) motorOptions.push(form.motor);
+  if (form.motor && subAreaCfg && !motorOptions.includes(form.motor)) motorOptions.push(form.motor);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.area.trim()) return toast.error('Area is required');
-    if (!form.sub_area.trim()) return toast.error('Sub-area is required');
+    if (hasSubArea && !form.sub_area.trim()) return toast.error('Sub-area is required');
     if (!form.motor.trim()) return toast.error('Motor is required');
     setSaving(true);
     try {
@@ -150,14 +151,16 @@ export default function CcmPumpHouseForm() {
               {Object.keys(CCM_AREAS).map((a) => <option key={a} value={a}>{a}</option>)}
             </select>
           </Field>
-          <Field label="Sub-area" required>
-            <select value={form.sub_area} onChange={(e) => set({ sub_area: e.target.value, motor: '' })} className={inputCls} disabled={!form.area}>
-              <option value="">Select sub-area</option>
-              {subAreaOptions.map((a) => <option key={a} value={a}>{a}</option>)}
-            </select>
-          </Field>
+          {hasSubArea && (
+            <Field label="Sub-area" required>
+              <select value={form.sub_area} onChange={(e) => set({ sub_area: e.target.value, motor: '' })} className={inputCls} disabled={!form.area}>
+                <option value="">Select sub-area</option>
+                {subAreaOptions.map((a) => <option key={a} value={a}>{a}</option>)}
+              </select>
+            </Field>
+          )}
           <Field label="Motor" required>
-            <select value={form.motor} onChange={(e) => set({ motor: e.target.value })} className={inputCls} disabled={!form.sub_area}>
+            <select value={form.motor} onChange={(e) => set({ motor: e.target.value })} className={inputCls} disabled={!subAreaCfg}>
               <option value="">Select motor</option>
               {motorOptions.map((m) => <option key={m} value={m}>{m}</option>)}
             </select>

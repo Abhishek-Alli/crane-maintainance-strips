@@ -12,8 +12,8 @@ export const FPK_CHECKS = [
 ];
 
 export const FPK_MOTORS = [
-  { key: 'lt_motor_10', label: 'LT Motor (10 HP)' },
-  { key: 'hydraulic_motor_40', label: 'Hydraulic Motor (40 HP)' },
+  { key: 'lt_motor_10', label: 'LT Motor (10 HP)', limit: 15.5 },
+  { key: 'hydraulic_motor_40', label: 'Hydraulic Motor (40 HP)', limit: 54 },
 ];
 
 export const FPK_PHASES = [
@@ -26,6 +26,9 @@ export const FPK_PHASES = [
 export const isBadValue = (check, value) =>
   !check.noBad && Boolean(value) && value !== check.options[0];
 
+export const isCurrentOver = (motor, row) =>
+  FPK_PHASES.some((p) => row?.[p.key] !== '' && row?.[p.key] != null && Number(row[p.key]) > motor.limit);
+
 export const formatCurrents = (currents, motorKey) =>
   FPK_PHASES.map((p) => currents?.[motorKey]?.[p.key] ?? '—').join(' / ');
 
@@ -33,7 +36,7 @@ export function emptyFurnacePokerForm() {
   const checks = {};
   FPK_CHECKS.forEach((c) => { checks[c.key] = { value: c.options[0], remark: '' }; });
   const currents = {};
-  FPK_MOTORS.forEach((m) => { currents[m.key] = { r: '', y: '', b: '' }; });
+  FPK_MOTORS.forEach((m) => { currents[m.key] = { r: '', y: '', b: '', remark: '' }; });
   return {
     report_date: new Date().toISOString().slice(0, 10),
     recorded_by: '',

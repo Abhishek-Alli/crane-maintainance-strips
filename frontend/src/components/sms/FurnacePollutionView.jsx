@@ -138,6 +138,7 @@ export default function FurnacePollutionView() {
                   <tr key={m.key}>
                     <td className="px-4 py-2.5 text-gray-900 font-semibold">{m.label}</td>
                     <td className="px-4 py-2.5 text-gray-700 whitespace-nowrap">{formatCurrents(log.currents, m.key)}</td>
+                    <td className="px-4 py-2.5 text-gray-600">{log.currents?.[m.key]?.remark || '—'}</td>
                   </tr>
                 ))}
               </tbody>

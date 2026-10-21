@@ -10,18 +10,21 @@ export const PUMP_HOUSE_CHECKS = [
 
 const pumps = (count, hp) => Array.from({ length: count }, (_, i) => `PUMP-${i + 1} (${hp} HP)`);
 
+/** Area with no sub-area uses this empty key, e.g. SCALE PIT: { [NO_SUB_AREA]: {...} } */
+export const NO_SUB_AREA = '';
+
 /** Area → Sub-area → { motors, max current (A) } */
 export const CCM_AREAS = {
-  BILLET: {
+  'BILLET - PUMP HOUSE': {
     'PRIMARY MOTOR': { motors: pumps(4, 100), max: 125 },
     'SECONDARY MOTOR': { motors: pumps(4, 60), max: 80 },
     'PRIMARY COOLING TOWER': { motors: pumps(1, 25), max: 37 },
     'SECONDARY COOLING TOWER': { motors: pumps(1, 15), max: 24.5 },
   },
-  COMMON: {
-    'SCALE PIT': { motors: pumps(6, 40), max: 53 },
+  'SCALE PIT': {
+    [NO_SUB_AREA]: { motors: pumps(6, 40), max: 53 },
   },
-  SLAB: {
+  'SLAB - PUMP HOUSE': {
     'PRIMARY MOTOR': { motors: pumps(4, 150), max: 180 },
     'SECONDARY MOTOR': { motors: pumps(4, 100), max: 125 },
     'PRIMARY COOLING TOWER': { motors: pumps(1, 15), max: 24.5 },

@@ -112,7 +112,7 @@ export default function CcmPumpHouseHistory() {
                           <td className="px-4 py-3 text-gray-500">{i + 1}</td>
                           <td className="px-4 py-3 font-semibold text-gray-900 whitespace-nowrap">{formatDate(log.report_date)}</td>
                           <td className="px-4 py-3 text-gray-700 whitespace-nowrap">{log.area}</td>
-                          <td className="px-4 py-3 text-gray-700 whitespace-nowrap">{log.sub_area}</td>
+                          <td className="px-4 py-3 text-gray-700 whitespace-nowrap">{log.sub_area || '—'}</td>
                           <td className="px-4 py-3 text-gray-700">{log.motor}</td>
                           <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
                             {[log.current_r, log.current_y, log.current_b].map((v) => v ?? '—').join(' / ')}

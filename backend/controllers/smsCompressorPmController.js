@@ -1,6 +1,6 @@
 const { query } = require('../config/database');
 const { isWithinEditWindow, editWindowDeniedMessage } = require('../utils/editWindow');
-const { CP_COMPRESSORS, nullIfEmpty, parseNumber, normalizeChecks } = require('../utils/smsCompressorPmConfig');
+const { CP_COMPRESSORS, CP_CURRENT_LIMIT, nullIfEmpty, parseNumber, normalizeChecks } = require('../utils/smsCompressorPmConfig');
 
 /** Validates the body. Returns { error } or { values } */
 function prepare(b) {
@@ -16,6 +16,9 @@ function prepare(b) {
 
   const currents = [parseNumber(b.current_r), parseNumber(b.current_y), parseNumber(b.current_b)];
   if (currents.some((c) => Number.isNaN(c))) return { error: 'Current values must be numbers' };
+  if (currents.some((c) => c !== null && c > CP_CURRENT_LIMIT) && !nullIfEmpty(b.remark)) {
+    return { error: `Remark is required when Motor (100 HP) current is above ${CP_CURRENT_LIMIT}` };
+  }
 
   return {
     values: [

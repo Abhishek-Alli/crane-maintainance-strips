@@ -51,7 +51,7 @@ export default function CcmPumpHouseView() {
   const checks = log.checks || {};
   const info = [
     ['Area', log.area],
-    ['Sub-area', log.sub_area],
+    ['Sub-area', log.sub_area || '—'],
     ['Motor', log.motor],
     ['Area - Motor', log.area_motor],
     ['Recorded By', log.recorded_by || '—'],

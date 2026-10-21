@@ -9,10 +9,10 @@ const FP_CHECKS = [
 ];
 
 const FP_MOTORS = [
-  { key: 'motor_737_1', label: 'Motor (737 HP)-1' },
-  { key: 'motor_737_2', label: 'Motor (737 HP)-2' },
-  { key: 'top_hood_15', label: 'Top Hood Motor (15 HP)' },
-  { key: 'side_hood_15', label: 'Side Hood Motor (15 HP)' },
+  { key: 'motor_737_1', label: 'Motor (737 HP)-1', limit: 994.5 },
+  { key: 'motor_737_2', label: 'Motor (737 HP)-2', limit: 994.5 },
+  { key: 'top_hood_15', label: 'Top Hood Motor (15 HP)', limit: 22 },
+  { key: 'side_hood_15', label: 'Side Hood Motor (15 HP)', limit: 22 },
 ];
 
 const PHASES = ['r', 'y', 'b'];
@@ -57,6 +57,10 @@ function normalizeCurrents(raw) {
       if (Number.isNaN(n)) return { error: `${m.label} current must be a number` };
       out[m.key][p] = n;
     }
+    const remark = nullIfEmpty(src[m.key]?.remark) || '';
+    const over = PHASES.some((p) => out[m.key][p] !== null && out[m.key][p] > m.limit);
+    if (over && !remark) return { error: `Remark is required when ${m.label} current is above ${m.limit}` };
+    if (remark) out[m.key].remark = remark;
   }
   return { currents: out };
 }

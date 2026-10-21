@@ -26,6 +26,7 @@ const SmsElectricalController = require('../controllers/smsElectricalController'
 const SmsCcmMotorController = require('../controllers/smsCcmMotorController');
 const SmsPumpHouseMotorController = require('../controllers/smsPumpHouseMotorController');
 const SmsCcmPumpHouseController = require('../controllers/smsCcmPumpHouseController');
+const SmsEotCraneElectricalController = require('../controllers/smsEotCraneElectricalController');
 const SmsFurnaceMotorPanelController = require('../controllers/smsFurnaceMotorPanelController');
 const SmsDgController = require('../controllers/smsDgController');
 const SmsFurnacePollutionPmController = require('../controllers/smsFurnacePollutionPmController');
@@ -140,6 +141,12 @@ router.get('/ccm-pump-house/:id', SmsCcmPumpHouseController.getById);
 router.post('/ccm-pump-house', SmsCcmPumpHouseController.create);
 router.put('/ccm-pump-house/:id', SmsCcmPumpHouseController.update);
 router.delete('/ccm-pump-house/:id', SmsCcmPumpHouseController.remove);
+
+router.get('/eot-crane-electrical', SmsEotCraneElectricalController.getLogs);
+router.get('/eot-crane-electrical/:id', SmsEotCraneElectricalController.getById);
+router.post('/eot-crane-electrical', SmsEotCraneElectricalController.create);
+router.put('/eot-crane-electrical/:id', SmsEotCraneElectricalController.update);
+router.delete('/eot-crane-electrical/:id', SmsEotCraneElectricalController.remove);
 
 router.get('/furnace-motor-panel', SmsFurnaceMotorPanelController.getLogs);
 router.get('/furnace-motor-panel/overall', SmsFurnaceMotorPanelController.getOverall);

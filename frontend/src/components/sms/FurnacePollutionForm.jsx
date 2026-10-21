@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { smsAPI } from '../../services/api';
 import {
-  FP_FURNACES, FP_CHECKS, FP_MOTORS, FP_PHASES, DRIVE_TEMP_LIMIT, isBadValue, emptyFurnacePollutionForm,
+  FP_FURNACES, FP_CHECKS, FP_MOTORS, FP_PHASES, DRIVE_TEMP_LIMIT, isBadValue, isCurrentOver, emptyFurnacePollutionForm,
 } from './furnacePollutionConfig';
 import {
   inputCls, Field, loggedInUsername, optionBtnCls, CheckRow, TempRow, PageLoader,
@@ -38,6 +38,7 @@ export default function FurnacePollutionForm() {
         FP_MOTORS.forEach((m) => {
           currents[m.key] = {};
           FP_PHASES.forEach((p) => { currents[m.key][p.key] = d.currents?.[m.key]?.[p.key] ?? ''; });
+          currents[m.key].remark = d.currents?.[m.key]?.remark || '';
         });
         setForm({
           ...base,
@@ -157,7 +158,9 @@ export default function FurnacePollutionForm() {
 
         {FP_MOTORS.map((m) => (
           <div key={m.key} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-5">
-            <h2 className="text-sm font-bold text-amber-800 uppercase tracking-wide mb-3">{m.label} — Current</h2>
+            <h2 className="text-sm font-bold text-amber-800 uppercase tracking-wide mb-3">
+              {m.label} — Current <span className="text-xs font-normal text-gray-500 normal-case">(limit {m.limit} A)</span>
+            </h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {FP_PHASES.map((p) => (
                 <Field key={p.key} label={`Current - ${p.label}`}>
@@ -166,11 +169,24 @@ export default function FurnacePollutionForm() {
                     step="any"
                     value={form.currents[m.key][p.key]}
                     onChange={(e) => setCurrent(m.key, p.key, e.target.value)}
-                    className={inputCls}
+                    className={`${inputCls} ${Number(form.currents[m.key][p.key]) > m.limit ? 'border-red-500 bg-red-50 text-red-700' : ''}`}
                   />
                 </Field>
               ))}
             </div>
+            {isCurrentOver(m, form.currents[m.key]) && (
+              <div className="mt-3">
+                <Field label={`Remark (current above ${m.limit} A)`} required>
+                  <textarea
+                    rows={2}
+                    value={form.currents[m.key].remark}
+                    onChange={(e) => setCurrent(m.key, 'remark', e.target.value)}
+                    className={inputCls}
+                    required
+                  />
+                </Field>
+              </div>
+            )}
           </div>
         ))}
 
