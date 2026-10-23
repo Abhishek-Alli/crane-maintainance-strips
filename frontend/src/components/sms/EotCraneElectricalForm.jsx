@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { smsAPI } from '../../services/api';
 import {
-  EOT_SHEDS, EOT_ELEC_SECTIONS, EOT_ELEC_PHASES, isBadValue, craneOptionLabel, emptyItems,
+  EOT_SHEDS, EOT_ELEC_PHASES, getSections, isBadValue, isCurrentOver, craneOptionLabel, emptyItems,
   emptyEotCraneElectricalForm, firstIssue,
 } from './eotCraneElectricalConfig';
 import {
@@ -30,7 +30,7 @@ export default function EotCraneElectricalForm() {
           return;
         }
         const items = emptyItems();
-        EOT_ELEC_SECTIONS.forEach((s) => {
+        getSections(d.shed_name, d.crane_number).forEach((s) => {
           s.points.forEach((p) => {
             const row = d.items?.[s.key]?.[p.key];
             if (!row) return;
@@ -88,7 +88,7 @@ export default function EotCraneElectricalForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.shed_name || !form.crane_number) return toast.error('Crane is required');
-    const issue = firstIssue(form.items, form.skipped_sections);
+    const issue = firstIssue(form.items, form.skipped_sections, form.shed_name, form.crane_number);
     if (issue) return toast.error(issue);
     if (!form.maintenance_start) return toast.error('Maintenance Start date & time is required');
     if (!form.maintenance_end) return toast.error('Maintenance End date & time is required');
@@ -114,6 +114,7 @@ export default function EotCraneElectricalForm() {
 
   if (loading) return <PageLoader />;
 
+  const sections = getSections(form.shed_name, form.crane_number);
   const [startD, startT] = splitDT(form.maintenance_start);
   const [endD, endT] = splitDT(form.maintenance_end);
 
@@ -154,7 +155,13 @@ export default function EotCraneElectricalForm() {
           </div>
         </div>
 
-        {EOT_ELEC_SECTIONS.map((s) => {
+        {sections.length === 0 && (
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-5 text-sm text-gray-500">
+            Select a crane to see its checklist.
+          </div>
+        )}
+
+        {sections.map((s) => {
           const skipped = form.skipped_sections.includes(s.key);
           return (
             <div key={s.key} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-5">
@@ -179,9 +186,13 @@ export default function EotCraneElectricalForm() {
                     const row = form.items[s.key][p.key];
                     const rk = `${s.key}.${p.key}`;
                     if (p.type === 'current') {
+                      const over = isCurrentOver(p, row);
                       return (
-                        <div key={p.key} className="rounded-lg p-3 border border-gray-100 bg-gray-50 space-y-2">
-                          <p className="text-sm font-semibold text-gray-800">{p.label} *</p>
+                        <div key={p.key} className={`rounded-lg p-3 border space-y-2 ${over ? 'border-red-200 bg-red-50/50' : 'border-gray-100 bg-gray-50'}`}>
+                          <p className="text-sm font-semibold text-gray-800">
+                            {p.label} *
+                            {p.limit != null && <span className="ml-2 text-xs font-normal text-gray-500">(Max: {p.limit} A)</span>}
+                          </p>
                           <div className="grid grid-cols-3 gap-3">
                             {EOT_ELEC_PHASES.map((ph) => (
                               <Field key={ph.key} label={`Current - ${ph.label}`}>
@@ -191,7 +202,7 @@ export default function EotCraneElectricalForm() {
                                   inputMode="decimal"
                                   value={row[ph.key]}
                                   onChange={(e) => setPoint(s.key, p.key, { [ph.key]: e.target.value })}
-                                  className={inputCls}
+                                  className={`${inputCls} ${p.limit != null && row[ph.key] !== '' && Number(row[ph.key]) > p.limit ? 'border-red-500 bg-red-50 text-red-700' : ''}`}
                                 />
                               </Field>
                             ))}
@@ -199,6 +210,8 @@ export default function EotCraneElectricalForm() {
                           <RemarkToggle
                             value={row.remark}
                             open={openRemarks[rk]}
+                            forceOpen={over}
+                            required={over}
                             onToggle={() => toggleRemark(rk)}
                             onChange={(v) => setPoint(s.key, p.key, { remark: v })}
                           />

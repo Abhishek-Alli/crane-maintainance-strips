@@ -4,7 +4,7 @@ import { toast } from 'react-toastify';
 import { smsAPI } from '../../services/api';
 import { isWithinEditWindow, editWindowLabel } from '../../utils/editWindow';
 import { formatDate } from './eotCraneConfig';
-import { EOT_SHEDS, EOT_ELEC_SECTIONS, EOT_ELEC_PHASES, isBadValue } from './eotCraneElectricalConfig';
+import { EOT_SHEDS, EOT_ELEC_PHASES, getSections, isBadValue, isCurrentOver } from './eotCraneElectricalConfig';
 import { PageLoader, DeleteConfirm } from './checkFormParts';
 
 const fmtDateTime = (v) => (v ? `${formatDate(String(v).slice(0, 10))} ${String(v).slice(11, 16)}` : '—');
@@ -90,7 +90,7 @@ export default function EotCraneElectricalView() {
           ))}
         </div>
 
-        {EOT_ELEC_SECTIONS.map((s) => (
+        {getSections(log.shed_name, log.crane_number).map((s) => (
           <div key={s.key} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-5">
             <div className="px-5 py-3 border-b border-amber-100 bg-amber-50/40">
               <h2 className="text-sm font-bold text-amber-800 uppercase tracking-wide">{s.label}</h2>
@@ -118,8 +118,9 @@ export default function EotCraneElectricalView() {
                           <td className="px-4 py-2.5 text-gray-900 font-semibold">{p.label}</td>
                           <td className="px-4 py-2.5">
                             {isCurrent ? (
-                              <span className="text-gray-700 whitespace-nowrap">
+                              <span className={`whitespace-nowrap ${isCurrentOver(p, row) ? 'font-semibold text-red-700' : 'text-gray-700'}`}>
                                 {EOT_ELEC_PHASES.map((ph) => row[ph.key] ?? '—').join(' / ')}
+                                {p.limit != null && <span className="ml-2 text-xs font-normal text-gray-400">(Max {p.limit})</span>}
                               </span>
                             ) : (
                               <span className={`text-xs font-semibold px-2 py-0.5 rounded whitespace-nowrap ${
