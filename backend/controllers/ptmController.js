@@ -397,7 +397,7 @@ class PtmController {
 
   static async getBreakdownLogs(req, res) {
     try {
-      const { date_from, date_to, mill_id, page: pg, limit: lim } = req.query;
+      const { date_from, date_to, page: pg, limit: lim } = req.query;
       const limit = parseInt(lim) || 20;
       const page = Math.max(1, parseInt(pg) || 1);
       const offset = (page - 1) * limit;
@@ -407,15 +407,11 @@ class PtmController {
 
       if (date_from) { conditions.push(`bl.log_date >= $${idx++}`); params.push(date_from); }
       if (date_to)   { conditions.push(`bl.log_date <= $${idx++}`); params.push(date_to); }
-      if (mill_id)   { conditions.push(`bs.mill_id = $${idx++}`); params.push(mill_id); }
 
       const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
 
       const countResult = await query(
-        `SELECT COUNT(DISTINCT bl.id) as total
-         FROM ptm_breakdown_logs bl
-         LEFT JOIN ptm_breakdown_slots bs ON bs.log_id = bl.id
-         ${where}`,
+        `SELECT COUNT(DISTINCT bl.id) as total FROM ptm_breakdown_logs bl ${where}`,
         [...params]
       );
       const total = parseInt(countResult.rows[0]?.total) || 0;
@@ -429,12 +425,11 @@ class PtmController {
         `SELECT bl.id, bl.log_date, bl.shift, bl.created_at,
                 u.username as filled_by,
                 COALESCE(SUM(be.breakdown_minutes),0) as total_breakdown_minutes,
-                ARRAY_AGG(DISTINCT m.name) FILTER (WHERE m.name IS NOT NULL) as mills,
+                ARRAY_AGG(DISTINCT bs.slot_label) FILTER (WHERE bs.slot_label IS NOT NULL) as mills,
                 (EXTRACT(EPOCH FROM (NOW() - bl.created_at)) < 86400) as can_modify
          FROM ptm_breakdown_logs bl
          JOIN users u ON u.id = bl.filled_by
          LEFT JOIN ptm_breakdown_slots bs ON bs.log_id = bl.id
-         LEFT JOIN ptm_mills m ON m.id = bs.mill_id
          LEFT JOIN ptm_breakdown_entries be ON be.slot_id = bs.id
          ${where}
          GROUP BY bl.id, u.username
