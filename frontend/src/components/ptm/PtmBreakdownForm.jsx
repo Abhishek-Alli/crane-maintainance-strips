@@ -17,6 +17,62 @@ const emptyRow = () => ({
   breakdown_reason: '', from_size: '', to_size: '', breakdown_minutes: '', repeated_count: '',
 });
 
+// Autocomplete for size (portal-based) — filters from preset sizes list as user types
+function SizeAutocomplete({ value, onChange, placeholder, allSizes }) {
+  const [suggestions, setSuggestions] = useState([]);
+  const [rect, setRect] = useState(null);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    const hide = (e) => { if (inputRef.current && !inputRef.current.contains(e.target)) setRect(null); };
+    document.addEventListener('mousedown', hide);
+    return () => document.removeEventListener('mousedown', hide);
+  }, []);
+
+  const showDropdown = (list) => {
+    setSuggestions(list);
+    if (list.length > 0 && inputRef.current) setRect(inputRef.current.getBoundingClientRect());
+    else setRect(null);
+  };
+
+  const handleFocus = () => {
+    if (!value.trim()) showDropdown(allSizes);
+  };
+
+  const handleChange = (val) => {
+    onChange(val);
+    if (!val.trim()) { showDropdown(allSizes); return; }
+    showDropdown(allSizes.filter(s => s.toLowerCase().includes(val.toLowerCase())));
+  };
+
+  const pick = (s) => { onChange(s); setSuggestions([]); setRect(null); };
+
+  const dropdown = rect && suggestions.length > 0 && createPortal(
+    <ul style={{ position: 'fixed', top: rect.bottom + 2, left: rect.left, width: Math.max(rect.width, 140), zIndex: 999999, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.15)', maxHeight: 200, overflowY: 'auto', margin: 0, padding: 0, listStyle: 'none' }}>
+      {suggestions.map((s, i) => (
+        <li key={i} onMouseDown={e => { e.preventDefault(); pick(s); }}
+          style={{ padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderBottom: '1px solid #f3f4f6', color: '#374151' }}
+          onMouseEnter={e => e.currentTarget.style.background = '#eff6ff'}
+          onMouseLeave={e => e.currentTarget.style.background = '#fff'}>
+          {s}
+        </li>
+      ))}
+    </ul>,
+    document.body
+  );
+
+  return (
+    <>
+      <input ref={inputRef} type="text" value={value}
+        onChange={e => handleChange(e.target.value)}
+        onFocus={handleFocus}
+        placeholder={placeholder}
+        className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-400" />
+      {dropdown}
+    </>
+  );
+}
+
 // Autocomplete for reason (portal-based) — shows preset reasons on focus, filters as user types, saves custom ones
 function ReasonAutocomplete({ value, onChange, typeName }) {
   const [suggestions, setSuggestions] = useState([]);
@@ -444,19 +500,19 @@ export default function PtmBreakdownForm() {
                           {type.has_size_change ? (
                             <>
                               <div className="col-span-2">
-                                <select value={row.from_size} onChange={e => updateRow(mill.id, type.id, rowIdx, 'from_size', e.target.value)}
-                                  className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 bg-white">
-                                  <option value="">From</option>
-                                  {sizes.map(s => <option key={s.id} value={s.size_label}>{s.size_label}</option>)}
-                                </select>
+                                <SizeAutocomplete
+                                  value={row.from_size}
+                                  onChange={val => updateRow(mill.id, type.id, rowIdx, 'from_size', val)}
+                                  placeholder="From"
+                                  allSizes={sizes.map(s => s.size_label)} />
                               </div>
                               <div className="col-span-1 text-center text-gray-400 font-bold">→</div>
                               <div className="col-span-2">
-                                <select value={row.to_size} onChange={e => updateRow(mill.id, type.id, rowIdx, 'to_size', e.target.value)}
-                                  className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 bg-white">
-                                  <option value="">To</option>
-                                  {sizes.map(s => <option key={s.id} value={s.size_label}>{s.size_label}</option>)}
-                                </select>
+                                <SizeAutocomplete
+                                  value={row.to_size}
+                                  onChange={val => updateRow(mill.id, type.id, rowIdx, 'to_size', val)}
+                                  placeholder="To"
+                                  allSizes={sizes.map(s => s.size_label)} />
                               </div>
                             </>
                           ) : (
