@@ -416,12 +416,14 @@ class PtmController {
          FROM ptm_breakdown_logs bl
          LEFT JOIN ptm_breakdown_slots bs ON bs.log_id = bl.id
          ${where}`,
-        params
+        [...params]
       );
       const total = parseInt(countResult.rows[0]?.total) || 0;
       const totalPages = Math.max(1, Math.ceil(total / limit));
 
-      params.push(limit, offset);
+      const limitIdx = idx;
+      const offsetIdx = idx + 1;
+      const dataParams = [...params, limit, offset];
 
       const result = await query(
         `SELECT bl.id, bl.log_date, bl.shift, bl.created_at,
@@ -437,8 +439,8 @@ class PtmController {
          ${where}
          GROUP BY bl.id, u.username
          ORDER BY bl.log_date DESC, bl.created_at DESC
-         LIMIT $${idx++} OFFSET $${idx++}`,
-        params
+         LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
+        dataParams
       );
       res.json({ success: true, logs: result.rows, total, totalPages, page });
     } catch (error) {
