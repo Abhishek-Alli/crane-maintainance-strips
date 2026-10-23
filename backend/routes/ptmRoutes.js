@@ -20,6 +20,8 @@ router.post('/logs', PtmController.createLog);
 router.get('/monthly-register/:templateId', PtmController.getMonthlyRegister);
 router.get('/breakdown', PtmController.getBreakdownLogs);
 router.get('/breakdown-reasons', PtmController.getBreakdownReasons);
+router.get('/breakdown-preset-reasons', PtmController.getPresetReasonsByType);
+router.post('/breakdown-reasons/custom', PtmController.addCustomReason);
 router.get('/breakdown/analytics', PtmController.getBreakdownAnalytics);
 router.get('/breakdown/import-template', PtmController.downloadBreakdownImportTemplate);
 router.post('/breakdown/import', excelMemoryUpload, PtmController.importBreakdownExcel);

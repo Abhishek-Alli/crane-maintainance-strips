@@ -847,18 +847,71 @@ class PtmController {
 
   static async getBreakdownReasons(req, res) {
     try {
-      const { q } = req.query;
-      const result = await query(
+      const { q, type_name } = req.query;
+      const search = `%${q || ''}%`;
+
+      // Preset reasons for this breakdown type (from ptm_breakdown_reasons table)
+      let presetReasons = [];
+      if (type_name) {
+        const preset = await query(
+          `SELECT reason FROM ptm_breakdown_reasons
+           WHERE LOWER(breakdown_type) = LOWER($1) AND reason ILIKE $2
+           ORDER BY reason LIMIT 20`,
+          [type_name, search]
+        );
+        presetReasons = preset.rows.map(r => r.reason);
+      }
+
+      // Past reasons from actual entries (not already in preset list)
+      const past = await query(
         `SELECT DISTINCT breakdown_reason as reason
          FROM ptm_breakdown_entries
          WHERE breakdown_reason IS NOT NULL AND breakdown_reason ILIKE $1
-         ORDER BY reason LIMIT 15`,
-        [`%${q || ''}%`]
+         ORDER BY reason LIMIT 10`,
+        [search]
       );
-      res.json({ success: true, reasons: result.rows.map(r => r.reason) });
+      const pastReasons = past.rows.map(r => r.reason).filter(r => !presetReasons.includes(r));
+
+      res.json({ success: true, reasons: [...presetReasons, ...pastReasons] });
     } catch (error) {
       console.error('PTM getBreakdownReasons error:', error);
       res.status(500).json({ success: false, message: 'Failed to fetch reasons' });
+    }
+  }
+
+  static async getPresetReasonsByType(req, res) {
+    try {
+      const { type_name } = req.query;
+      if (!type_name) return res.json({ success: true, reasons: [] });
+      const result = await query(
+        `SELECT reason FROM ptm_breakdown_reasons WHERE LOWER(breakdown_type) = LOWER($1) ORDER BY reason`,
+        [type_name]
+      );
+      res.json({ success: true, reasons: result.rows.map(r => r.reason) });
+    } catch (error) {
+      console.error('PTM getPresetReasonsByType error:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch preset reasons' });
+    }
+  }
+
+  static async addCustomReason(req, res) {
+    try {
+      const { breakdown_type, reason } = req.body;
+      if (!breakdown_type || !reason?.trim()) return res.status(400).json({ success: false, message: 'breakdown_type and reason required' });
+      // Check if already exists
+      const existing = await query(
+        `SELECT id FROM ptm_breakdown_reasons WHERE LOWER(breakdown_type) = LOWER($1) AND LOWER(reason) = LOWER($2)`,
+        [breakdown_type, reason.trim()]
+      );
+      if (existing.rows.length > 0) return res.json({ success: true, added: false });
+      await query(
+        `INSERT INTO ptm_breakdown_reasons (breakdown_type, reason, is_preset) VALUES ($1, $2, false)`,
+        [breakdown_type, reason.trim()]
+      );
+      res.json({ success: true, added: true });
+    } catch (error) {
+      console.error('PTM addCustomReason error:', error);
+      res.status(500).json({ success: false, message: 'Failed to add reason' });
     }
   }
 

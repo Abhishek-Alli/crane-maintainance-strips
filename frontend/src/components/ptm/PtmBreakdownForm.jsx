@@ -17,12 +17,21 @@ const emptyRow = () => ({
   breakdown_reason: '', from_size: '', to_size: '', breakdown_minutes: '', repeated_count: '',
 });
 
-// Autocomplete for reason (portal-based)
-function ReasonAutocomplete({ value, onChange }) {
+// Autocomplete for reason (portal-based) — shows preset reasons on focus, filters as user types, saves custom ones
+function ReasonAutocomplete({ value, onChange, typeName }) {
   const [suggestions, setSuggestions] = useState([]);
+  const [allPresets, setAllPresets] = useState([]);
   const [rect, setRect] = useState(null);
   const debounceRef = useRef(null);
   const inputRef = useRef(null);
+
+  // Load all preset reasons for this type on mount
+  useEffect(() => {
+    if (!typeName) return;
+    ptmAPI.getPresetReasonsByType(typeName)
+      .then(res => setAllPresets(res?.data?.reasons || res?.reasons || []))
+      .catch(() => {});
+  }, [typeName]);
 
   useEffect(() => {
     const hide = (e) => { if (inputRef.current && !inputRef.current.contains(e.target)) setRect(null); };
@@ -30,25 +39,50 @@ function ReasonAutocomplete({ value, onChange }) {
     return () => document.removeEventListener('mousedown', hide);
   }, []);
 
+  const showDropdown = (list) => {
+    setSuggestions(list);
+    if (list.length > 0 && inputRef.current) setRect(inputRef.current.getBoundingClientRect());
+    else setRect(null);
+  };
+
+  const handleFocus = () => {
+    // Show all presets on focus if input is empty
+    if (!value.trim()) {
+      showDropdown(allPresets);
+    }
+  };
+
   const handleChange = (val) => {
     onChange(val);
     clearTimeout(debounceRef.current);
-    if (!val.trim()) { setSuggestions([]); setRect(null); return; }
+    if (!val.trim()) {
+      showDropdown(allPresets);
+      return;
+    }
+    // Filter presets locally first (instant), then also fetch from backend
+    const localFiltered = allPresets.filter(r => r.toLowerCase().includes(val.toLowerCase()));
+    showDropdown(localFiltered);
     debounceRef.current = setTimeout(async () => {
       try {
-        const res = await ptmAPI.getBreakdownReasons(val);
-        const list = res.reasons || [];
-        setSuggestions(list);
-        if (list.length > 0 && inputRef.current) setRect(inputRef.current.getBoundingClientRect());
-        else setRect(null);
+        const res = await ptmAPI.getBreakdownReasons(val, typeName);
+        const list = res?.data?.reasons || res?.reasons || [];
+        showDropdown(list);
       } catch {}
-    }, 250);
+    }, 300);
   };
 
-  const pick = (r) => { onChange(r); setSuggestions([]); setRect(null); };
+  const pick = async (r) => {
+    onChange(r);
+    setSuggestions([]);
+    setRect(null);
+    // Save as custom reason if not already a preset
+    if (typeName && !allPresets.includes(r)) {
+      try { await ptmAPI.addCustomReason(typeName, r); } catch {}
+    }
+  };
 
   const dropdown = rect && suggestions.length > 0 && createPortal(
-    <ul style={{ position: 'fixed', top: rect.bottom + 2, left: rect.left, width: rect.width, zIndex: 999999, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.15)', maxHeight: 200, overflowY: 'auto', margin: 0, padding: 0, listStyle: 'none' }}>
+    <ul style={{ position: 'fixed', top: rect.bottom + 2, left: rect.left, width: rect.width, zIndex: 999999, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.15)', maxHeight: 220, overflowY: 'auto', margin: 0, padding: 0, listStyle: 'none' }}>
       {suggestions.map((r, i) => (
         <li key={i} onMouseDown={e => { e.preventDefault(); pick(r); }}
           style={{ padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderBottom: '1px solid #f3f4f6', color: '#374151' }}
@@ -63,9 +97,11 @@ function ReasonAutocomplete({ value, onChange }) {
 
   return (
     <>
-      <input ref={inputRef} type="text" value={value} onChange={e => handleChange(e.target.value)}
-        onFocus={() => { if (suggestions.length > 0 && inputRef.current) setRect(inputRef.current.getBoundingClientRect()); }}
-        placeholder="Type reason..." className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+      <input ref={inputRef} type="text" value={value}
+        onChange={e => handleChange(e.target.value)}
+        onFocus={handleFocus}
+        placeholder="Type or select reason..."
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
       {dropdown}
     </>
   );
@@ -426,7 +462,8 @@ export default function PtmBreakdownForm() {
                           ) : (
                             <div className="col-span-5">
                               <ReasonAutocomplete value={row.breakdown_reason}
-                                onChange={val => updateRow(mill.id, type.id, rowIdx, 'breakdown_reason', val)} />
+                                onChange={val => updateRow(mill.id, type.id, rowIdx, 'breakdown_reason', val)}
+                                typeName={type.name} />
                             </div>
                           )}
                           <div className="col-span-3">
