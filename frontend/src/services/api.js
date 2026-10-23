@@ -440,6 +440,7 @@ export const ptmAPI = {
   getBreakdownAnalytics: (params) => api.get('/ptm/breakdown/analytics', { params }),
   getBreakdownLogById: (id) => api.get(`/ptm/breakdown/${id}`),
   createBreakdownLog: (data) => api.post('/ptm/breakdown', data),
+  updateBreakdownLog: (id, data) => api.put(`/ptm/breakdown/${id}`, data),
   downloadBreakdownImportTemplate: () =>
     api.get('/ptm/breakdown/import-template', { responseType: 'blob' }),
   importBreakdownExcel: (formData) => api.post('/ptm/breakdown/import', formData),

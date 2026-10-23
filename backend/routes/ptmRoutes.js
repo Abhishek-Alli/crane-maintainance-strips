@@ -26,6 +26,7 @@ router.get('/breakdown/analytics', PtmController.getBreakdownAnalytics);
 router.get('/breakdown/import-template', PtmController.downloadBreakdownImportTemplate);
 router.post('/breakdown/import', excelMemoryUpload, PtmController.importBreakdownExcel);
 router.get('/breakdown/:id', PtmController.getBreakdownLogById);
+router.put('/breakdown/:id', PtmController.updateBreakdownLog);
 router.post('/breakdown', PtmController.createBreakdownLog);
 
 // Config — Admin only

@@ -82,6 +82,7 @@ import HbmMonthlyRegister from './components/hbm/HbmMonthlyRegister';
 import PtmDashboard from './components/ptm/PtmDashboard';
 import PtmChecksheetHistory from './components/ptm/PtmChecksheetHistory';
 import PtmBreakdownForm from './components/ptm/PtmBreakdownForm';
+import PtmBreakdownHistory from './components/ptm/PtmBreakdownHistory';
 import PtmMonthlyRegister from './components/ptm/PtmMonthlyRegister';
 import PtmAdminConfig from './components/ptm/PtmAdminConfig';
 
@@ -803,6 +804,10 @@ function App() {
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M5.07 19H19a2 2 0 001.75-2.96l-7-12a2 2 0 00-3.5 0l-7 12A2 2 0 005.07 19z" /></svg>
                         <span className="font-medium">Breakdown Report</span>
                       </Link>
+                      <Link to="/ptm/breakdown/history" className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/ptm/breakdown/history' ? navActive + ' text-white' : navHover}`}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 12h6m-3-3v6" /></svg>
+                        <span className="font-medium">Breakdown History</span>
+                      </Link>
                       <Link to="/ptm/monthly-register" className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors ${location.pathname === '/ptm/monthly-register' ? navActive + ' text-white' : navHover}`}>
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 6h18M3 14h18M3 18h18" /></svg>
                         <span className="font-medium">Monthly Register</span>
@@ -1368,6 +1373,8 @@ function App() {
           />
           <Route path="/ptm/checksheet/history" element={user ? (isPTMUser || isAdminUser) && canAccessPtmSheet('checksheet') ? <PtmChecksheetHistory /> : <Navigate to="/ptm/dashboard" replace /> : <Navigate to="/login" replace />} />
           <Route path="/ptm/breakdown/new"       element={user ? (isPTMUser || isAdminUser) && canAccessPtmSheet('breakdown') ? <PtmBreakdownForm /> : <Navigate to="/ptm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/ptm/breakdown/history"   element={user ? (isPTMUser || isAdminUser) && canAccessPtmSheet('breakdown') ? <PtmBreakdownHistory /> : <Navigate to="/ptm/dashboard" replace /> : <Navigate to="/login" replace />} />
+          <Route path="/ptm/breakdown/:id/edit"  element={user ? (isPTMUser || isAdminUser) && canAccessPtmSheet('breakdown') ? <PtmBreakdownForm /> : <Navigate to="/ptm/dashboard" replace /> : <Navigate to="/login" replace />} />
           <Route path="/ptm/monthly-register"    element={user ? (isPTMUser || isAdminUser) && canAccessPtmSheet('monthly-register') ? <PtmMonthlyRegister /> : <Navigate to="/ptm/dashboard" replace /> : <Navigate to="/login" replace />} />
           <Route
             path="/ptm/admin/config"

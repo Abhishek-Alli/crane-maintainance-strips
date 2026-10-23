@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { ptmAPI } from '../../services/api';
 
@@ -164,33 +164,37 @@ function ReasonAutocomplete({ value, onChange, typeName }) {
 }
 
 export default function PtmBreakdownForm() {
-  const TOTAL_MINUTES = 1440; // 24 hours
+  const TOTAL_MINUTES = 1440;
 
   const navigate = useNavigate();
+  const { id: editId } = useParams();
+  const isEdit = Boolean(editId);
+
   const [logDate, setLogDate] = useState(new Date().toLocaleDateString('en-CA'));
   const [mills, setMills] = useState([]);
   const [breakdownTypes, setBreakdownTypes] = useState([]);
   const [sizes, setSizes] = useState([]);
   const [millData, setMillData] = useState({});
-  // Per-mill production fields: { millId: { pieces, pipeLength } }
   const [millProduction, setMillProduction] = useState({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const [downloadingTemplate, setDownloadingTemplate] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState(null);
   const importFileRef = useRef(null);
 
-  // Load config from DB
+  // Load config from DB, then optionally load existing log for edit
   useEffect(() => {
     Promise.all([ptmAPI.getMills(), ptmAPI.getBreakdownTypes(), ptmAPI.getSizes()])
-      .then(([mRes, tRes, sRes]) => {
+      .then(async ([mRes, tRes, sRes]) => {
         const activeMills = (mRes.mills || []).filter(m => m.is_active);
         const activeTypes = (tRes.breakdown_types || []).filter(t => t.is_active);
         const activeSizes = (sRes.sizes || []).filter(s => s.is_active);
         setMills(activeMills);
         setBreakdownTypes(activeTypes);
         setSizes(activeSizes);
+
         const data = {};
         const prod = {};
         activeMills.forEach(m => {
@@ -198,12 +202,55 @@ export default function PtmBreakdownForm() {
           activeTypes.forEach(t => { data[m.id][t.id] = { enabled: false, rows: [emptyRow()] }; });
           prod[m.id] = { pieces: '', pipeLength: 6, totalTime: 1440 };
         });
+
+        if (isEdit) {
+          try {
+            const res = await ptmAPI.getBreakdownLogById(editId);
+            const log = res?.data || res;
+            if (!log?.can_modify) {
+              toast.error('Edit window expired (24 hours)');
+              navigate('/ptm/breakdown/history');
+              return;
+            }
+            setLogDate(String(log.log_date || '').slice(0, 10));
+            // Rebuild millData and millProduction from saved slots
+            (log.slots || []).forEach(slot => {
+              const mill = activeMills.find(m => m.name === slot.slot_label);
+              if (!mill) return;
+              prod[mill.id] = {
+                pieces: slot.pipe_pieces ?? '',
+                pipeLength: slot.pipe_length_m ?? 6,
+                totalTime: slot.total_minutes ?? 1440,
+              };
+              activeTypes.forEach(t => {
+                const entries = (slot.entries || []).filter(e => e.breakdown_type === t.name);
+                if (entries.length > 0) {
+                  data[mill.id][t.id] = {
+                    enabled: true,
+                    rows: entries.map(e => ({
+                      breakdown_reason: t.has_size_change ? '' : (e.breakdown_reason || ''),
+                      from_size: t.has_size_change ? (e.breakdown_reason?.split(' → ')[0] || '') : '',
+                      to_size: t.has_size_change ? (e.breakdown_reason?.split(' → ')[1] || '') : '',
+                      breakdown_minutes: e.breakdown_minutes ?? '',
+                      repeated_count: e.repeated_count ?? '',
+                    })),
+                  };
+                }
+              });
+            });
+          } catch {
+            toast.error('Failed to load breakdown log');
+            navigate('/ptm/breakdown/history');
+            return;
+          }
+        }
+
         setMillData(data);
         setMillProduction(prod);
         setLoading(false);
       })
       .catch(() => { toast.error('Failed to load config'); setLoading(false); });
-  }, []);
+  }, [editId]);
 
   const updateProduction = (millId, field, val) => {
     setMillProduction(prev => ({ ...prev, [millId]: { ...prev[millId], [field]: val } }));
@@ -264,40 +311,53 @@ export default function PtmBreakdownForm() {
   }, {});
   const grandTotal = Object.values(totals).reduce((a, v) => a + v, 0);
 
-  const handleSubmit = async (e) => {
+  const buildSlots = () => mills.map(m => {
+    const entries = breakdownTypes.flatMap(t => {
+      const td = millData[m.id]?.[t.id];
+      if (!td?.enabled) return [];
+      return td.rows
+        .filter(r => t.has_size_change
+          ? (r.from_size || r.to_size || r.breakdown_minutes)
+          : (r.breakdown_reason || r.breakdown_minutes))
+        .map(r => ({
+          breakdown_type: t.name,
+          breakdown_minutes: parseInt(r.breakdown_minutes) || 0,
+          breakdown_reason: t.has_size_change
+            ? (r.from_size || r.to_size ? `${r.from_size || '?'} → ${r.to_size || '?'}` : null)
+            : (r.breakdown_reason || null),
+          repeated_count: r.repeated_count ? parseInt(r.repeated_count) : null,
+        }));
+    });
+    const prod = millProduction[m.id] || {};
+    return {
+      slot_label: m.name, slot_order: m.display_order, miss_roll: 0, entries,
+      pipe_pieces: parseInt(prod.pieces) || null,
+      pipe_length_m: parseFloat(prod.pipeLength) || 6,
+      total_minutes: parseInt(prod.totalTime) || TOTAL_MINUTES,
+    };
+  });
+
+  const handleSubmit = (e) => {
     e.preventDefault();
     if (!logDate) return toast.error('Date is required');
+    setShowPreview(true);
+  };
+
+  const handleConfirmSubmit = async () => {
     setSubmitting(true);
+    setShowPreview(false);
     try {
-      const slots = mills.map(m => {
-        const entries = breakdownTypes.flatMap(t => {
-          const td = millData[m.id]?.[t.id];
-          if (!td?.enabled) return [];
-          return td.rows
-            .filter(r => t.has_size_change
-              ? (r.from_size || r.to_size || r.breakdown_minutes)
-              : (r.breakdown_reason || r.breakdown_minutes))
-            .map(r => ({
-              breakdown_type: t.name,
-              breakdown_minutes: parseInt(r.breakdown_minutes) || 0,
-              breakdown_reason: t.has_size_change
-                ? (r.from_size || r.to_size ? `${r.from_size || '?'} → ${r.to_size || '?'}` : null)
-                : (r.breakdown_reason || null),
-              repeated_count: r.repeated_count ? parseInt(r.repeated_count) : null,
-            }));
-        });
-        const prod = millProduction[m.id] || {};
-        return {
-          slot_label: m.name, slot_order: m.display_order, miss_roll: 0, entries,
-          pipe_pieces: parseInt(prod.pieces) || null,
-          pipe_length_m: parseFloat(prod.pipeLength) || 6,
-        };
-      });
-      await ptmAPI.createBreakdownLog({ log_date: logDate, size: null, slots });
-      toast.success('Breakdown report submitted');
-      navigate('/ptm/checksheet/history');
+      const slots = buildSlots();
+      if (isEdit) {
+        await ptmAPI.updateBreakdownLog(editId, { log_date: logDate, size: null, slots });
+        toast.success('Breakdown report updated');
+      } else {
+        await ptmAPI.createBreakdownLog({ log_date: logDate, size: null, slots });
+        toast.success('Breakdown report submitted');
+      }
+      navigate('/ptm/breakdown/history');
     } catch (err) {
-      toast.error(err?.message || 'Failed to submit');
+      toast.error(err?.response?.data?.message || err?.message || 'Failed to submit');
     } finally {
       setSubmitting(false);
     }
@@ -633,9 +693,65 @@ export default function PtmBreakdownForm() {
 
         <button type="submit" disabled={submitting}
           className="w-full bg-blue-600 text-white rounded-xl py-3 font-semibold text-lg hover:bg-blue-700 disabled:opacity-50 transition-colors shadow">
-          {submitting ? 'Submitting...' : 'Submit Breakdown Report'}
+          {submitting ? 'Saving...' : isEdit ? 'Preview & Update' : 'Preview & Submit'}
         </button>
       </form>
+
+      {/* Preview Modal */}
+      {showPreview && createPortal(
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 99999, overflowY: 'auto', padding: '24px 16px' }}>
+          <div style={{ maxWidth: 640, margin: '0 auto', background: '#fff', borderRadius: 16, padding: 24 }}>
+            <h2 className="text-xl font-bold text-blue-800 mb-1">{isEdit ? 'Confirm Update' : 'Confirm Submission'}</h2>
+            <p className="text-sm text-gray-500 mb-4">Date: <strong>{logDate}</strong></p>
+            <div className="space-y-4 max-h-96 overflow-y-auto mb-5">
+              {mills.map(mill => {
+                const enabledTypes = breakdownTypes.filter(t => millData[mill.id]?.[t.id]?.enabled);
+                const stats = getMillStats(mill.id);
+                if (enabledTypes.length === 0 && !millProduction[mill.id]?.pieces) return null;
+                return (
+                  <div key={mill.id} className="border border-gray-200 rounded-xl p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-bold text-gray-800">{mill.name}</span>
+                      <span className="text-xs text-gray-500">Runtime: {stats.runtime} min</span>
+                    </div>
+                    {enabledTypes.map(t => {
+                      const td = millData[mill.id][t.id];
+                      return (
+                        <div key={t.id} className="mb-2">
+                          <div className="text-xs font-semibold text-gray-600 mb-1">{t.name}</div>
+                          {td.rows.filter(r => r.breakdown_minutes || r.breakdown_reason || r.from_size).map((r, i) => (
+                            <div key={i} className="text-xs text-gray-700 bg-gray-50 rounded px-2 py-1 mb-1">
+                              {t.has_size_change
+                                ? <span>{r.from_size || '?'} → {r.to_size || '?'}</span>
+                                : <span>{r.breakdown_reason || '—'}</span>}
+                              <span className="ml-2 text-red-600 font-semibold">{r.breakdown_minutes} min</span>
+                              {r.repeated_count && <span className="ml-2 text-gray-400">×{r.repeated_count}</span>}
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })}
+                    {millProduction[mill.id]?.pieces && (
+                      <div className="text-xs text-blue-700 mt-1">Pieces: {millProduction[mill.id].pieces} × {millProduction[mill.id].pipeLength}m</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setShowPreview(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50">
+                ← Go Back & Edit
+              </button>
+              <button onClick={handleConfirmSubmit} disabled={submitting}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50">
+                {submitting ? 'Saving...' : isEdit ? 'Confirm Update' : 'Confirm Submit'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

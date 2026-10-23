@@ -397,33 +397,50 @@ class PtmController {
 
   static async getBreakdownLogs(req, res) {
     try {
-      const { date_from, date_to, limit: lim } = req.query;
-      const limit = parseInt(lim) || 50;
+      const { date_from, date_to, mill_id, page: pg, limit: lim } = req.query;
+      const limit = parseInt(lim) || 20;
+      const page = Math.max(1, parseInt(pg) || 1);
+      const offset = (page - 1) * limit;
       const conditions = [];
       const params = [];
       let idx = 1;
 
       if (date_from) { conditions.push(`bl.log_date >= $${idx++}`); params.push(date_from); }
       if (date_to)   { conditions.push(`bl.log_date <= $${idx++}`); params.push(date_to); }
+      if (mill_id)   { conditions.push(`bs.mill_id = $${idx++}`); params.push(mill_id); }
 
       const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
-      params.push(limit);
+
+      const countResult = await query(
+        `SELECT COUNT(DISTINCT bl.id) as total
+         FROM ptm_breakdown_logs bl
+         LEFT JOIN ptm_breakdown_slots bs ON bs.log_id = bl.id
+         ${where}`,
+        params
+      );
+      const total = parseInt(countResult.rows[0]?.total) || 0;
+      const totalPages = Math.max(1, Math.ceil(total / limit));
+
+      params.push(limit, offset);
 
       const result = await query(
-        `SELECT bl.id, bl.log_date, bl.size, bl.created_at,
-                u.username as filled_by_name,
-                COALESCE(SUM(be.breakdown_minutes),0) as total_minutes
+        `SELECT bl.id, bl.log_date, bl.shift, bl.created_at,
+                u.username as filled_by,
+                COALESCE(SUM(be.breakdown_minutes),0) as total_breakdown_minutes,
+                ARRAY_AGG(DISTINCT m.name) FILTER (WHERE m.name IS NOT NULL) as mills,
+                (EXTRACT(EPOCH FROM (NOW() - bl.created_at)) < 86400) as can_modify
          FROM ptm_breakdown_logs bl
          JOIN users u ON u.id = bl.filled_by
          LEFT JOIN ptm_breakdown_slots bs ON bs.log_id = bl.id
+         LEFT JOIN ptm_mills m ON m.id = bs.mill_id
          LEFT JOIN ptm_breakdown_entries be ON be.slot_id = bs.id
          ${where}
          GROUP BY bl.id, u.username
-         ORDER BY bl.log_date DESC
-         LIMIT $${idx}`,
+         ORDER BY bl.log_date DESC, bl.created_at DESC
+         LIMIT $${idx++} OFFSET $${idx++}`,
         params
       );
-      res.json({ success: true, data: result.rows, count: result.rows.length });
+      res.json({ success: true, logs: result.rows, total, totalPages, page });
     } catch (error) {
       console.error('PTM getBreakdownLogs error:', error);
       res.status(500).json({ success: false, message: 'Failed to fetch breakdown logs' });
@@ -455,10 +472,47 @@ class PtmController {
         return { ...slot, entries: entriesRes.rows };
       }));
 
-      res.json({ success: true, data: { ...logRes.rows[0], slots } });
+      const log = logRes.rows[0];
+      const ageMs = Date.now() - new Date(log.created_at).getTime();
+      const can_modify = ageMs < 24 * 60 * 60 * 1000;
+      res.json({ success: true, data: { ...log, slots, can_modify } });
     } catch (error) {
       console.error('PTM getBreakdownLogById error:', error);
       res.status(500).json({ success: false, message: 'Failed to fetch breakdown log' });
+    }
+  }
+
+  static async updateBreakdownLog(req, res) {
+    try {
+      const { id } = req.params;
+      const logRes = await query('SELECT created_at FROM ptm_breakdown_logs WHERE id = $1', [id]);
+      if (!logRes.rows.length) return res.status(404).json({ success: false, message: 'Not found' });
+      const ageMs = Date.now() - new Date(logRes.rows[0].created_at).getTime();
+      if (ageMs > 24 * 60 * 60 * 1000) return res.status(403).json({ success: false, message: 'Edit window expired (24 hours)' });
+
+      const { log_date, size, slots } = req.body;
+      await transaction(async (client) => {
+        await client.query('UPDATE ptm_breakdown_logs SET log_date=$1, size=$2, filled_by=$3 WHERE id=$4', [log_date, size || null, req.user.id, id]);
+        await client.query('DELETE FROM ptm_breakdown_slots WHERE log_id = $1', [id]);
+        for (const slot of slots) {
+          const slotRes = await client.query(
+            'INSERT INTO ptm_breakdown_slots (log_id, slot_label, slot_order, miss_roll, pipe_pieces, pipe_length_m, total_minutes) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id',
+            [id, slot.slot_label, slot.slot_order, parseInt(slot.miss_roll) || 0, slot.pipe_pieces || null, parseFloat(slot.pipe_length_m) || 6, parseInt(slot.total_minutes) || 1440]
+          );
+          const slotId = slotRes.rows[0].id;
+          for (const entry of (slot.entries || [])) {
+            if (!entry.breakdown_type && !entry.breakdown_minutes) continue;
+            await client.query(
+              `INSERT INTO ptm_breakdown_entries (slot_id, breakdown_type, breakdown_minutes, breakdown_reason, repeated_count) VALUES ($1,$2,$3,$4,$5)`,
+              [slotId, entry.breakdown_type || null, parseInt(entry.breakdown_minutes) || 0, entry.breakdown_reason || null, entry.repeated_count ? parseInt(entry.repeated_count) : null]
+            );
+          }
+        }
+      });
+      res.json({ success: true, message: 'Breakdown log updated' });
+    } catch (error) {
+      console.error('PTM updateBreakdownLog error:', error);
+      res.status(500).json({ success: false, message: 'Failed to update breakdown log' });
     }
   }
 
