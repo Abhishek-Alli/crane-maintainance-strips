@@ -39,12 +39,23 @@ const SLAB_STRAND_1_MOTORS = [
 /** Slab Strand 2 is the same as Strand 1 without the tilting stand motor */
 const SLAB_STRAND_2_MOTORS = SLAB_STRAND_1_MOTORS.filter((m) => m.key !== 'tilting_stand');
 
+const COMMON_MOTORS = [
+  { key: 'tundish_car_1', label: 'Tundish Car-1 (LT) Motor', hp: 5, max: 8.2 },
+  { key: 'tundish_car_2', label: 'Tundish Car-2 (LT) Motor', hp: 5, max: 8.2 },
+  { key: 'ladle_sequence_car_1', label: 'Ladle Sequence Car-1', hp: 5, max: 8.2 },
+  { key: 'ladle_sequence_car_2', label: 'Ladle Sequence Car-2', hp: 5, max: 8.2 },
+  { key: 'nfc_slide_gate_power_pack', label: 'NFC Slide Gate Power Pack Motor', hp: 3, max: 4.4 },
+  { key: 'slide_gate_power_pack_1', label: 'Slide Gate Power Pack-1', hp: 10, max: 14.1 },
+  { key: 'slide_gate_power_pack_2', label: 'Slide Gate Power Pack-2', hp: 10, max: 14.1 },
+];
+
 /** sheet key (URL + permission key) -> { label, motors } */
 const CASTER_SHEETS = {
   'billet-strand-1': { label: 'Billet Caster Strand 1', motors: BILLET_STRAND_1_MOTORS },
   'billet-strand-2': { label: 'Billet Caster Strand 2', motors: BILLET_STRAND_2_MOTORS },
   'slab-strand-1': { label: 'Slab Caster Strand 1', motors: SLAB_STRAND_1_MOTORS },
   'slab-strand-2': { label: 'Slab Caster Strand 2', motors: SLAB_STRAND_2_MOTORS },
+  'common-motor': { label: 'Common Motor', motors: COMMON_MOTORS },
 };
 
 const nullIfEmpty = (v) => {
