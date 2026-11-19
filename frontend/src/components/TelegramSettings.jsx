@@ -236,6 +236,7 @@ function TelegramSettings() {
   const [sendResult, setSendResult]     = useState(null);
   const [notifDate, setNotifDate]       = useState(new Date().toLocaleDateString('en-CA'));
   const [sendingSummary, setSendingSummary] = useState(false);
+  const [sendingDept, setSendingDept] = useState(false);
 
   const fetchRecipients = useCallback(async () => {
     setLoading(true);
@@ -326,6 +327,20 @@ function TelegramSettings() {
     }
   };
 
+  const handleSendDeptSummaries = async () => {
+    setSendingDept(true);
+    try {
+      const res = await telegramAPI.sendDeptSummary({ dept: 'all', date: notifDate });
+      const failed = (res.results || []).filter((r) => r.error);
+      if (failed.length) toast.warn(`Sent with errors: ${failed.map((f) => f.dept.toUpperCase()).join(', ')}`);
+      else toast.success('SMS, HSM and PTM status summaries sent');
+    } catch {
+      toast.error('Failed to send department summaries');
+    } finally {
+      setSendingDept(false);
+    }
+  };
+
   const handleTest = async (targetChatId) => {
     setTestingId(targetChatId);
     try {
@@ -411,6 +426,15 @@ function TelegramSettings() {
           )}
         </button>
         </div>
+
+        <button
+          onClick={handleSendDeptSummaries}
+          disabled={sendingDept || !notifDate}
+          title="Send the SMS, HSM and PTM sheet-wise status summaries for the selected date"
+          className="mt-2 w-full bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors"
+        >
+          {sendingDept ? 'Sending…' : 'Send SMS · HSM · PTM Status Summary'}
+        </button>
 
         {sendResult && (
           <div className="mt-3 space-y-2 text-xs">

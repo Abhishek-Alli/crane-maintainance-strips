@@ -335,6 +335,13 @@ function startCronJobs() {
     sendDailyStatusSummary(today).catch(e => console.error('[CRON 7PM] Status summary error:', e.message));
   }, { timezone: 'Asia/Kolkata' });
 
+  // SMS / HSM / PTM daily sheet status summaries — 7:05 PM IST (HBM summary runs at 7:00 PM)
+  cron.schedule('5 19 * * *', () => {
+    console.log('[CRON] Running 7:05 PM SMS / HSM / PTM status summaries...');
+    const { sendAllDeptStatusSummaries } = require('../utils/telegramDeptSummary');
+    sendAllDeptStatusSummaries().catch(e => console.error('[CRON 7:05PM] Dept status summary error:', e.message));
+  }, { timezone: 'Asia/Kolkata' });
+
   // HBM 1-year data retention — runs daily at 2:30 AM IST
   cron.schedule('30 2 * * *', () => {
     console.log('[CRON] Running 2:30 AM HBM data cleanup...');

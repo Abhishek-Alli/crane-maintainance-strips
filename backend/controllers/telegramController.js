@@ -3,6 +3,7 @@
 const { query } = require('../config/database');
 const { sendTestMessage, sendTelegramMessage, TYPE_LABEL_TO_KEY } = require('../utils/telegram');
 const { listDepartmentSheets } = require('../utils/smsNotifyRegistry');
+const { sendDeptStatusSummary, sendAllDeptStatusSummaries } = require('../utils/telegramDeptSummary');
 
 class TelegramController {
 
@@ -125,6 +126,24 @@ class TelegramController {
     } catch (error) {
       console.error('Update checksheets error:', error);
       res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  // POST /api/telegram/dept-summary
+  // Body: { dept: 'sms' | 'hsm' | 'ptm' | 'all', date?: 'YYYY-MM-DD' }
+  static async sendDeptSummary(req, res) {
+    try {
+      const { dept = 'all', date } = req.body || {};
+      if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return res.status(400).json({ success: false, message: 'date must be YYYY-MM-DD' });
+      }
+      const results = dept === 'all'
+        ? await sendAllDeptStatusSummaries(date || undefined)
+        : [await sendDeptStatusSummary(dept, date || undefined)];
+      res.json({ success: true, results });
+    } catch (error) {
+      console.error('Dept summary error:', error);
+      res.status(400).json({ success: false, message: error.message });
     }
   }
 

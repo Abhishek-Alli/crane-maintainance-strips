@@ -5,6 +5,7 @@
 //   - route segment : the path after /api/sms/ used to save the sheet
 //   - key / label   : shown on the Telegram settings screen and used for subscriptions
 //   - controller    : the sheet's controller (needs a static getById)
+//   - table         : the sheet's database table (used by the daily status summary)
 // It then (a) sends Telegram messages on every new entry and edit, and
 // (b) appears automatically in the Telegram settings screen.
 // Motor-current sheets are added in utils/smsCasterMotorConfig.js instead.
@@ -43,40 +44,40 @@ const { CASTER_SHEETS } = require('./smsCasterMotorConfig');
 const { isBad } = require('./telegramSmsGeneric');
 
 const SMS_NOTIFY_REGISTRY = {
-  'eot-crane-maintenance': { key: 'eot-crane', label: 'EOT Crane Maintenance', controller: SmsEotCraneController },
-  'crucible-maintenance': { key: 'crucible', label: 'Crucible Maintenance', controller: SmsCrucibleController },
-  'poker-maintenance': { key: 'poker', label: 'Hyd Poker Maintenance', controller: SmsPokerController },
-  'pump-house': { key: 'pump-house', label: 'Pump House — Mechanical', controller: SmsPumpHouseController },
-  patching: { key: 'patching', label: 'Patching', controller: SmsPatchingController },
-  'scrap-trolly': { key: 'scrap-trolly', label: 'Scrap Transfer Trolly', controller: SmsScrapTrollyController },
-  'ladle-car': { key: 'ladle-car', label: 'Ladle Car — Mechanical', controller: SmsLadleCarController },
-  pollution: { key: 'pollution', label: 'Pollution — Daily Check Sheet', controller: SmsPollutionController },
-  'dm-unit': { key: 'dm-unit', label: 'DM Unit Check List', controller: SmsDmUnitController },
-  'ccm-motor': { key: 'ccm-motor', label: 'CCM Motor', controller: SmsCcmMotorController },
-  'pump-house-motor': { key: 'pump-house-motor', label: 'Furnace Pump House', controller: SmsPumpHouseMotorController },
-  'ccm-pump-house': { key: 'ccm-pump-house', label: 'CCM Pump House', controller: SmsCcmPumpHouseController },
-  'eot-crane-electrical': { key: 'eot-crane-electrical', label: 'EOT Crane — Electrical', controller: SmsEotCraneElectricalController },
-  'furnace-motor-panel': { key: 'furnace-motor-panel', label: 'Furnace Motor Panel', controller: SmsFurnaceMotorPanelController },
-  dg: { key: 'dg', label: 'DG', controller: SmsDgController },
-  'furnace-pollution-pm': { key: 'furnace-pollution-pm', label: 'Furnace Pollution - Scheduled', controller: SmsFurnacePollutionPmController },
-  'lt-transformer': { key: 'lt-transformer', label: 'LT Transformer', controller: SmsLtTransformerController },
-  'compressor-pm': { key: 'compressor-pm', label: 'Compressor - Scheduled', controller: SmsCompressorPmController },
-  'furnace-pollution': { key: 'furnace-pollution', label: 'Furnace Pollution', controller: SmsFurnacePollutionController },
-  'furnace-stand-by': { key: 'furnace-stand-by', label: 'Furnace Stand By', controller: SmsFurnaceStandByController },
-  'furnace-poker': { key: 'furnace-poker', label: 'Furnace Poker', controller: SmsFurnacePokerController },
-  'bundle-press': { key: 'bundle-press', label: 'Bundle Press', controller: SmsBundlePressController },
-  'furnace-transformer': { key: 'furnace-transformer', label: 'Furnace Transformer', controller: SmsFurnaceTransformerController },
+  'eot-crane-maintenance': { key: 'eot-crane', label: 'EOT Crane Maintenance', table: 'sms_eot_crane_checklists', controller: SmsEotCraneController },
+  'crucible-maintenance': { key: 'crucible', label: 'Crucible Maintenance', table: 'sms_crucible_checklists', controller: SmsCrucibleController },
+  'poker-maintenance': { key: 'poker', label: 'Hyd Poker Maintenance', table: 'sms_poker_checklists', controller: SmsPokerController },
+  'pump-house': { key: 'pump-house', label: 'Pump House — Mechanical', table: 'sms_pump_house_checklists', controller: SmsPumpHouseController },
+  patching: { key: 'patching', label: 'Patching', table: 'sms_patching_checklists', controller: SmsPatchingController },
+  'scrap-trolly': { key: 'scrap-trolly', label: 'Scrap Transfer Trolly', table: 'sms_scrap_trolly_checklists', controller: SmsScrapTrollyController },
+  'ladle-car': { key: 'ladle-car', label: 'Ladle Car — Mechanical', table: 'sms_ladle_car_checklists', controller: SmsLadleCarController },
+  pollution: { key: 'pollution', label: 'Pollution — Daily Check Sheet', table: 'sms_pollution_checklists', controller: SmsPollutionController },
+  'dm-unit': { key: 'dm-unit', label: 'DM Unit Check List', table: 'sms_dm_unit_checklists', controller: SmsDmUnitController },
+  'ccm-motor': { key: 'ccm-motor', label: 'CCM Motor', table: 'sms_ccm_motor_checklists', controller: SmsCcmMotorController },
+  'pump-house-motor': { key: 'pump-house-motor', label: 'Furnace Pump House', table: 'sms_pump_house_motor_checklists', controller: SmsPumpHouseMotorController },
+  'ccm-pump-house': { key: 'ccm-pump-house', label: 'CCM Pump House', table: 'sms_ccm_pump_house_checklists', controller: SmsCcmPumpHouseController },
+  'eot-crane-electrical': { key: 'eot-crane-electrical', label: 'EOT Crane — Electrical', table: 'sms_eot_crane_electrical_checklists', controller: SmsEotCraneElectricalController },
+  'furnace-motor-panel': { key: 'furnace-motor-panel', label: 'Furnace Motor Panel', table: 'sms_furnace_motor_panel_checklists', controller: SmsFurnaceMotorPanelController },
+  dg: { key: 'dg', label: 'DG', table: 'sms_dg_checklists', controller: SmsDgController },
+  'furnace-pollution-pm': { key: 'furnace-pollution-pm', label: 'Furnace Pollution - Scheduled', table: 'sms_furnace_pollution_pm_checklists', controller: SmsFurnacePollutionPmController },
+  'lt-transformer': { key: 'lt-transformer', label: 'LT Transformer', table: 'sms_lt_transformer_checklists', controller: SmsLtTransformerController },
+  'compressor-pm': { key: 'compressor-pm', label: 'Compressor - Scheduled', table: 'sms_compressor_pm_checklists', controller: SmsCompressorPmController },
+  'furnace-pollution': { key: 'furnace-pollution', label: 'Furnace Pollution', table: 'sms_furnace_pollution_checklists', controller: SmsFurnacePollutionController },
+  'furnace-stand-by': { key: 'furnace-stand-by', label: 'Furnace Stand By', table: 'sms_furnace_stand_by_checklists', controller: SmsFurnaceStandByController },
+  'furnace-poker': { key: 'furnace-poker', label: 'Furnace Poker', table: 'sms_furnace_poker_checklists', controller: SmsFurnacePokerController },
+  'bundle-press': { key: 'bundle-press', label: 'Bundle Press', table: 'sms_bundle_press_checklists', controller: SmsBundlePressController },
+  'furnace-transformer': { key: 'furnace-transformer', label: 'Furnace Transformer', table: 'sms_furnace_transformer_checklists', controller: SmsFurnaceTransformerController },
 };
 
 // HSM sheets. Subscription keys are prefixed ("hsm:") so they can never clash with SMS / HBM keys.
 const HSM_NOTIFY_REGISTRY = {
-  'breakdown-analysis': { key: 'hsm:breakdown-analysis', label: 'Breakdown Analysis Report', controller: HsmController, method: 'getBreakdownAnalysisById' },
-  'roll-change-activity': { key: 'hsm:roll-change-activity', label: 'Mechanical Activities During Roll Change', controller: HsmController, method: 'getRollChangeActivityById' },
-  'delay-report': { key: 'hsm:delay-report', label: 'Delay Report', controller: HsmDelayController },
-  'fm-daily-checklist': { key: 'hsm:fm-daily-checklist', label: 'FM Daily Check List', controller: HsmFmDailyController },
-  'induction-daily-checklist': { key: 'hsm:induction-daily-checklist', label: 'Induction Daily Check List', controller: HsmInductionDailyController },
-  'dc-daily-checklist': { key: 'hsm:dc-daily-checklist', label: 'DC Daily Check List', controller: HsmDcDailyController },
-  'rm-daily-checklist': { key: 'hsm:rm-daily-checklist', label: 'RM Daily Check List', controller: HsmRmDailyController },
+  'breakdown-analysis': { key: 'hsm:breakdown-analysis', label: 'Breakdown Analysis Report', table: 'hsm_breakdown_analysis_logs', controller: HsmController, method: 'getBreakdownAnalysisById' },
+  'roll-change-activity': { key: 'hsm:roll-change-activity', label: 'Mechanical Activities During Roll Change', table: 'hsm_roll_change_activity_logs', controller: HsmController, method: 'getRollChangeActivityById' },
+  'delay-report': { key: 'hsm:delay-report', label: 'Delay Report', table: 'hsm_delay_reports', controller: HsmDelayController },
+  'fm-daily-checklist': { key: 'hsm:fm-daily-checklist', label: 'FM Daily Check List', table: 'hsm_fm_daily_checklists', controller: HsmFmDailyController },
+  'induction-daily-checklist': { key: 'hsm:induction-daily-checklist', label: 'Induction Daily Check List', table: 'hsm_induction_daily_checklists', controller: HsmInductionDailyController },
+  'dc-daily-checklist': { key: 'hsm:dc-daily-checklist', label: 'DC Daily Check List', table: 'hsm_dc_daily_checklists', controller: HsmDcDailyController },
+  'rm-daily-checklist': { key: 'hsm:rm-daily-checklist', label: 'RM Daily Check List', table: 'hsm_rm_daily_checklists', controller: HsmRmDailyController },
 };
 
 /** PTM checksheet: one row per item, "Section › Item" with its status / value */
@@ -95,7 +96,7 @@ function ptmChecksheetRows(record) {
 // PTM sheets (Monthly Register is a read-only view, so it has nothing to notify about).
 const PTM_NOTIFY_REGISTRY = {
   logs: { key: 'ptm:checksheet', label: 'PTM Checksheet', controller: PtmController, method: 'getLogById', rows: ptmChecksheetRows },
-  breakdown: { key: 'ptm:breakdown', label: 'Breakdown Report', controller: PtmController, method: 'getBreakdownLogById' },
+  breakdown: { key: 'ptm:breakdown', label: 'Breakdown Report', table: 'ptm_breakdown_logs', controller: PtmController, method: 'getBreakdownLogById' },
 };
 
 const CRANE_NOTIFY_SHEETS = [{ key: 'crane:inspection', label: 'Crane Inspection' }];
