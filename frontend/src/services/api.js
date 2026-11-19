@@ -221,6 +221,7 @@ export const reportAPI = {
 export const telegramAPI = {
   getSheets: () => api.get('/telegram/sheets'),
   sendDeptSummary: (data) => api.post('/telegram/dept-summary', data),
+  sendDateNotifications: (data) => api.post('/telegram/date-notifications', data),
   getRecipients: () => api.get('/telegram/recipients'),
   addRecipient: (data) => api.post('/telegram/recipients', data),
   toggleRecipient: (id) => api.put(`/telegram/recipients/${id}/toggle`),

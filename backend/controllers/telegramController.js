@@ -4,6 +4,7 @@ const { query } = require('../config/database');
 const { sendTestMessage, sendTelegramMessage, TYPE_LABEL_TO_KEY } = require('../utils/telegram');
 const { listDepartmentSheets } = require('../utils/smsNotifyRegistry');
 const { sendDeptStatusSummary, sendAllDeptStatusSummaries } = require('../utils/telegramDeptSummary');
+const { sendDateNotifications } = require('../utils/telegramDateNotify');
 
 class TelegramController {
 
@@ -125,6 +126,23 @@ class TelegramController {
       res.json({ success: true, recipient: rows[0] });
     } catch (error) {
       console.error('Update checksheets error:', error);
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  // POST /api/telegram/date-notifications
+  // Body: { date?: 'YYYY-MM-DD' } — sends the latest entry of that day for every SMS / HSM / PTM sheet
+  // and every Crane inspection of that day (HBM has its own sender: POST /api/hbm/send-daily-notifications)
+  static async sendDateNotifications(req, res) {
+    try {
+      const date = (req.body && req.body.date) || new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return res.status(400).json({ success: false, message: 'date must be YYYY-MM-DD' });
+      }
+      const results = await sendDateNotifications(date, req.user);
+      res.json({ success: true, results });
+    } catch (error) {
+      console.error('Date notifications error:', error);
       res.status(500).json({ success: false, message: error.message });
     }
   }

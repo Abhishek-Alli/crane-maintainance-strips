@@ -11,6 +11,7 @@ router.use(authorize('ADMIN'));
 
 router.get('/sheets', TelegramController.getSheets);
 router.post('/dept-summary', TelegramController.sendDeptSummary);
+router.post('/date-notifications', TelegramController.sendDateNotifications);
 router.get('/recipients', TelegramController.getRecipients);
 router.post('/recipients', TelegramController.addRecipient);
 router.put('/recipients/:id/toggle', TelegramController.toggleRecipient);

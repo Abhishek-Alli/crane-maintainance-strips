@@ -236,7 +236,6 @@ function TelegramSettings() {
   const [sendResult, setSendResult]     = useState(null);
   const [notifDate, setNotifDate]       = useState(new Date().toLocaleDateString('en-CA'));
   const [sendingSummary, setSendingSummary] = useState(false);
-  const [sendingDept, setSendingDept] = useState(false);
 
   const fetchRecipients = useCallback(async () => {
     setLoading(true);
@@ -303,10 +302,23 @@ function TelegramSettings() {
     setSending(true);
     setSendResult(null);
     try {
-      const res = await hbmAPI.sendDailyNotifications(notifDate);
-      setSendResult(res.results);
-      const { sent, skipped, failed } = res.results;
-      if (failed.length === 0) toast.success(`Sent ${sent.length} notifications, ${skipped.length} not filled today`);
+      // HBM sheets, then SMS / HSM / PTM sheets and Crane inspections of the same day
+      const hbm = await hbmAPI.sendDailyNotifications(notifDate);
+      let others = { sent: [], skipped: [], failed: [] };
+      try {
+        const res = await telegramAPI.sendDateNotifications({ date: notifDate });
+        others = res.results || others;
+      } catch {
+        others.failed.push('SMS / HSM / PTM / Crane');
+      }
+      const merged = {
+        sent: [...hbm.results.sent, ...others.sent],
+        skipped: [...hbm.results.skipped, ...others.skipped],
+        failed: [...hbm.results.failed, ...others.failed],
+      };
+      setSendResult(merged);
+      const { sent, skipped, failed } = merged;
+      if (failed.length === 0) toast.success(`Sent ${sent.length} notifications, ${skipped.length} not filled that day`);
       else toast.warn(`Sent ${sent.length}, skipped ${skipped.length}, failed ${failed.length}`);
     } catch {
       toast.error('Failed to send notifications');
@@ -319,25 +331,17 @@ function TelegramSettings() {
     setSendingSummary(true);
     try {
       await hbmAPI.sendStatusSummary(notifDate);
+      // also the SMS / HSM / PTM tables
+      try {
+        await telegramAPI.sendDeptSummary({ dept: 'all', date: notifDate });
+      } catch {
+        toast.warn('HBM summary sent, but the SMS / HSM / PTM summaries failed');
+      }
       toast.success(`Daily status summary sent for ${new Date(notifDate + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`);
     } catch {
       toast.error('Failed to send status summary');
     } finally {
       setSendingSummary(false);
-    }
-  };
-
-  const handleSendDeptSummaries = async () => {
-    setSendingDept(true);
-    try {
-      const res = await telegramAPI.sendDeptSummary({ dept: 'all', date: notifDate });
-      const failed = (res.results || []).filter((r) => r.error);
-      if (failed.length) toast.warn(`Sent with errors: ${failed.map((f) => f.dept.toUpperCase()).join(', ')}`);
-      else toast.success('SMS, HSM and PTM status summaries sent');
-    } catch {
-      toast.error('Failed to send department summaries');
-    } finally {
-      setSendingDept(false);
     }
   };
 
@@ -364,7 +368,7 @@ function TelegramSettings() {
       <div className="bg-white rounded-xl shadow-sm border border-blue-200 p-4 mb-6">
         <h2 className="text-sm font-semibold text-gray-600 mb-1 uppercase tracking-wide">Send Notifications by Date</h2>
         <p className="text-xs text-gray-500 mb-3">
-          Pick a date and send Telegram notifications for all HBM sheets filled on that day. Only the latest submission per sheet is sent.
+          Pick a date and send Telegram notifications for every sheet filled on that day — HBM, SMS, HSM, PTM and Crane inspections. Only the latest submission per sheet is sent.
         </p>
         <div className="flex gap-2 mb-3">
           <input
@@ -426,15 +430,6 @@ function TelegramSettings() {
           )}
         </button>
         </div>
-
-        <button
-          onClick={handleSendDeptSummaries}
-          disabled={sendingDept || !notifDate}
-          title="Send the SMS, HSM and PTM sheet-wise status summaries for the selected date"
-          className="mt-2 w-full bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors"
-        >
-          {sendingDept ? 'Sending…' : 'Send SMS · HSM · PTM Status Summary'}
-        </button>
 
         {sendResult && (
           <div className="mt-3 space-y-2 text-xs">

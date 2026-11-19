@@ -194,4 +194,4 @@ async function sendAllDeptStatusSummaries(date = istToday()) {
   return results;
 }
 
-module.exports = { sendDeptStatusSummary, sendAllDeptStatusSummaries, buildSummaryMessage };
+module.exports = { sendDeptStatusSummary, sendAllDeptStatusSummaries, buildSummaryMessage, tableInfo };

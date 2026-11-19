@@ -148,14 +148,15 @@ function loadRecord(controller, method, id, user) {
 async function dispatch(entry, id, action, user) {
   try {
     const record = await loadRecord(entry.controller, entry.method || 'getById', id, user);
-    if (!record || typeof record !== 'object') return;
+    if (!record || typeof record !== 'object') return false;
     const customRows = entry.rows ? entry.rows(record) : null;
     const { msg, hasAlert } = buildMessage({ label: entry.label, record, action, actorName: user?.username, customRows });
     const chatIds = await getSmsRecipientIds(entry.key, hasAlert);
-    if (!chatIds.length) return;
-    await sendLongMessageToIds(chatIds, msg);
+    if (chatIds.length) await sendLongMessageToIds(chatIds, msg);
+    return true;
   } catch (e) {
     console.error(`Telegram SMS notify error [${entry.key}]:`, e.message);
+    return false;
   }
 }
 
@@ -187,4 +188,4 @@ function smsNotifyMiddleware(registry) {
   };
 }
 
-module.exports = { smsNotifyMiddleware, buildMessage, flatten, isBad };
+module.exports = { smsNotifyMiddleware, dispatch, buildMessage, flatten, isBad };
