@@ -24,12 +24,9 @@ const ALL_CHECKSHEET_TYPES = [
 // ─── Unified editor: Admin flag, Alerts-only and every department's sheets ───
 // HBM and every SMS sheet send Telegram messages. HSM, PTM and Crane sheets are listed
 // (so you can see what exists) but disabled until their notifications are built.
-const SMS_NOTIFY_SHEETS = Object.entries(SMS_DOWNLOAD_SHEETS).map(([key, s]) => ({
-  key,
-  label: s.label,
-  wired: true,
-}));
-const WIRED_SMS_KEYS = SMS_NOTIFY_SHEETS.filter((t) => t.wired).map((t) => t.key);
+// The live list comes from the backend (GET /api/telegram/sheets), so new sheets appear without a
+// frontend change. These are only the fallback if that request fails.
+const FALLBACK_SMS_SHEETS = Object.entries(SMS_DOWNLOAD_SHEETS).map(([key, s]) => ({ key, label: s.label }));
 
 const OTHER_DEPARTMENTS = [
   { code: 'HSM_CHECKSHEETS', name: 'HSM Checksheets' },
@@ -67,11 +64,11 @@ function SheetChip({ label, checked, disabled, onChange, tone = 'blue' }) {
   );
 }
 
-function RecipientEditor({ recipient, otherSheets, onSaved, onClose }) {
+function RecipientEditor({ recipient, hbmSheets, smsSheets, otherSheets, onSaved, onClose }) {
   const [isAdmin, setIsAdmin] = useState(Boolean(recipient.is_admin));
   const [alertsOnly, setAlertsOnly] = useState(Boolean(recipient.alerts_only));
   // null in DB = all HBM types; pre-select all in that case
-  const [hbm, setHbm] = useState(new Set(recipient.checksheet_types ?? ALL_CHECKSHEET_TYPES.map((t) => t.key)));
+  const [hbm, setHbm] = useState(new Set(recipient.checksheet_types ?? hbmSheets.map((t) => t.key)));
   const [sms, setSms] = useState(new Set(recipient.sms_sheets || []));
   const [saving, setSaving] = useState(false);
 
@@ -80,8 +77,8 @@ function RecipientEditor({ recipient, otherSheets, onSaved, onClose }) {
     next.has(key) ? next.delete(key) : next.add(key);
     return next;
   });
-  const hbmAll = hbm.size === ALL_CHECKSHEET_TYPES.length;
-  const smsAll = WIRED_SMS_KEYS.every((k) => sms.has(k));
+  const hbmAll = hbmSheets.every((t) => hbm.has(t.key));
+  const smsAll = smsSheets.every((t) => sms.has(t.key));
 
   const handleSave = async () => {
     if (!isAdmin && hbm.size === 0 && sms.size === 0) {
@@ -127,27 +124,27 @@ function RecipientEditor({ recipient, otherSheets, onSaved, onClose }) {
           </span>
         </label>
 
-        <Department title="HBM Checksheets" total={ALL_CHECKSHEET_TYPES.length} selectedCount={hbm.size} defaultOpen>
+        <Department title="HBM Checksheets" total={hbmSheets.length} selectedCount={hbm.size} defaultOpen>
           <div className="flex justify-end mb-1.5">
-            <button type="button" onClick={() => setHbm(hbmAll ? new Set() : new Set(ALL_CHECKSHEET_TYPES.map((t) => t.key)))}
+            <button type="button" onClick={() => setHbm(hbmAll ? new Set() : new Set(hbmSheets.map((t) => t.key)))}
               className="text-xs text-blue-600 hover:underline font-medium">{hbmAll ? 'Deselect All' : 'Select All'}</button>
           </div>
           <div className="grid grid-cols-2 gap-1.5">
-            {ALL_CHECKSHEET_TYPES.map(({ key, label }) => (
+            {hbmSheets.map(({ key, label }) => (
               <SheetChip key={key} label={label} checked={hbm.has(key)} onChange={() => flip(setHbm)(key)} />
             ))}
           </div>
         </Department>
 
-        <Department title="SMS Checksheets" total={SMS_NOTIFY_SHEETS.length} selectedCount={sms.size} defaultOpen>
+        <Department title="SMS Checksheets" total={smsSheets.length} selectedCount={sms.size} defaultOpen>
           <div className="flex items-center justify-between mb-1.5">
             <span className="text-[11px] text-gray-500">Admin receives all of these automatically</span>
-            <button type="button" onClick={() => setSms(smsAll ? new Set() : new Set(WIRED_SMS_KEYS))}
+            <button type="button" onClick={() => setSms(smsAll ? new Set() : new Set(smsSheets.map((t) => t.key)))}
               className="text-xs text-blue-600 hover:underline font-medium">{smsAll ? 'Deselect All' : 'Select All'}</button>
           </div>
           <div className="grid grid-cols-2 gap-1.5">
-            {SMS_NOTIFY_SHEETS.map(({ key, label, wired }) => (
-              <SheetChip key={key} tone="amber" label={label} checked={wired && sms.has(key)} disabled={!wired}
+            {smsSheets.map(({ key, label }) => (
+              <SheetChip key={key} tone="amber" label={label} checked={sms.has(key)}
                 onChange={() => flip(setSms)(key)} />
             ))}
           </div>
@@ -183,7 +180,7 @@ function RecipientEditor({ recipient, otherSheets, onSaved, onClose }) {
 }
 
 // ─── Subscription Pills (read-only) ──────────────────────────────────────────
-function SubscriptionPills({ checksheetTypes }) {
+function SubscriptionPills({ checksheetTypes, hbmSheets }) {
   if (!checksheetTypes) {
     return (
       <span className="inline-block mt-1.5 text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold">
@@ -201,7 +198,7 @@ function SubscriptionPills({ checksheetTypes }) {
   return (
     <div className="flex flex-wrap gap-1 mt-1.5">
       {checksheetTypes.map(key => {
-        const found = ALL_CHECKSHEET_TYPES.find(t => t.key === key);
+        const found = hbmSheets.find(t => t.key === key);
         return (
           <span key={key}
             className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">
@@ -223,6 +220,8 @@ function TelegramSettings() {
   const [testingId, setTestingId]   = useState(null);
   const [editingId, setEditingId]   = useState(null);
   const [otherSheets, setOtherSheets] = useState({});
+  const [hbmSheets, setHbmSheets] = useState(ALL_CHECKSHEET_TYPES);
+  const [smsSheets, setSmsSheets] = useState(FALLBACK_SMS_SHEETS);
   const [sending, setSending]           = useState(false);
   const [sendResult, setSendResult]     = useState(null);
   const [notifDate, setNotifDate]       = useState(new Date().toLocaleDateString('en-CA'));
@@ -241,6 +240,14 @@ function TelegramSettings() {
   }, []);
 
   useEffect(() => { fetchRecipients(); }, [fetchRecipients]);
+
+  // Live list of notifiable sheets (HBM + SMS) from the backend
+  useEffect(() => {
+    telegramAPI.getSheets().then((res) => {
+      if (Array.isArray(res.hbm) && res.hbm.length) setHbmSheets(res.hbm);
+      if (Array.isArray(res.sms) && res.sms.length) setSmsSheets(res.sms);
+    }).catch(() => {});
+  }, []);
 
   // Sheet names for the departments whose notifications are not built yet (display only)
   useEffect(() => {
@@ -507,7 +514,7 @@ function TelegramSettings() {
                       {r.is_active ? 'Active' : 'Disabled'}
                     </span>
                     {/* Which checksheets this recipient gets */}
-                    <SubscriptionPills checksheetTypes={r.checksheet_types} />
+                    <SubscriptionPills checksheetTypes={r.checksheet_types} hbmSheets={hbmSheets} />
                     {/* SMS options summary */}
                     <div className="flex flex-wrap gap-1 mt-1.5">
                       {r.is_admin && (
@@ -559,6 +566,8 @@ function TelegramSettings() {
                 {editingId === r.id && (
                   <RecipientEditor
                     recipient={r}
+                    hbmSheets={hbmSheets}
+                    smsSheets={smsSheets}
                     otherSheets={otherSheets}
                     onSaved={() => { fetchRecipients(); setEditingId(null); }}
                     onClose={() => setEditingId(null)}

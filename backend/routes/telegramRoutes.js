@@ -9,6 +9,7 @@ const { authenticate, authorize } = require('../middleware/auth');
 router.use(authenticate);
 router.use(authorize('ADMIN'));
 
+router.get('/sheets', TelegramController.getSheets);
 router.get('/recipients', TelegramController.getRecipients);
 router.post('/recipients', TelegramController.addRecipient);
 router.put('/recipients/:id/toggle', TelegramController.toggleRecipient);

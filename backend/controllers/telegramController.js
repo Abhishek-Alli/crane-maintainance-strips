@@ -1,7 +1,8 @@
 // Telegram Recipients Controller – CRUD + Test
 
 const { query } = require('../config/database');
-const { sendTestMessage, sendTelegramMessage } = require('../utils/telegram');
+const { sendTestMessage, sendTelegramMessage, TYPE_LABEL_TO_KEY } = require('../utils/telegram');
+const { listSmsNotifySheets } = require('../utils/smsNotifyRegistry');
 
 class TelegramController {
 
@@ -123,6 +124,17 @@ class TelegramController {
       res.json({ success: true, recipient: rows[0] });
     } catch (error) {
       console.error('Update checksheets error:', error);
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  // GET /api/telegram/sheets – every sheet that can send Telegram notifications, by department
+  static async getSheets(req, res) {
+    try {
+      const hbm = Object.entries(TYPE_LABEL_TO_KEY).map(([label, key]) => ({ key, label }));
+      res.json({ success: true, hbm, sms: listSmsNotifySheets() });
+    } catch (error) {
+      console.error('Get telegram sheets error:', error);
       res.status(500).json({ success: false, message: error.message });
     }
   }

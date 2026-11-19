@@ -1040,6 +1040,7 @@ async function sendDailyStatusSummary(date) {
 // ─── Exports ──────────────────────────────────────────────────────────────────
 
 module.exports = {
+  TYPE_LABEL_TO_KEY,
   sendTelegramMessage,
   sendTestMessage,
   sendToChat,
