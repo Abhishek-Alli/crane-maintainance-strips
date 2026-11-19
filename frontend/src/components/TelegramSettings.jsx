@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-toastify';
 import { telegramAPI, hbmAPI } from '../services/api';
 import { CASTER_SHEETS } from './sms/casterMotorConfig';
+import { SMS_DOWNLOAD_SHEETS } from './sms/smsDownloadConfig';
 
 const ALL_CHECKSHEET_TYPES = [
   { key: 'dc-motor',       label: 'DC Motor' },
@@ -11,6 +12,14 @@ const ALL_CHECKSHEET_TYPES = [
   { key: 'pumphouse',      label: 'Pumphouse' },
   { key: 'bar-bundle',     label: 'Bar Bundle Area' },
   { key: 'before-rolling', label: 'Before Rolling' },
+  { key: 'pump-param',     label: 'Pump Parameter Report' },
+  { key: 'water-param',    label: 'Pump House Water Parameters' },
+  { key: 'ph-maint',       label: 'Pump House Maintenance Work Sheet' },
+  { key: 'transformer',    label: 'Visual Inspection & HBM Transformer' },
+  { key: 'oil-level',      label: 'Daily Oil Level Sheet' },
+  { key: 'dc-motor-airflow', label: 'DC Motor Airflow, Temp & Vibration' },
+  { key: 'roughing-gb-temp', label: 'Roughing Stand & Gearbox Bearing Temp' },
+  { key: 'breakdown',      label: 'HBM Breakdown Report' },
 ];
 
 // ─── Subscription Editor ──────────────────────────────────────────────────────
@@ -104,7 +113,14 @@ function SubscriptionEditor({ recipient, onSaved, onClose }) {
 
 // ─── SMS Options Editor (admin flag, alerts-only, SMS sheet subscriptions) ───
 // Add new SMS sheet keys here as notifications are wired for them.
-const SMS_NOTIFY_SHEETS = Object.entries(CASTER_SHEETS).map(([key, s]) => ({ key, label: s.label }));
+// Every SMS sheet is listed; only the ones with `wired: true` send Telegram messages so far.
+const SMS_NOTIFY_SHEETS = Object.entries(SMS_DOWNLOAD_SHEETS).map(([key, s]) => ({
+  key,
+  label: s.label,
+  wired: Boolean(CASTER_SHEETS[key]),
+}));
+const WIRED_SMS_SHEETS = SMS_NOTIFY_SHEETS.filter((s) => s.wired);
+const PENDING_SMS_SHEETS = SMS_NOTIFY_SHEETS.filter((s) => !s.wired);
 
 function SmsOptionsEditor({ recipient, onSaved, onClose }) {
   const [isAdmin, setIsAdmin] = useState(Boolean(recipient.is_admin));
@@ -112,7 +128,7 @@ function SmsOptionsEditor({ recipient, onSaved, onClose }) {
   const [selected, setSelected] = useState(new Set(recipient.sms_sheets || []));
   const [saving, setSaving] = useState(false);
 
-  const allSelected = selected.size === SMS_NOTIFY_SHEETS.length;
+  const allSelected = WIRED_SMS_SHEETS.every((t) => selected.has(t.key));
   const toggle = (key) => setSelected((prev) => {
     const next = new Set(prev);
     next.has(key) ? next.delete(key) : next.add(key);
@@ -157,18 +173,30 @@ function SmsOptionsEditor({ recipient, onSaved, onClose }) {
 
         <div className="flex items-center justify-between mb-2">
           <p className="text-xs font-bold text-gray-600 uppercase tracking-wide">SMS sheet notifications</p>
-          <button type="button" onClick={() => setSelected(allSelected ? new Set() : new Set(SMS_NOTIFY_SHEETS.map((t) => t.key)))}
+          <button type="button" onClick={() => setSelected(allSelected ? new Set() : new Set(WIRED_SMS_SHEETS.map((t) => t.key)))}
             className="text-xs text-blue-600 hover:underline font-medium">
             {allSelected ? 'Deselect All' : 'Select All'}
           </button>
         </div>
-        <div className="grid grid-cols-2 gap-1.5">
-          {SMS_NOTIFY_SHEETS.map(({ key, label }) => (
+        <p className="text-[11px] font-semibold text-gray-500 mb-1">Billet &amp; Slab Caster — notifications active</p>
+        <div className="grid grid-cols-2 gap-1.5 mb-3">
+          {WIRED_SMS_SHEETS.map(({ key, label }) => (
             <label key={key}
               className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border cursor-pointer text-xs font-medium select-none ${
                 selected.has(key) ? 'bg-amber-50 border-amber-300 text-amber-800' : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
               }`}>
               <input type="checkbox" checked={selected.has(key)} onChange={() => toggle(key)} className="w-3 h-3 accent-amber-600" />
+              {label}
+            </label>
+          ))}
+        </div>
+
+        <p className="text-[11px] font-semibold text-gray-500 mb-1">Other SMS sheets — notifications coming soon</p>
+        <div className="grid grid-cols-2 gap-1.5">
+          {PENDING_SMS_SHEETS.map(({ key, label }) => (
+            <label key={key} title="Telegram notifications for this sheet are not enabled yet"
+              className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-gray-100 bg-gray-50 text-xs font-medium text-gray-400 select-none cursor-not-allowed">
+              <input type="checkbox" disabled checked={false} className="w-3 h-3" />
               {label}
             </label>
           ))}
