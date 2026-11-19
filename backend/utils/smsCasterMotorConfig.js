@@ -18,9 +18,14 @@ const BILLET_STRAND_1_MOTORS = [
   { key: 'shearing_oil_cooling', label: 'Shearing Oil Cooling Motor', hp: 2, max: 3.47 },
 ];
 
+/** Strand 2 has the same motors as Strand 1 except steam exhaust and the hydraulic motors */
+const STRAND_2_EXCLUDED = ['steam_exhaust_1', 'hydraulic_1', 'hydraulic_2', 'hydraulic_3'];
+const BILLET_STRAND_2_MOTORS = BILLET_STRAND_1_MOTORS.filter((m) => !STRAND_2_EXCLUDED.includes(m.key));
+
 /** sheet key (URL + permission key) -> { label, motors } */
 const CASTER_SHEETS = {
   'billet-strand-1': { label: 'Billet Caster Strand 1', motors: BILLET_STRAND_1_MOTORS },
+  'billet-strand-2': { label: 'Billet Caster Strand 2', motors: BILLET_STRAND_2_MOTORS },
 };
 
 const nullIfEmpty = (v) => {
