@@ -207,6 +207,9 @@ import EotCraneElectricalView from './components/sms/EotCraneElectricalView';
 import CcmMotorForm from './components/sms/CcmMotorForm';
 import CcmMotorHistory from './components/sms/CcmMotorHistory';
 import CcmMotorView from './components/sms/CcmMotorView';
+import CasterMotorForm from './components/sms/CasterMotorForm';
+import CasterMotorHistory from './components/sms/CasterMotorHistory';
+import CasterMotorView from './components/sms/CasterMotorView';
 
 // import FabricationReport from "./components/fabrication/FabricationReport";
 import Dashboard from "./components/Dashboard";
@@ -1899,6 +1902,10 @@ function App() {
             ['/sms/ccm-motor/history', <CcmMotorHistory />],
             ['/sms/ccm-motor/:id/edit', <CcmMotorForm />],
             ['/sms/ccm-motor/:id', <CcmMotorView />],
+            ['/sms/caster-motor/:sheet/new', <CasterMotorForm />],
+            ['/sms/caster-motor/:sheet/history', <CasterMotorHistory />],
+            ['/sms/caster-motor/:sheet/:id/edit', <CasterMotorForm />],
+            ['/sms/caster-motor/:sheet/:id', <CasterMotorView />],
             ['/sms/pump-house-motor/new', <PumpHouseMotorForm />],
             ['/sms/pump-house-motor/history', <PumpHouseMotorHistory />],
             ['/sms/pump-house-motor/:id/edit', <PumpHouseMotorForm />],

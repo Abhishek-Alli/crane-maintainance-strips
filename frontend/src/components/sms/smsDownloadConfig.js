@@ -12,6 +12,11 @@ export const SMS_DOWNLOAD_SHEETS = {
   pollution: { label: 'Pollution — Daily Check Sheet', list: smsAPI.getPollutionLogs, get: smsAPI.getPollutionById },
   'dm-unit': { label: 'DM Unit Check List', list: smsAPI.getDmUnitLogs, get: smsAPI.getDmUnitById },
   'ccm-motor': { label: 'CCM Motor', list: smsAPI.getCcmMotorLogs, get: smsAPI.getCcmMotorById },
+  'billet-strand-1': {
+    label: 'Billet Caster Strand 1',
+    list: (params) => smsAPI.getCasterMotorLogs('billet-strand-1', params),
+    get: (id) => smsAPI.getCasterMotorById('billet-strand-1', id),
+  },
   'pump-house-motor': { label: 'Furnace Pump House', list: smsAPI.getPumpHouseMotorLogs, get: smsAPI.getPumpHouseMotorById },
   'ccm-pump-house': { label: 'CCM Pump House', list: smsAPI.getCcmPumpHouseLogs, get: smsAPI.getCcmPumpHouseById },
   'eot-crane-electrical': { label: 'EOT Crane — Electrical', list: smsAPI.getEotCraneElectricalLogs, get: smsAPI.getEotCraneElectricalById },

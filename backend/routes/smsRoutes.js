@@ -24,6 +24,7 @@ const SmsPollutionController = require('../controllers/smsPollutionController');
 const SmsDmUnitController = require('../controllers/smsDmUnitController');
 const SmsElectricalController = require('../controllers/smsElectricalController');
 const SmsCcmMotorController = require('../controllers/smsCcmMotorController');
+const SmsCasterMotorController = require('../controllers/smsCasterMotorController');
 const SmsPumpHouseMotorController = require('../controllers/smsPumpHouseMotorController');
 const SmsCcmPumpHouseController = require('../controllers/smsCcmPumpHouseController');
 const SmsEotCraneElectricalController = require('../controllers/smsEotCraneElectricalController');
@@ -130,6 +131,12 @@ router.get('/ccm-motor/:id', SmsCcmMotorController.getById);
 router.post('/ccm-motor', SmsCcmMotorController.create);
 router.put('/ccm-motor/:id', SmsCcmMotorController.update);
 router.delete('/ccm-motor/:id', SmsCcmMotorController.remove);
+
+router.get('/caster-motor/:sheet', SmsCasterMotorController.getLogs);
+router.get('/caster-motor/:sheet/:id', SmsCasterMotorController.getById);
+router.post('/caster-motor/:sheet', SmsCasterMotorController.create);
+router.put('/caster-motor/:sheet/:id', SmsCasterMotorController.update);
+router.delete('/caster-motor/:sheet/:id', SmsCasterMotorController.remove);
 
 router.get('/pump-house-motor', SmsPumpHouseMotorController.getLogs);
 router.get('/pump-house-motor/:id', SmsPumpHouseMotorController.getById);
