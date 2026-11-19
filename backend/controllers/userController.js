@@ -602,7 +602,7 @@ class UserController {
            can_delete           = EXCLUDED.can_delete,
            can_edit_submitted   = EXCLUDED.can_edit_submitted,
            updated_at           = NOW()`,
-        [id, allowed_checksheets, can_download_pdf, can_delete, can_edit_submitted]
+        [id, allowed_checksheets == null ? null : JSON.stringify(allowed_checksheets), can_download_pdf, can_delete, can_edit_submitted]
       );
       res.json({ success: true, message: 'SMS permissions updated' });
     } catch (error) {
