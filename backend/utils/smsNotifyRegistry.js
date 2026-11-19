@@ -32,7 +32,15 @@ const SmsPollutionController = require('../controllers/smsPollutionController');
 const SmsPumpHouseController = require('../controllers/smsPumpHouseController');
 const SmsPumpHouseMotorController = require('../controllers/smsPumpHouseMotorController');
 const SmsScrapTrollyController = require('../controllers/smsScrapTrollyController');
+const HsmController = require('../controllers/hsmController');
+const HsmDelayController = require('../controllers/hsmDelayController');
+const HsmFmDailyController = require('../controllers/hsmFmDailyController');
+const HsmInductionDailyController = require('../controllers/hsmInductionDailyController');
+const HsmDcDailyController = require('../controllers/hsmDcDailyController');
+const HsmRmDailyController = require('../controllers/hsmRmDailyController');
+const PtmController = require('../controllers/ptmController');
 const { CASTER_SHEETS } = require('./smsCasterMotorConfig');
+const { isBad } = require('./telegramSmsGeneric');
 
 const SMS_NOTIFY_REGISTRY = {
   'eot-crane-maintenance': { key: 'eot-crane', label: 'EOT Crane Maintenance', controller: SmsEotCraneController },
@@ -60,6 +68,57 @@ const SMS_NOTIFY_REGISTRY = {
   'furnace-transformer': { key: 'furnace-transformer', label: 'Furnace Transformer', controller: SmsFurnaceTransformerController },
 };
 
+// HSM sheets. Subscription keys are prefixed ("hsm:") so they can never clash with SMS / HBM keys.
+const HSM_NOTIFY_REGISTRY = {
+  'breakdown-analysis': { key: 'hsm:breakdown-analysis', label: 'Breakdown Analysis Report', controller: HsmController, method: 'getBreakdownAnalysisById' },
+  'roll-change-activity': { key: 'hsm:roll-change-activity', label: 'Mechanical Activities During Roll Change', controller: HsmController, method: 'getRollChangeActivityById' },
+  'delay-report': { key: 'hsm:delay-report', label: 'Delay Report', controller: HsmDelayController },
+  'fm-daily-checklist': { key: 'hsm:fm-daily-checklist', label: 'FM Daily Check List', controller: HsmFmDailyController },
+  'induction-daily-checklist': { key: 'hsm:induction-daily-checklist', label: 'Induction Daily Check List', controller: HsmInductionDailyController },
+  'dc-daily-checklist': { key: 'hsm:dc-daily-checklist', label: 'DC Daily Check List', controller: HsmDcDailyController },
+  'rm-daily-checklist': { key: 'hsm:rm-daily-checklist', label: 'RM Daily Check List', controller: HsmRmDailyController },
+};
+
+/** PTM checksheet: one row per item, "Section › Item" with its status / value */
+function ptmChecksheetRows(record) {
+  return (record.entries || []).map((e) => {
+    const value = e.status || e.value_text || '';
+    return {
+      label: [e.section_name, e.item_name].filter(Boolean).join(' › '),
+      value: String(value),
+      remark: [e.remark, e.action_taken].filter(Boolean).join(' / '),
+      bad: isBad(e.item_name || '', value),
+    };
+  }).filter((r) => r.value !== '');
+}
+
+// PTM sheets (Monthly Register is a read-only view, so it has nothing to notify about).
+const PTM_NOTIFY_REGISTRY = {
+  logs: { key: 'ptm:checksheet', label: 'PTM Checksheet', controller: PtmController, method: 'getLogById', rows: ptmChecksheetRows },
+  breakdown: { key: 'ptm:breakdown', label: 'Breakdown Report', controller: PtmController, method: 'getBreakdownLogById' },
+};
+
+const CRANE_NOTIFY_SHEETS = [{ key: 'crane:inspection', label: 'Crane Inspection' }];
+
+const uniqueSheets = (registry) => {
+  const seen = new Set();
+  const out = [];
+  Object.values(registry).forEach(({ key, label }) => {
+    if (!seen.has(key)) { seen.add(key); out.push({ key, label }); }
+  });
+  return out;
+};
+
+/** Every non-HBM department's notifiable sheets, for the Telegram settings screen */
+function listDepartmentSheets() {
+  return {
+    sms: listSmsNotifySheets(),
+    hsm: uniqueSheets(HSM_NOTIFY_REGISTRY),
+    ptm: uniqueSheets(PTM_NOTIFY_REGISTRY),
+    crane: CRANE_NOTIFY_SHEETS,
+  };
+}
+
 /** [{ key, label }] — registry sheets plus the motor-current sheets, for the Telegram settings screen */
 function listSmsNotifySheets() {
   const seen = new Set();
@@ -73,4 +132,10 @@ function listSmsNotifySheets() {
   return out;
 }
 
-module.exports = { SMS_NOTIFY_REGISTRY, listSmsNotifySheets };
+module.exports = {
+  SMS_NOTIFY_REGISTRY,
+  HSM_NOTIFY_REGISTRY,
+  PTM_NOTIFY_REGISTRY,
+  listSmsNotifySheets,
+  listDepartmentSheets,
+};

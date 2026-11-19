@@ -1,3 +1,5 @@
+const { smsNotifyMiddleware } = require('../utils/telegramSmsGeneric');
+const { PTM_NOTIFY_REGISTRY } = require('../utils/smsNotifyRegistry');
 const express = require('express');
 const router = express.Router();
 const { authenticate, requireAdmin } = require('../middleware/auth');
@@ -5,6 +7,9 @@ const { excelMemoryUpload } = require('../middleware/upload');
 const PtmController = require('../controllers/ptmController');
 
 router.use(authenticate);
+
+// Telegram: notify subscribed recipients after every successful save / edit of a PTM sheet
+router.use(smsNotifyMiddleware(PTM_NOTIFY_REGISTRY));
 
 router.get('/dashboard', PtmController.getDashboardStats);
 router.get('/templates', PtmController.getTemplates);

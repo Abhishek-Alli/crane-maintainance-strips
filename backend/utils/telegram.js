@@ -2,6 +2,7 @@
 // Tabular per-sheet notification templates for all 14 sheet types
 
 const https = require('https');
+const { AsyncLocalStorage } = require('async_hooks');
 const { query } = require('../config/database');
 
 const BOT_TOKEN       = process.env.TELEGRAM_BOT_TOKEN;
@@ -26,6 +27,13 @@ const TYPE_LABEL_TO_KEY = {
 };
 
 // ─── Core helpers ─────────────────────────────────────────────────────────────
+
+// When an edit re-sends a notification, everything sent inside runAsUpdate() gets an
+// "UPDATED — edited by …" header, so the existing per-sheet message builders stay unchanged.
+const updateContext = new AsyncLocalStorage();
+function runAsUpdate(editedBy, fn) {
+  return updateContext.run({ editedBy }, fn);
+}
 
 // Escape special HTML chars so user-entered text doesn't break Telegram HTML parse_mode
 function esc(str) {
@@ -60,6 +68,11 @@ function sendToChat(chatId, message) {
 }
 
 async function sendToIds(chatIds, message) {
+  const ctx = updateContext.getStore();
+  if (ctx) {
+    const when = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: false });
+    message = `✏️ <b>UPDATED</b> — edited by <b>${esc(ctx.editedBy)}</b> at ${when}\n━━━━━━━━━━━━━━━━━━━━━━\n${message}`;
+  }
   if (!BOT_TOKEN) { console.error('TELEGRAM_BOT_TOKEN not set'); return []; }
   if (!chatIds.length) { console.warn('No Telegram recipients'); return []; }
   const results = await Promise.all(chatIds.map((id) => sendToChat(id, message)));
@@ -83,7 +96,7 @@ async function getChatIdsForType(typeKey) {
   try {
     const { rows } = await query(
       `SELECT chat_id FROM telegram_recipients
-       WHERE is_active = true AND (checksheet_types IS NULL OR $1 = ANY(checksheet_types))`,
+       WHERE is_active = true AND (is_admin = true OR checksheet_types IS NULL OR $1 = ANY(checksheet_types))`,
       [typeKey]
     );
     rows.forEach((r) => s.add(r.chat_id));
@@ -1041,6 +1054,7 @@ async function sendDailyStatusSummary(date) {
 
 module.exports = {
   TYPE_LABEL_TO_KEY,
+  runAsUpdate,
   sendTelegramMessage,
   sendTestMessage,
   sendToChat,

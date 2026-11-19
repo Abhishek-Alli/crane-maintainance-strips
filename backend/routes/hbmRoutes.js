@@ -130,7 +130,23 @@ router.post('/send-daily-notifications', requireAdmin, HbmController.sendDailyNo
 router.post('/send-status-summary', requireAdmin, HbmController.sendStatusSummary);
 
 // Update a log entry (original filler or admin, within 24 hours)
-router.put('/:type/:id', HbmController.updateHbmLog);
+// After a successful edit, send the sheet's Telegram message again marked "UPDATED"
+const notifyHbmEdit = (req, res, next) => {
+  const originalJson = res.json.bind(res);
+  res.json = (payload) => {
+    const sent = originalJson(payload);
+    if (res.statusCode >= 200 && res.statusCode < 300 && payload && payload.success !== false) {
+      const { type, id } = req.params;
+      setImmediate(() => {
+        Promise.resolve(HbmController.notifyEdit(type, id, req.user))
+          .catch((e) => console.error('HBM edit Telegram notify error:', e.message));
+      });
+    }
+    return sent;
+  };
+  next();
+};
+router.put('/:type/:id', notifyHbmEdit, HbmController.updateHbmLog);
 
 // Delete a log entry (admin only)
 router.delete('/:type/:id', HbmController.deleteHbmLog);

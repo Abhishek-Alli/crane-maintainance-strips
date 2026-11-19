@@ -1,4 +1,5 @@
-// Generic Telegram notifications for every SMS checksheet that is not a motor-current sheet.
+// Generic Telegram notifications for SMS, HSM and PTM checksheets (everything except the
+// SMS motor-current sheets, which notify from their own controller).
 //
 // One Express middleware watches the SMS routes. After a successful POST (new entry) or
 // PUT (edit) it loads the saved record through that sheet's existing getById controller,
@@ -87,11 +88,12 @@ const fmtDate = (d) => {
 };
 const fmtNow = () => new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: false });
 
-function buildMessage({ label, record, action, actorName }) {
-  const rows = flatten(record, '', []).filter((r) => r.label);
+function buildMessage({ label, record, action, actorName, customRows }) {
+  const rows = (customRows || flatten(record, '', [])).filter((r) => r.label);
   const bad = rows.filter((r) => r.bad);
   const updated = action === 'updated';
-  const date = record.report_date || record.date || record.inspection_date || record.created_at;
+  const date = record.report_date || record.date || record.log_date || record.breakdown_date
+    || record.inspection_date || record.created_at;
 
   let msg =
     `🏭 <b>${esc(label)}</b>${updated ? '  ✏️ <b>UPDATED</b>' : ''}\n` +
@@ -123,7 +125,7 @@ function buildMessage({ label, record, action, actorName }) {
 }
 
 /** Loads the saved record through the sheet controller's own getById */
-function loadRecord(controller, id, user) {
+function loadRecord(controller, method, id, user) {
   return new Promise((resolve) => {
     const timer = setTimeout(() => resolve(null), 8000);
     const done = (payload) => {
@@ -138,16 +140,17 @@ function loadRecord(controller, id, user) {
       setHeader() { return this; },
       set() { return this; },
     };
-    Promise.resolve(controller.getById({ params: { id: String(id) }, query: {}, body: {}, user }, fakeRes))
+    Promise.resolve(controller[method]({ params: { id: String(id) }, query: {}, body: {}, user }, fakeRes))
       .catch(() => { clearTimeout(timer); resolve(null); });
   });
 }
 
 async function dispatch(entry, id, action, user) {
   try {
-    const record = await loadRecord(entry.controller, id, user);
+    const record = await loadRecord(entry.controller, entry.method || 'getById', id, user);
     if (!record || typeof record !== 'object') return;
-    const { msg, hasAlert } = buildMessage({ label: entry.label, record, action, actorName: user?.username });
+    const customRows = entry.rows ? entry.rows(record) : null;
+    const { msg, hasAlert } = buildMessage({ label: entry.label, record, action, actorName: user?.username, customRows });
     const chatIds = await getSmsRecipientIds(entry.key, hasAlert);
     if (!chatIds.length) return;
     await sendLongMessageToIds(chatIds, msg);
@@ -157,8 +160,10 @@ async function dispatch(entry, id, action, user) {
 }
 
 /**
- * registry: { '<route segment>': { key, label, controller } }
+ * registry: { '<route segment>': { key, label, controller, method?, rows? } }
  * `key` is the subscription key used on the Telegram settings screen.
+ * `method` is the controller's by-id loader (default getById).
+ * `rows(record)` optionally turns the record into [{ label, value, remark, bad }] for a nicer message.
  */
 function smsNotifyMiddleware(registry) {
   return (req, res, next) => {
@@ -182,4 +187,4 @@ function smsNotifyMiddleware(registry) {
   };
 }
 
-module.exports = { smsNotifyMiddleware, buildMessage, flatten };
+module.exports = { smsNotifyMiddleware, buildMessage, flatten, isBad };

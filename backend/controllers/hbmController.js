@@ -3937,6 +3937,20 @@ class HbmController {
     }
   }
 
+  // Re-sends the sheet's Telegram message after an edit, marked "UPDATED".
+  // Called by the PUT /:type/:id route hook; never affects the save itself.
+  static notifyEdit(type, id, user) {
+    const { runAsUpdate } = require('../utils/telegram');
+    const fakeRes = {
+      statusCode: 200,
+      status(code) { this.statusCode = code; return this; },
+      json() { return this; },
+    };
+    return runAsUpdate(user?.username || 'a user', () =>
+      HbmController.resendTelegramNotification({ params: { type, id }, user }, fakeRes)
+    );
+  }
+
   // ==========================================
   // SEND DAILY STATUS SUMMARY
   // POST /api/hbm/send-status-summary

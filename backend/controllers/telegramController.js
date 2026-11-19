@@ -2,7 +2,7 @@
 
 const { query } = require('../config/database');
 const { sendTestMessage, sendTelegramMessage, TYPE_LABEL_TO_KEY } = require('../utils/telegram');
-const { listSmsNotifySheets } = require('../utils/smsNotifyRegistry');
+const { listDepartmentSheets } = require('../utils/smsNotifyRegistry');
 
 class TelegramController {
 
@@ -132,7 +132,7 @@ class TelegramController {
   static async getSheets(req, res) {
     try {
       const hbm = Object.entries(TYPE_LABEL_TO_KEY).map(([label, key]) => ({ key, label }));
-      res.json({ success: true, hbm, sms: listSmsNotifySheets() });
+      res.json({ success: true, hbm, ...listDepartmentSheets() });
     } catch (error) {
       console.error('Get telegram sheets error:', error);
       res.status(500).json({ success: false, message: error.message });

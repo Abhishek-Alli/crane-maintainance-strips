@@ -1,5 +1,6 @@
 const { pool, query } = require('../config/database');
-const { sendLongMessage } = require('../utils/telegram');
+const { sendLongMessageToIds } = require('../utils/telegram');
+const { getSmsRecipientIds } = require('../utils/telegramSmsNotify');
 const MaintenanceTracking = require('../models/MaintenanceTracking');
 
 
@@ -373,7 +374,10 @@ class InspectionController {
         `📊 ${summary}\n\n` +
         `<pre>${tableLines.join('\n')}</pre>`;
 
-      await sendLongMessage(msg);
+      // Admins always get it; everyone else only if subscribed to 'Crane Inspection'
+      // (and, for alerts-only recipients, only when something failed)
+      const chatIds = await getSmsRecipientIds('crane:inspection', Boolean(insp.has_alerts) || notOkCount > 0);
+      await sendLongMessageToIds(chatIds, msg);
 
     } catch (err) {
       console.error('TELEGRAM ERROR:', err);

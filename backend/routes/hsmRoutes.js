@@ -1,3 +1,5 @@
+const { smsNotifyMiddleware } = require('../utils/telegramSmsGeneric');
+const { HSM_NOTIFY_REGISTRY } = require('../utils/smsNotifyRegistry');
 const express = require('express');
 const router = express.Router();
 const { authenticate, requireHSM, requireAdmin } = require('../middleware/auth');
@@ -21,6 +23,9 @@ const HsmRmDailyController = require('../controllers/hsmRmDailyController');
 
 router.use(authenticate);
 router.use(requireHSM);
+
+// Telegram: notify subscribed recipients after every successful save / edit of an HSM sheet
+router.use(smsNotifyMiddleware(HSM_NOTIFY_REGISTRY));
 
 router.get('/insights', requireAdmin, HsmInsightsController.getInsights);
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-toastify';
-import { telegramAPI, hbmAPI, permissionListsAPI } from '../services/api';
+import { telegramAPI, hbmAPI } from '../services/api';
 import { SMS_DOWNLOAD_SHEETS } from './sms/smsDownloadConfig';
 
 const ALL_CHECKSHEET_TYPES = [
@@ -22,17 +22,12 @@ const ALL_CHECKSHEET_TYPES = [
 ];
 
 // ─── Unified editor: Admin flag, Alerts-only and every department's sheets ───
-// HBM and every SMS sheet send Telegram messages. HSM, PTM and Crane sheets are listed
-// (so you can see what exists) but disabled until their notifications are built.
+// Every department's sheets are listed from the backend (GET /api/telegram/sheets).
+// HBM subscriptions are stored in checksheet_types; SMS / HSM / PTM / Crane keys all go in
+// sms_sheets (non-SMS keys carry a prefix such as "hsm:" so they never clash).
 // The live list comes from the backend (GET /api/telegram/sheets), so new sheets appear without a
 // frontend change. These are only the fallback if that request fails.
 const FALLBACK_SMS_SHEETS = Object.entries(SMS_DOWNLOAD_SHEETS).map(([key, s]) => ({ key, label: s.label }));
-
-const OTHER_DEPARTMENTS = [
-  { code: 'HSM_CHECKSHEETS', name: 'HSM Checksheets' },
-  { code: 'PTM_CHECKSHEETS', name: 'PTM Checksheets' },
-  { code: 'CRANE_MAINTENANCE', name: 'Crane Maintenance' },
-];
 
 function Department({ title, total, selectedCount, soon, children, defaultOpen }) {
   return (
@@ -64,7 +59,7 @@ function SheetChip({ label, checked, disabled, onChange, tone = 'blue' }) {
   );
 }
 
-function RecipientEditor({ recipient, hbmSheets, smsSheets, otherSheets, onSaved, onClose }) {
+function RecipientEditor({ recipient, hbmSheets, smsSheets, extraSheets, onSaved, onClose }) {
   const [isAdmin, setIsAdmin] = useState(Boolean(recipient.is_admin));
   const [alertsOnly, setAlertsOnly] = useState(Boolean(recipient.alerts_only));
   // null in DB = all HBM types; pre-select all in that case
@@ -79,6 +74,7 @@ function RecipientEditor({ recipient, hbmSheets, smsSheets, otherSheets, onSaved
   });
   const hbmAll = hbmSheets.every((t) => hbm.has(t.key));
   const smsAll = smsSheets.every((t) => sms.has(t.key));
+  const countIn = (list) => list.filter((t) => sms.has(t.key)).length;
 
   const handleSave = async () => {
     if (!isAdmin && hbm.size === 0 && sms.size === 0) {
@@ -120,7 +116,7 @@ function RecipientEditor({ recipient, hbmSheets, smsSheets, otherSheets, onSaved
           <input type="checkbox" checked={alertsOnly} onChange={(e) => setAlertsOnly(e.target.checked)} className="mt-0.5 w-3.5 h-3.5 accent-amber-600" />
           <span>
             <span className="font-bold text-gray-700">Alerts only</span>
-            <span className="block text-gray-500">Only send abnormal entries (e.g. a motor current above its max). Applies to SMS sheets.</span>
+            <span className="block text-gray-500">Only send abnormal entries (e.g. a motor current above its max, or a Not OK answer). Applies to every department except HBM.</span>
           </span>
         </label>
 
@@ -136,7 +132,7 @@ function RecipientEditor({ recipient, hbmSheets, smsSheets, otherSheets, onSaved
           </div>
         </Department>
 
-        <Department title="SMS Checksheets" total={smsSheets.length} selectedCount={sms.size} defaultOpen>
+        <Department title="SMS Checksheets" total={smsSheets.length} selectedCount={countIn(smsSheets)} defaultOpen>
           <div className="flex items-center justify-between mb-1.5">
             <span className="text-[11px] text-gray-500">Admin receives all of these automatically</span>
             <button type="button" onClick={() => setSms(smsAll ? new Set() : new Set(smsSheets.map((t) => t.key)))}
@@ -150,13 +146,27 @@ function RecipientEditor({ recipient, hbmSheets, smsSheets, otherSheets, onSaved
           </div>
         </Department>
 
-        {OTHER_DEPARTMENTS.map(({ code, name }) => {
-          const list = otherSheets[code] || [];
+        {[
+          { code: 'hsm', name: 'HSM Checksheets' },
+          { code: 'ptm', name: 'PTM Checksheets' },
+          { code: 'crane', name: 'Crane Maintenance' },
+        ].map(({ code, name }) => {
+          const list = extraSheets[code] || [];
+          const allOn = list.length > 0 && list.every((t) => sms.has(t.key));
           return (
-            <Department key={code} title={name} total={list.length} soon>
+            <Department key={code} title={name} total={list.length} selectedCount={countIn(list)}>
+              <div className="flex justify-end mb-1.5">
+                <button type="button"
+                  onClick={() => setSms((prev) => {
+                    const next = new Set(prev);
+                    list.forEach((t) => (allOn ? next.delete(t.key) : next.add(t.key)));
+                    return next;
+                  })}
+                  className="text-xs text-blue-600 hover:underline font-medium">{allOn ? 'Deselect All' : 'Select All'}</button>
+              </div>
               <div className="grid grid-cols-2 gap-1.5">
                 {list.map(({ key, label }) => (
-                  <SheetChip key={key} label={label} checked={false} disabled onChange={() => {}} />
+                  <SheetChip key={key} label={label} checked={sms.has(key)} onChange={() => flip(setSms)(key)} />
                 ))}
                 {list.length === 0 && <p className="text-xs text-gray-400 col-span-2">No sheets found.</p>}
               </div>
@@ -219,7 +229,7 @@ function TelegramSettings() {
   const [adding, setAdding]         = useState(false);
   const [testingId, setTestingId]   = useState(null);
   const [editingId, setEditingId]   = useState(null);
-  const [otherSheets, setOtherSheets] = useState({});
+  const [extraSheets, setExtraSheets] = useState({});
   const [hbmSheets, setHbmSheets] = useState(ALL_CHECKSHEET_TYPES);
   const [smsSheets, setSmsSheets] = useState(FALLBACK_SMS_SHEETS);
   const [sending, setSending]           = useState(false);
@@ -246,17 +256,7 @@ function TelegramSettings() {
     telegramAPI.getSheets().then((res) => {
       if (Array.isArray(res.hbm) && res.hbm.length) setHbmSheets(res.hbm);
       if (Array.isArray(res.sms) && res.sms.length) setSmsSheets(res.sms);
-    }).catch(() => {});
-  }, []);
-
-  // Sheet names for the departments whose notifications are not built yet (display only)
-  useEffect(() => {
-    permissionListsAPI.getAll().then((res) => {
-      const grouped = {};
-      (res.items || []).filter((i) => i.is_active).forEach((i) => {
-        (grouped[i.module_code] = grouped[i.module_code] || []).push({ key: i.item_key, label: i.item_label });
-      });
-      setOtherSheets(grouped);
+      setExtraSheets({ hsm: res.hsm || [], ptm: res.ptm || [], crane: res.crane || [] });
     }).catch(() => {});
   }, []);
 
@@ -525,7 +525,7 @@ function TelegramSettings() {
                       )}
                       {!r.is_admin && (r.sms_sheets || []).length > 0 && (
                         <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 font-medium">
-                          SMS: {r.sms_sheets.length} sheet{r.sms_sheets.length > 1 ? 's' : ''}
+                          {r.sms_sheets.length} sheet{r.sms_sheets.length > 1 ? 's' : ''} (SMS / HSM / PTM / Crane)
                         </span>
                       )}
                     </div>
@@ -568,7 +568,7 @@ function TelegramSettings() {
                     recipient={r}
                     hbmSheets={hbmSheets}
                     smsSheets={smsSheets}
-                    otherSheets={otherSheets}
+                    extraSheets={extraSheets}
                     onSaved={() => { fetchRecipients(); setEditingId(null); }}
                     onClose={() => setEditingId(null)}
                   />
