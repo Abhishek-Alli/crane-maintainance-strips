@@ -3684,8 +3684,8 @@ class HbmController {
       if (!r.rows.length) { results.skipped.push('DC Motor Airflow'); }
       else {
         const log = r.rows[0];
-        const entries = await query(`SELECT * FROM hbm_dc_motor_airflow_entries WHERE log_id = $1 ORDER BY item_name`, [log.id]);
-        await tg.sendDcMotorAirflowNotification({ date: log.log_date, shift: log.shift, remark: log.remark, entries: entries.rows, filledBy: log.filled_by_name, submittedAt: new Date(log.created_at) });
+        const entries = await query(`SELECT * FROM hbm_dc_motor_airflow_entries WHERE log_id = $1 ORDER BY id`, [log.id]);
+        await tg.sendDcMotorAirflowNotification({ date: log.log_date, shiftEng: log.shift_eng, readingBy: log.reading_by, remark: log.remark, entries: entries.rows, filledBy: log.filled_by_name, submittedAt: new Date(log.created_at) });
         results.sent.push('DC Motor Airflow');
       }
     } catch (e) { console.error('Daily notif error [DC Motor Airflow]:', e.message); results.failed.push('DC Motor Airflow'); }
@@ -3696,10 +3696,9 @@ class HbmController {
       if (!r.rows.length) { results.skipped.push('Pump Parameter'); }
       else {
         const log = r.rows[0];
-        const pumps = await query(`SELECT * FROM hbm_pump_param_entries WHERE log_id = $1 ORDER BY pump_name`, [log.id]);
-        const kwh   = await query(`SELECT * FROM hbm_pump_kwh_entries   WHERE log_id = $1 ORDER BY pump_name`, [log.id]);
-        const sec2  = await query(`SELECT * FROM hbm_pump_param_sec2    WHERE log_id = $1 ORDER BY section_name, item_name`, [log.id]);
-        await tg.sendPumpParamNotification({ date: log.log_date, shift: log.shift, remark: log.remark, pumps: pumps.rows, kwhEntries: kwh.rows, sec2Items: sec2.rows, filledBy: log.filled_by_name, submittedAt: new Date(log.created_at) });
+        const pumps = await query(`SELECT * FROM hbm_pump_param_entries WHERE log_id = $1 ORDER BY id`, [log.id]);
+        const sec2  = await query(`SELECT * FROM hbm_pump_param_sec2    WHERE log_id = $1 ORDER BY id`, [log.id]);
+        await tg.sendPumpParamNotification({ date: log.log_date, sizeValue: log.size_value, entries: pumps.rows, sec2Items: sec2.rows, filledBy: log.filled_by_name, submittedAt: new Date(log.created_at) });
         results.sent.push('Pump Parameter');
       }
     } catch (e) { console.error('Daily notif error [Pump Param]:', e.message); results.failed.push('Pump Parameter'); }
@@ -3838,7 +3837,7 @@ class HbmController {
       'bar-bundle':      { table: 'hbm_bar_bundle_logs',      items: 'hbm_bar_bundle_items',       label: 'Bar Bundle Area',       orderBy: 'section_name, item_name' },
       'before-rolling':  { table: 'hbm_before_rolling_logs',  items: 'hbm_before_rolling_items',   label: 'Before Rolling',        orderBy: 'section_name, item_name' },
       'oil-level':       { table: 'hbm_oil_level_logs',       items: 'hbm_oil_level_entries',      label: 'Oil Level',             orderBy: 'item_name' },
-      'dc-motor-airflow':{ table: 'hbm_dc_motor_airflow_logs',items: 'hbm_dc_motor_airflow_entries',label: 'DC Motor Airflow',     orderBy: 'item_name' },
+      'dc-motor-airflow':{ table: 'hbm_dc_motor_airflow_logs',items: 'hbm_dc_motor_airflow_entries',label: 'DC Motor Airflow',     orderBy: 'id' },
       'roughing-gb-temp':{ table: 'hbm_roughing_gb_temp_logs',items: null,                          label: 'Roughing GB Temp',     orderBy: null },
       'transformer':     { table: 'hbm_transformer_logs',     items: null,                          label: 'Transformer',          orderBy: null },
       'pump-param':      { table: 'hbm_pump_param_logs',      items: null,                          label: 'Pump Parameter',       orderBy: null },
@@ -3902,6 +3901,27 @@ class HbmController {
           stand_nde_top: log.s1_stand_nde_top, stand_nde_mid: log.s1_stand_nde_mid, stand_nde_bot: log.s1_stand_nde_bot,
         };
         await tgLib.sendRoughingGbTempNotification({ date: log.log_date, shiftEng: log.shift_eng, tempTakenBy: log.temp_taken_by, s1, stands: stands.rows, sec1Remark: log.sec1_remark, sec2Remark: log.sec2_remark, sec3Remark: log.sec3_remark, filledBy: log.filled_by_name, submittedAt: new Date(log.created_at) });
+      } else if (type === 'dc-motor-airflow') {
+        const entries = await query(`SELECT * FROM hbm_dc_motor_airflow_entries WHERE log_id = $1 ORDER BY id`, [id]);
+        await tgLib.sendDcMotorAirflowNotification({ date: log.log_date, shiftEng: log.shift_eng, readingBy: log.reading_by, remark: log.remark, entries: entries.rows, filledBy: log.filled_by_name, submittedAt: new Date(log.created_at) });
+      } else if (type === 'pump-param') {
+        const pumps = await query(`SELECT * FROM hbm_pump_param_entries WHERE log_id = $1 ORDER BY id`, [id]);
+        const sec2  = await query(`SELECT * FROM hbm_pump_param_sec2 WHERE log_id = $1 ORDER BY id`, [id]);
+        await tgLib.sendPumpParamNotification({ date: log.log_date, sizeValue: log.size_value, entries: pumps.rows, sec2Items: sec2.rows, filledBy: log.filled_by_name, submittedAt: new Date(log.created_at) });
+      } else if (type === 'oil-level') {
+        const entries = await query(`SELECT * FROM hbm_oil_level_entries WHERE log_id = $1 ORDER BY item_name`, [id]);
+        await tgLib.sendOilLevelNotification({ date: log.log_date, shift: log.shift, remark: log.remark, entries: entries.rows, filledBy: log.filled_by_name, submittedAt: new Date(log.created_at) });
+      } else if (type === 'water-param') {
+        const entries = await query(`SELECT * FROM hbm_water_param_entries WHERE log_id = $1 ORDER BY water_source`, [id]);
+        await tgLib.sendWaterParamNotification({ date: log.log_date, remark: log.remark, entries: entries.rows, filledBy: log.filled_by_name, submittedAt: new Date(log.created_at) });
+      } else if (type === 'ph-maint') {
+        const phItems = await query(`SELECT * FROM hbm_ph_maint_items WHERE log_id = $1 ORDER BY id`, [id]);
+        await tgLib.sendPhMaintNotification({ date: log.log_date, items: phItems.rows, filledBy: log.filled_by_name, submittedAt: new Date(log.created_at) });
+      } else if (type === 'transformer') {
+        const sec1 = await query(`SELECT * FROM hbm_transformer_sec1 WHERE log_id = $1 ORDER BY unit_name`, [id]);
+        const sec2 = await query(`SELECT * FROM hbm_transformer_sec2 WHERE log_id = $1 ORDER BY unit_name`, [id]);
+        const sec3 = await query(`SELECT * FROM hbm_transformer_sec3 WHERE log_id = $1 ORDER BY unit_name`, [id]);
+        await tgLib.sendTransformerNotification({ date: log.log_date, sec1: sec1.rows, sec2: sec2.rows, sec3: sec3.rows, sec2Remark: log.sec2_remark, sec3Remark: log.sec3_remark, filledBy: log.filled_by_name, submittedAt: new Date(log.created_at) });
       } else {
         const specificFn = {
           'cooling-bed':    tgLib.sendCoolingBedNotification,
