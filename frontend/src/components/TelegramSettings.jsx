@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-toastify';
-import { telegramAPI, hbmAPI } from '../services/api';
+import { telegramAPI, hbmAPI, permissionListsAPI } from '../services/api';
 import { CASTER_SHEETS } from './sms/casterMotorConfig';
 import { SMS_DOWNLOAD_SHEETS } from './sms/smsDownloadConfig';
 
@@ -22,128 +22,85 @@ const ALL_CHECKSHEET_TYPES = [
   { key: 'breakdown',      label: 'HBM Breakdown Report' },
 ];
 
-// ─── Subscription Editor ──────────────────────────────────────────────────────
-function SubscriptionEditor({ recipient, onSaved, onClose }) {
-  // null in DB = all types; pre-select all in that case
-  const initial = recipient.checksheet_types ?? ALL_CHECKSHEET_TYPES.map(t => t.key);
-  const [selected, setSelected] = useState(new Set(initial));
-  const [saving, setSaving] = useState(false);
-
-  const allSelected = selected.size === ALL_CHECKSHEET_TYPES.length;
-
-  const toggle = (key) => {
-    setSelected(prev => {
-      const next = new Set(prev);
-      next.has(key) ? next.delete(key) : next.add(key);
-      return next;
-    });
-  };
-
-  const toggleAll = () => {
-    setSelected(allSelected
-      ? new Set()
-      : new Set(ALL_CHECKSHEET_TYPES.map(t => t.key))
-    );
-  };
-
-  const handleSave = async () => {
-    if (selected.size === 0) { toast.warn('Select at least one checksheet type'); return; }
-    setSaving(true);
-    try {
-      // all selected → send null so DB stores NULL (receives all, no filter overhead)
-      const types = allSelected ? null : [...selected];
-      await telegramAPI.updateRecipientChecksheets(recipient.id, types);
-      toast.success('Subscriptions saved');
-      onSaved();
-    } catch {
-      toast.error('Failed to save subscriptions');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="mt-3 border-t border-gray-200 pt-3">
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-xs font-bold text-gray-600 uppercase tracking-wide">
-          Checksheet Subscriptions
-        </p>
-        <button type="button" onClick={toggleAll}
-          className="text-xs text-blue-600 hover:underline font-medium">
-          {allSelected ? 'Deselect All' : 'Select All'}
-        </button>
-      </div>
-
-      <div className="grid grid-cols-2 gap-1.5 mb-3">
-        {ALL_CHECKSHEET_TYPES.map(({ key, label }) => (
-          <label key={key}
-            className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border cursor-pointer transition-colors text-xs font-medium select-none ${
-              selected.has(key)
-                ? 'bg-blue-50 border-blue-300 text-blue-800'
-                : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
-            }`}>
-            <input
-              type="checkbox"
-              checked={selected.has(key)}
-              onChange={() => toggle(key)}
-              className="w-3 h-3 accent-blue-600"
-            />
-            {label}
-          </label>
-        ))}
-      </div>
-
-      <div className="flex gap-2">
-        <button type="button" onClick={handleSave}
-          disabled={saving || selected.size === 0}
-          className="flex-1 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors">
-          {saving ? 'Saving…' : 'Save Subscriptions'}
-        </button>
-        <button type="button" onClick={onClose}
-          className="px-4 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-lg transition-colors">
-          Cancel
-        </button>
-      </div>
-      {selected.size === 0 && (
-        <p className="text-xs text-red-500 mt-1">At least one type must be selected.</p>
-      )}
-    </div>
-  );
-}
-
-// ─── SMS Options Editor (admin flag, alerts-only, SMS sheet subscriptions) ───
-// Add new SMS sheet keys here as notifications are wired for them.
-// Every SMS sheet is listed; only the ones with `wired: true` send Telegram messages so far.
+// ─── Unified editor: Admin flag, Alerts-only and every department's sheets ───
+// Only HBM sheets and the SMS caster sheets send Telegram messages so far; every other
+// sheet is listed (so you can see what exists) but disabled until its notifications are built.
 const SMS_NOTIFY_SHEETS = Object.entries(SMS_DOWNLOAD_SHEETS).map(([key, s]) => ({
   key,
   label: s.label,
   wired: Boolean(CASTER_SHEETS[key]),
 }));
-const WIRED_SMS_SHEETS = SMS_NOTIFY_SHEETS.filter((s) => s.wired);
-const PENDING_SMS_SHEETS = SMS_NOTIFY_SHEETS.filter((s) => !s.wired);
+const WIRED_SMS_KEYS = SMS_NOTIFY_SHEETS.filter((t) => t.wired).map((t) => t.key);
 
-function SmsOptionsEditor({ recipient, onSaved, onClose }) {
+const OTHER_DEPARTMENTS = [
+  { code: 'HSM_CHECKSHEETS', name: 'HSM Checksheets' },
+  { code: 'PTM_CHECKSHEETS', name: 'PTM Checksheets' },
+  { code: 'CRANE_MAINTENANCE', name: 'Crane Maintenance' },
+];
+
+function Department({ title, total, selectedCount, soon, children, defaultOpen }) {
+  return (
+    <details open={defaultOpen} className="border border-gray-200 rounded-lg bg-white">
+      <summary className="cursor-pointer select-none px-3 py-2 flex items-center justify-between gap-2 text-xs">
+        <span className="font-bold text-gray-700">{title}</span>
+        <span className={`font-semibold ${soon ? 'text-gray-400' : 'text-blue-700'}`}>
+          {soon ? `${total} sheets · coming soon` : `${selectedCount}/${total} selected`}
+        </span>
+      </summary>
+      <div className="px-3 pb-3 pt-1">{children}</div>
+    </details>
+  );
+}
+
+function SheetChip({ label, checked, disabled, onChange, tone = 'blue' }) {
+  const on = tone === 'amber'
+    ? 'bg-amber-50 border-amber-300 text-amber-800'
+    : 'bg-blue-50 border-blue-300 text-blue-800';
+  return (
+    <label className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs font-medium select-none ${
+      disabled
+        ? 'border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed'
+        : checked ? `${on} cursor-pointer` : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300 cursor-pointer'
+    }`}>
+      <input type="checkbox" checked={checked} disabled={disabled} onChange={onChange} className="w-3 h-3 shrink-0" />
+      {label}
+    </label>
+  );
+}
+
+function RecipientEditor({ recipient, otherSheets, onSaved, onClose }) {
   const [isAdmin, setIsAdmin] = useState(Boolean(recipient.is_admin));
   const [alertsOnly, setAlertsOnly] = useState(Boolean(recipient.alerts_only));
-  const [selected, setSelected] = useState(new Set(recipient.sms_sheets || []));
+  // null in DB = all HBM types; pre-select all in that case
+  const [hbm, setHbm] = useState(new Set(recipient.checksheet_types ?? ALL_CHECKSHEET_TYPES.map((t) => t.key)));
+  const [sms, setSms] = useState(new Set(recipient.sms_sheets || []));
   const [saving, setSaving] = useState(false);
 
-  const allSelected = WIRED_SMS_SHEETS.every((t) => selected.has(t.key));
-  const toggle = (key) => setSelected((prev) => {
+  const flip = (setter) => (key) => setter((prev) => {
     const next = new Set(prev);
     next.has(key) ? next.delete(key) : next.add(key);
     return next;
   });
+  const hbmAll = hbm.size === ALL_CHECKSHEET_TYPES.length;
+  const smsAll = WIRED_SMS_KEYS.every((k) => sms.has(k));
 
   const handleSave = async () => {
+    if (!isAdmin && hbm.size === 0 && sms.size === 0) {
+      toast.warn('Select at least one sheet, or make this recipient an Admin');
+      return;
+    }
     setSaving(true);
     try {
+      // HBM: all selected -> null (receives all). None selected -> a key that matches no sheet,
+      // because null/empty means "all" on the server.
+      const hbmTypes = hbmAll ? null : hbm.size === 0 ? ['__none__'] : [...hbm];
+      await telegramAPI.updateRecipientChecksheets(recipient.id, hbmTypes);
       await telegramAPI.updateRecipientSettings(recipient.id, {
         is_admin: isAdmin,
         alerts_only: alertsOnly,
-        sms_sheets: [...selected],
+        sms_sheets: [...sms],
       });
-      toast.success('SMS notification settings saved');
+      toast.success('Notification settings saved');
       onSaved();
     } catch {
       toast.error('Failed to save settings');
@@ -158,55 +115,64 @@ function SmsOptionsEditor({ recipient, onSaved, onClose }) {
         <input type="checkbox" checked={isAdmin} onChange={(e) => setIsAdmin(e.target.checked)} className="mt-0.5 w-3.5 h-3.5 accent-red-600" />
         <span>
           <span className="font-bold text-red-700">Admin — receive every notification</span>
-          <span className="block text-gray-500">All sheets, normal and abnormal, new entries and edits. Ignores the choices below.</span>
+          <span className="block text-gray-500">All departments and sheets, normal and abnormal, new entries and edits. Ignores the choices below.</span>
         </span>
       </label>
 
-      <div className={isAdmin ? 'opacity-40 pointer-events-none' : ''}>
-        <label className="flex items-start gap-2 text-xs cursor-pointer select-none mb-3">
+      <div className={`space-y-2 ${isAdmin ? 'opacity-40 pointer-events-none' : ''}`}>
+        <label className="flex items-start gap-2 text-xs cursor-pointer select-none">
           <input type="checkbox" checked={alertsOnly} onChange={(e) => setAlertsOnly(e.target.checked)} className="mt-0.5 w-3.5 h-3.5 accent-amber-600" />
           <span>
             <span className="font-bold text-gray-700">Alerts only</span>
-            <span className="block text-gray-500">Only send when something is abnormal (e.g. a motor current above its max).</span>
+            <span className="block text-gray-500">Only send abnormal entries (e.g. a motor current above its max). Applies to SMS sheets.</span>
           </span>
         </label>
 
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-xs font-bold text-gray-600 uppercase tracking-wide">SMS sheet notifications</p>
-          <button type="button" onClick={() => setSelected(allSelected ? new Set() : new Set(WIRED_SMS_SHEETS.map((t) => t.key)))}
-            className="text-xs text-blue-600 hover:underline font-medium">
-            {allSelected ? 'Deselect All' : 'Select All'}
-          </button>
-        </div>
-        <p className="text-[11px] font-semibold text-gray-500 mb-1">Billet &amp; Slab Caster — notifications active</p>
-        <div className="grid grid-cols-2 gap-1.5 mb-3">
-          {WIRED_SMS_SHEETS.map(({ key, label }) => (
-            <label key={key}
-              className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border cursor-pointer text-xs font-medium select-none ${
-                selected.has(key) ? 'bg-amber-50 border-amber-300 text-amber-800' : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
-              }`}>
-              <input type="checkbox" checked={selected.has(key)} onChange={() => toggle(key)} className="w-3 h-3 accent-amber-600" />
-              {label}
-            </label>
-          ))}
-        </div>
+        <Department title="HBM Checksheets" total={ALL_CHECKSHEET_TYPES.length} selectedCount={hbm.size} defaultOpen>
+          <div className="flex justify-end mb-1.5">
+            <button type="button" onClick={() => setHbm(hbmAll ? new Set() : new Set(ALL_CHECKSHEET_TYPES.map((t) => t.key)))}
+              className="text-xs text-blue-600 hover:underline font-medium">{hbmAll ? 'Deselect All' : 'Select All'}</button>
+          </div>
+          <div className="grid grid-cols-2 gap-1.5">
+            {ALL_CHECKSHEET_TYPES.map(({ key, label }) => (
+              <SheetChip key={key} label={label} checked={hbm.has(key)} onChange={() => flip(setHbm)(key)} />
+            ))}
+          </div>
+        </Department>
 
-        <p className="text-[11px] font-semibold text-gray-500 mb-1">Other SMS sheets — notifications coming soon</p>
-        <div className="grid grid-cols-2 gap-1.5">
-          {PENDING_SMS_SHEETS.map(({ key, label }) => (
-            <label key={key} title="Telegram notifications for this sheet are not enabled yet"
-              className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-gray-100 bg-gray-50 text-xs font-medium text-gray-400 select-none cursor-not-allowed">
-              <input type="checkbox" disabled checked={false} className="w-3 h-3" />
-              {label}
-            </label>
-          ))}
-        </div>
+        <Department title="SMS Checksheets" total={SMS_NOTIFY_SHEETS.length} selectedCount={sms.size} defaultOpen>
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[11px] text-gray-500">Greyed-out sheets: notifications coming soon</span>
+            <button type="button" onClick={() => setSms(smsAll ? new Set() : new Set(WIRED_SMS_KEYS))}
+              className="text-xs text-blue-600 hover:underline font-medium">{smsAll ? 'Deselect All' : 'Select All active'}</button>
+          </div>
+          <div className="grid grid-cols-2 gap-1.5">
+            {SMS_NOTIFY_SHEETS.map(({ key, label, wired }) => (
+              <SheetChip key={key} tone="amber" label={label} checked={wired && sms.has(key)} disabled={!wired}
+                onChange={() => flip(setSms)(key)} />
+            ))}
+          </div>
+        </Department>
+
+        {OTHER_DEPARTMENTS.map(({ code, name }) => {
+          const list = otherSheets[code] || [];
+          return (
+            <Department key={code} title={name} total={list.length} soon>
+              <div className="grid grid-cols-2 gap-1.5">
+                {list.map(({ key, label }) => (
+                  <SheetChip key={key} label={label} checked={false} disabled onChange={() => {}} />
+                ))}
+                {list.length === 0 && <p className="text-xs text-gray-400 col-span-2">No sheets found.</p>}
+              </div>
+            </Department>
+          );
+        })}
       </div>
 
       <div className="flex gap-2">
         <button type="button" onClick={handleSave} disabled={saving}
-          className="flex-1 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors">
-          {saving ? 'Saving…' : 'Save SMS Settings'}
+          className="flex-1 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors">
+          {saving ? 'Saving…' : 'Save'}
         </button>
         <button type="button" onClick={onClose}
           className="px-4 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-lg transition-colors">
@@ -222,14 +188,14 @@ function SubscriptionPills({ checksheetTypes }) {
   if (!checksheetTypes) {
     return (
       <span className="inline-block mt-1.5 text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold">
-        All checksheets
+        All HBM sheets
       </span>
     );
   }
-  if (checksheetTypes.length === 0) {
+  if (checksheetTypes.length === 0 || (checksheetTypes.length === 1 && checksheetTypes[0] === '__none__')) {
     return (
       <span className="inline-block mt-1.5 text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600 font-semibold">
-        None selected
+        No HBM sheets
       </span>
     );
   }
@@ -257,7 +223,7 @@ function TelegramSettings() {
   const [adding, setAdding]         = useState(false);
   const [testingId, setTestingId]   = useState(null);
   const [editingId, setEditingId]   = useState(null);
-  const [smsEditingId, setSmsEditingId] = useState(null);
+  const [otherSheets, setOtherSheets] = useState({});
   const [sending, setSending]           = useState(false);
   const [sendResult, setSendResult]     = useState(null);
   const [notifDate, setNotifDate]       = useState(new Date().toLocaleDateString('en-CA'));
@@ -276,6 +242,17 @@ function TelegramSettings() {
   }, []);
 
   useEffect(() => { fetchRecipients(); }, [fetchRecipients]);
+
+  // Sheet names for the departments whose notifications are not built yet (display only)
+  useEffect(() => {
+    permissionListsAPI.getAll().then((res) => {
+      const grouped = {};
+      (res.items || []).filter((i) => i.is_active).forEach((i) => {
+        (grouped[i.module_code] = grouped[i.module_code] || []).push({ key: i.item_key, label: i.item_label });
+      });
+      setOtherSheets(grouped);
+    }).catch(() => {});
+  }, []);
 
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -570,16 +547,7 @@ function TelegramSettings() {
                           ? 'bg-indigo-600 text-white'
                           : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
                       }`}>
-                      Sheets
-                    </button>
-                    <button
-                      onClick={() => setSmsEditingId(smsEditingId === r.id ? null : r.id)}
-                      className={`text-xs px-2.5 py-1.5 rounded-lg font-medium ${
-                        smsEditingId === r.id
-                          ? 'bg-amber-600 text-white'
-                          : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
-                      }`}>
-                      SMS
+                      Notifications
                     </button>
                     <button onClick={() => handleDelete(r.id)}
                       className="text-xs px-2.5 py-1.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 font-medium">
@@ -588,18 +556,11 @@ function TelegramSettings() {
                   </div>
                 </div>
 
-                {smsEditingId === r.id && (
-                  <SmsOptionsEditor
-                    recipient={r}
-                    onSaved={() => { fetchRecipients(); setSmsEditingId(null); }}
-                    onClose={() => setSmsEditingId(null)}
-                  />
-                )}
-
                 {/* Inline subscription editor */}
                 {editingId === r.id && (
-                  <SubscriptionEditor
+                  <RecipientEditor
                     recipient={r}
+                    otherSheets={otherSheets}
                     onSaved={() => { fetchRecipients(); setEditingId(null); }}
                     onClose={() => setEditingId(null)}
                   />
