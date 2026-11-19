@@ -135,7 +135,7 @@ export default function PumpHouseMotorForm() {
               ← Back
             </button>
             <h1 className="text-2xl font-bold text-gray-900">
-              {isEdit ? 'Edit Pump House Motor Panel' : 'Pump House Motor Panel'}
+              {isEdit ? 'Edit Furnace Pump House' : 'Furnace Pump House'}
             </h1>
             <p className="text-sm text-gray-500 mt-1">Furnace Pump House</p>
           </div>

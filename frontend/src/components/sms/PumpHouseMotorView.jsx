@@ -67,7 +67,7 @@ export default function PumpHouseMotorView() {
 
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Pump House Motor Panel</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Furnace Pump House</h1>
             <p className="text-sm text-gray-500 mt-1">{formatDate(log.report_date)}</p>
             <p className="text-xs text-gray-400 mt-1">Edit window: {editWindowLabel(log.created_at)}</p>
           </div>

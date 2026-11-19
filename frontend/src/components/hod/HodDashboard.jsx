@@ -56,7 +56,7 @@ const ALL_MODULES = [
       { key: 'compressor-pm',          label: 'Compressor — Scheduled' },
       { key: 'sms-dg',                 label: 'DG' },
       { key: 'lt-transformer',         label: 'LT Transformer' },
-      { key: 'pump-house-motor',       label: 'Pump House Motor Panel' },
+      { key: 'pump-house-motor',       label: 'Furnace Pump House' },
       { key: 'ccm-pump-house',         label: 'CCM Pump House' },
       { key: 'ccm-motor',              label: 'CCM Motor' },
     ],

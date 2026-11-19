@@ -53,7 +53,7 @@ export default function PumpHouseMotorHistory() {
             >
               ← Back
             </button>
-            <h1 className="text-2xl font-bold text-gray-900">Pump House Motor Panel History</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Furnace Pump House History</h1>
           </div>
           <Link
             to="/sms/pump-house-motor/new"
