@@ -22,14 +22,33 @@ const BILLET_STRAND_1_MOTORS = [
 const STRAND_2_EXCLUDED = ['steam_exhaust_1', 'hydraulic_1', 'hydraulic_2', 'hydraulic_3'];
 const BILLET_STRAND_2_MOTORS = BILLET_STRAND_1_MOTORS.filter((m) => !STRAND_2_EXCLUDED.includes(m.key));
 
+const SLAB_STRAND_1_MOTORS = [
+  { key: 'entry_top', label: 'Entry Top Motor', hp: 7.5, max: 12.6 },
+  { key: 'entry_bottom', label: 'Entry Bottom Motor', hp: 7.5, max: 12.6 },
+  { key: 'tangent', label: 'Tangent Motor', hp: 7.5, max: 12.6 },
+  { key: 'withdrawal', label: 'Withdrawal (Exit) Motor', hp: 7.5, max: 12.6 },
+  { key: 'cart', label: 'Cart Motor', hp: 3, max: 5 },
+  { key: 'drt_1', label: 'DRT-1 Motor', hp: 3, max: 5 },
+  { key: 'drt_2', label: 'DRT-2 Motor', hp: 3, max: 5 },
+  { key: 'mould_oscillation', label: 'Mould Oscillation Motor', hp: 15, max: 21 },
+  { key: 'rdbs', label: 'RDBS Motor', hp: 7.5, max: 12.6 },
+  { key: 'steam_exhaust_1', label: 'Steam Exhaust Motor-1', hp: 20, max: 28.5 },
+  { key: 'tilting_stand', label: 'Tilting Stand Motor', hp: 5, max: 7.8 },
+];
+
+/** Slab Strand 2 is the same as Strand 1 without the tilting stand motor */
+const SLAB_STRAND_2_MOTORS = SLAB_STRAND_1_MOTORS.filter((m) => m.key !== 'tilting_stand');
+
 /** sheet key (URL + permission key) -> { label, motors } */
 export const CASTER_SHEETS = {
   'billet-strand-1': { label: 'Billet Caster Strand 1', motors: BILLET_STRAND_1_MOTORS },
   'billet-strand-2': { label: 'Billet Caster Strand 2', motors: BILLET_STRAND_2_MOTORS },
+  'slab-strand-1': { label: 'Slab Caster Strand 1', motors: SLAB_STRAND_1_MOTORS },
+  'slab-strand-2': { label: 'Slab Caster Strand 2', motors: SLAB_STRAND_2_MOTORS },
 };
 
-/** Back-link target for every caster sheet */
-export const CASTER_BACK = '/sms/billet-caster';
+/** Back-link target: the Billet or Slab caster page that lists the strand */
+export const casterBack = (sheetKey) => (String(sheetKey).startsWith('slab') ? '/sms/slab-caster' : '/sms/billet-caster');
 
 export const isOverMax = (motor, value) => {
   if (value === '' || value === null || value === undefined) return false;

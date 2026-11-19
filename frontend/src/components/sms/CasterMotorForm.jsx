@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { smsAPI } from '../../services/api';
-import { CASTER_SHEETS, CASTER_BACK, isOverMax, emptyCasterForm } from './casterMotorConfig';
+import { CASTER_SHEETS, casterBack, isOverMax, emptyCasterForm } from './casterMotorConfig';
 
 const inputCls =
   'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400';
@@ -103,7 +103,7 @@ function CasterMotorFormInner({ sheetKey, sheet, editId }) {
       <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
         <div className="flex items-start justify-between gap-3 mb-6">
           <div>
-            <button type="button" onClick={() => navigate(CASTER_BACK)} className="text-sm text-gray-500 hover:text-gray-700 mb-1">
+            <button type="button" onClick={() => navigate(casterBack(sheetKey))} className="text-sm text-gray-500 hover:text-gray-700 mb-1">
               ← Back
             </button>
             <h1 className="text-2xl font-bold text-gray-900">

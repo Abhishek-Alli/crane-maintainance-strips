@@ -22,6 +22,16 @@ export const SMS_DOWNLOAD_SHEETS = {
     list: (params) => smsAPI.getCasterMotorLogs('billet-strand-2', params),
     get: (id) => smsAPI.getCasterMotorById('billet-strand-2', id),
   },
+  'slab-strand-1': {
+    label: 'Slab Caster Strand 1',
+    list: (params) => smsAPI.getCasterMotorLogs('slab-strand-1', params),
+    get: (id) => smsAPI.getCasterMotorById('slab-strand-1', id),
+  },
+  'slab-strand-2': {
+    label: 'Slab Caster Strand 2',
+    list: (params) => smsAPI.getCasterMotorLogs('slab-strand-2', params),
+    get: (id) => smsAPI.getCasterMotorById('slab-strand-2', id),
+  },
   'pump-house-motor': { label: 'Furnace Pump House', list: smsAPI.getPumpHouseMotorLogs, get: smsAPI.getPumpHouseMotorById },
   'ccm-pump-house': { label: 'CCM Pump House', list: smsAPI.getCcmPumpHouseLogs, get: smsAPI.getCcmPumpHouseById },
   'eot-crane-electrical': { label: 'EOT Crane — Electrical', list: smsAPI.getEotCraneElectricalLogs, get: smsAPI.getEotCraneElectricalById },
