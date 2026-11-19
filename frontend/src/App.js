@@ -155,6 +155,8 @@ import ElectricalForm from './components/sms/ElectricalForm';
 import ElectricalHistory from './components/sms/ElectricalHistory';
 import ElectricalView from './components/sms/ElectricalView';
 import BilletSlabCaster from './components/sms/BilletSlabCaster';
+import BilletCaster from './components/sms/BilletCaster';
+import SlabCaster from './components/sms/SlabCaster';
 import Electrical from './components/sms/Electrical';
 import SmsMechanical from './components/sms/SmsMechanical';
 import Ccm from './components/sms/Ccm';
@@ -1815,6 +1817,30 @@ function App() {
             element={
               user && (isSMSUser || isAdminUser) ? (
                 <BilletSlabCaster />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/billet-caster"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <BilletCaster />
+              ) : user ? (
+                <Navigate to="/sms/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/sms/slab-caster"
+            element={
+              user && (isSMSUser || isAdminUser) ? (
+                <SlabCaster />
               ) : user ? (
                 <Navigate to="/sms/dashboard" replace />
               ) : (
