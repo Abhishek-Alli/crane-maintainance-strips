@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-toastify';
 import { telegramAPI, hbmAPI, permissionListsAPI } from '../services/api';
-import { CASTER_SHEETS } from './sms/casterMotorConfig';
 import { SMS_DOWNLOAD_SHEETS } from './sms/smsDownloadConfig';
 
 const ALL_CHECKSHEET_TYPES = [
@@ -23,12 +22,12 @@ const ALL_CHECKSHEET_TYPES = [
 ];
 
 // ─── Unified editor: Admin flag, Alerts-only and every department's sheets ───
-// Only HBM sheets and the SMS caster sheets send Telegram messages so far; every other
-// sheet is listed (so you can see what exists) but disabled until its notifications are built.
+// HBM and every SMS sheet send Telegram messages. HSM, PTM and Crane sheets are listed
+// (so you can see what exists) but disabled until their notifications are built.
 const SMS_NOTIFY_SHEETS = Object.entries(SMS_DOWNLOAD_SHEETS).map(([key, s]) => ({
   key,
   label: s.label,
-  wired: Boolean(CASTER_SHEETS[key]),
+  wired: true,
 }));
 const WIRED_SMS_KEYS = SMS_NOTIFY_SHEETS.filter((t) => t.wired).map((t) => t.key);
 
@@ -142,9 +141,9 @@ function RecipientEditor({ recipient, otherSheets, onSaved, onClose }) {
 
         <Department title="SMS Checksheets" total={SMS_NOTIFY_SHEETS.length} selectedCount={sms.size} defaultOpen>
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[11px] text-gray-500">Greyed-out sheets: notifications coming soon</span>
+            <span className="text-[11px] text-gray-500">Admin receives all of these automatically</span>
             <button type="button" onClick={() => setSms(smsAll ? new Set() : new Set(WIRED_SMS_KEYS))}
-              className="text-xs text-blue-600 hover:underline font-medium">{smsAll ? 'Deselect All' : 'Select All active'}</button>
+              className="text-xs text-blue-600 hover:underline font-medium">{smsAll ? 'Deselect All' : 'Select All'}</button>
           </div>
           <div className="grid grid-cols-2 gap-1.5">
             {SMS_NOTIFY_SHEETS.map(({ key, label, wired }) => (

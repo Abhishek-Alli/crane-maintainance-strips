@@ -25,6 +25,7 @@ const SmsDmUnitController = require('../controllers/smsDmUnitController');
 const SmsElectricalController = require('../controllers/smsElectricalController');
 const SmsCcmMotorController = require('../controllers/smsCcmMotorController');
 const SmsCasterMotorController = require('../controllers/smsCasterMotorController');
+const { smsNotifyMiddleware } = require('../utils/telegramSmsGeneric');
 const SmsPumpHouseMotorController = require('../controllers/smsPumpHouseMotorController');
 const SmsCcmPumpHouseController = require('../controllers/smsCcmPumpHouseController');
 const SmsEotCraneElectricalController = require('../controllers/smsEotCraneElectricalController');
@@ -41,6 +42,35 @@ const SmsFurnaceTransformerController = require('../controllers/smsFurnaceTransf
 
 router.use(authenticate);
 router.use(requireSMS);
+
+// Telegram: after any successful save/edit of these sheets, notify subscribed recipients.
+// Keys match the sheet keys on the Telegram settings screen (route segment -> key).
+// Motor-current sheets (caster-motor) notify from their own controller.
+router.use(smsNotifyMiddleware({
+  'eot-crane-maintenance': { key: 'eot-crane', label: 'EOT Crane Maintenance', controller: SmsEotCraneController },
+  'crucible-maintenance': { key: 'crucible', label: 'Crucible Maintenance', controller: SmsCrucibleController },
+  'poker-maintenance': { key: 'poker', label: 'Hyd Poker Maintenance', controller: SmsPokerController },
+  'pump-house': { key: 'pump-house', label: 'Pump House — Mechanical', controller: SmsPumpHouseController },
+  patching: { key: 'patching', label: 'Patching', controller: SmsPatchingController },
+  'scrap-trolly': { key: 'scrap-trolly', label: 'Scrap Transfer Trolly', controller: SmsScrapTrollyController },
+  'ladle-car': { key: 'ladle-car', label: 'Ladle Car — Mechanical', controller: SmsLadleCarController },
+  pollution: { key: 'pollution', label: 'Pollution — Daily Check Sheet', controller: SmsPollutionController },
+  'dm-unit': { key: 'dm-unit', label: 'DM Unit Check List', controller: SmsDmUnitController },
+  'ccm-motor': { key: 'ccm-motor', label: 'CCM Motor', controller: SmsCcmMotorController },
+  'pump-house-motor': { key: 'pump-house-motor', label: 'Furnace Pump House', controller: SmsPumpHouseMotorController },
+  'ccm-pump-house': { key: 'ccm-pump-house', label: 'CCM Pump House', controller: SmsCcmPumpHouseController },
+  'eot-crane-electrical': { key: 'eot-crane-electrical', label: 'EOT Crane — Electrical', controller: SmsEotCraneElectricalController },
+  'furnace-motor-panel': { key: 'furnace-motor-panel', label: 'Furnace Motor Panel', controller: SmsFurnaceMotorPanelController },
+  dg: { key: 'dg', label: 'DG', controller: SmsDgController },
+  'furnace-pollution-pm': { key: 'furnace-pollution-pm', label: 'Furnace Pollution - Scheduled', controller: SmsFurnacePollutionPmController },
+  'lt-transformer': { key: 'lt-transformer', label: 'LT Transformer', controller: SmsLtTransformerController },
+  'compressor-pm': { key: 'compressor-pm', label: 'Compressor - Scheduled', controller: SmsCompressorPmController },
+  'furnace-pollution': { key: 'furnace-pollution', label: 'Furnace Pollution', controller: SmsFurnacePollutionController },
+  'furnace-stand-by': { key: 'furnace-stand-by', label: 'Furnace Stand By', controller: SmsFurnaceStandByController },
+  'furnace-poker': { key: 'furnace-poker', label: 'Furnace Poker', controller: SmsFurnacePokerController },
+  'bundle-press': { key: 'bundle-press', label: 'Bundle Press', controller: SmsBundlePressController },
+  'furnace-transformer': { key: 'furnace-transformer', label: 'Furnace Transformer', controller: SmsFurnaceTransformerController },
+}));
 
 router.get('/breakdown-analysis', SmsController.getBreakdownAnalysisLogs);
 router.get('/breakdown-analysis/:id/pdf', SmsController.downloadBreakdownAnalysisPDF);
