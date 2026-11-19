@@ -13,6 +13,7 @@ router.get('/recipients', TelegramController.getRecipients);
 router.post('/recipients', TelegramController.addRecipient);
 router.put('/recipients/:id/toggle', TelegramController.toggleRecipient);
 router.put('/recipients/:id/checksheets', TelegramController.updateChecksheets);
+router.put('/recipients/:id/settings', TelegramController.updateSettings);
 router.delete('/recipients/:id', TelegramController.deleteRecipient);
 
 router.post('/test', TelegramController.sendTest);

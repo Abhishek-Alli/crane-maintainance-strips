@@ -9,7 +9,7 @@ class TelegramController {
   static async getRecipients(req, res) {
     try {
       const { rows } = await query(
-        'SELECT id, chat_id, label, is_active, checksheet_types, created_at FROM telegram_recipients ORDER BY created_at DESC'
+        'SELECT id, chat_id, label, is_active, checksheet_types, is_admin, alerts_only, sms_sheets, created_at FROM telegram_recipients ORDER BY created_at DESC'
       );
       res.json({ success: true, recipients: rows });
     } catch (error) {
@@ -123,6 +123,32 @@ class TelegramController {
       res.json({ success: true, recipient: rows[0] });
     } catch (error) {
       console.error('Update checksheets error:', error);
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  // PUT /api/telegram/recipients/:id/settings
+  // Body: { is_admin, alerts_only, sms_sheets: ['billet-strand-1', ...] }
+  static async updateSettings(req, res) {
+    try {
+      const { id } = req.params;
+      const { is_admin, alerts_only, sms_sheets } = req.body;
+      const sheets = Array.isArray(sms_sheets) && sms_sheets.length > 0
+        ? sms_sheets.map(String)
+        : null;
+
+      const { rows } = await query(
+        `UPDATE telegram_recipients
+         SET is_admin = $1, alerts_only = $2, sms_sheets = $3
+         WHERE id = $4 RETURNING *`,
+        [Boolean(is_admin), Boolean(alerts_only), sheets, parseInt(id, 10)]
+      );
+      if (rows.length === 0) {
+        return res.status(404).json({ success: false, message: 'Recipient not found' });
+      }
+      res.json({ success: true, recipient: rows[0] });
+    } catch (error) {
+      console.error('Update recipient settings error:', error);
       res.status(500).json({ success: false, message: error.message });
     }
   }

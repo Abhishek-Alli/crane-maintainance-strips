@@ -1,6 +1,7 @@
 const { query } = require('../config/database');
 const { isWithinEditWindow, editWindowDeniedMessage } = require('../utils/editWindow');
 const { CASTER_SHEETS, nullIfEmpty, normalizeReadings } = require('../utils/smsCasterMotorConfig');
+const { notifyCasterMotorSheet } = require('../utils/telegramSmsNotify');
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -24,7 +25,11 @@ function prepare(sheet, b) {
   if (!Object.values(norm.readings).some((r) => r.value !== null)) {
     return { error: 'Enter at least one motor current' };
   }
-  return { values: [b.report_date, recordedBy, JSON.stringify(norm.readings), nullIfEmpty(b.remark)] };
+  const remark = nullIfEmpty(b.remark);
+  return {
+    values: [b.report_date, recordedBy, JSON.stringify(norm.readings), remark],
+    data: { report_date: b.report_date, recorded_by: recordedBy, readings: norm.readings, remark },
+  };
 }
 
 class SmsCasterMotorController {
@@ -108,6 +113,8 @@ class SmsCasterMotorController {
         [req.params.sheet, ...prep.values, req.user.id]
       );
       res.status(201).json({ success: true, message: 'Checklist saved', data: result.rows[0] });
+      // Fire-and-forget: a Telegram failure must never affect the save
+      notifyCasterMotorSheet({ sheetKey: req.params.sheet, sheet, data: prep.data, action: 'created', actorName: req.user.username });
     } catch (error) {
       console.error('SMS Caster Motor create error:', error);
       res.status(500).json({ success: false, message: 'Failed to save caster motor checklist' });
@@ -137,6 +144,7 @@ class SmsCasterMotorController {
         [...prep.values, id, req.params.sheet]
       );
       res.json({ success: true, message: 'Checklist updated', data: result.rows[0] });
+      notifyCasterMotorSheet({ sheetKey: req.params.sheet, sheet, data: prep.data, action: 'updated', actorName: req.user.username });
     } catch (error) {
       console.error('SMS Caster Motor update error:', error);
       res.status(500).json({ success: false, message: 'Failed to update caster motor checklist' });

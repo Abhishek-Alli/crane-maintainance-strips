@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-toastify';
 import { telegramAPI, hbmAPI } from '../services/api';
+import { CASTER_SHEETS } from './sms/casterMotorConfig';
 
 const ALL_CHECKSHEET_TYPES = [
   { key: 'dc-motor',       label: 'DC Motor' },
@@ -101,6 +102,93 @@ function SubscriptionEditor({ recipient, onSaved, onClose }) {
   );
 }
 
+// ─── SMS Options Editor (admin flag, alerts-only, SMS sheet subscriptions) ───
+// Add new SMS sheet keys here as notifications are wired for them.
+const SMS_NOTIFY_SHEETS = Object.entries(CASTER_SHEETS).map(([key, s]) => ({ key, label: s.label }));
+
+function SmsOptionsEditor({ recipient, onSaved, onClose }) {
+  const [isAdmin, setIsAdmin] = useState(Boolean(recipient.is_admin));
+  const [alertsOnly, setAlertsOnly] = useState(Boolean(recipient.alerts_only));
+  const [selected, setSelected] = useState(new Set(recipient.sms_sheets || []));
+  const [saving, setSaving] = useState(false);
+
+  const allSelected = selected.size === SMS_NOTIFY_SHEETS.length;
+  const toggle = (key) => setSelected((prev) => {
+    const next = new Set(prev);
+    next.has(key) ? next.delete(key) : next.add(key);
+    return next;
+  });
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await telegramAPI.updateRecipientSettings(recipient.id, {
+        is_admin: isAdmin,
+        alerts_only: alertsOnly,
+        sms_sheets: [...selected],
+      });
+      toast.success('SMS notification settings saved');
+      onSaved();
+    } catch {
+      toast.error('Failed to save settings');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="mt-3 border-t border-gray-200 pt-3 space-y-3">
+      <label className="flex items-start gap-2 text-xs cursor-pointer select-none">
+        <input type="checkbox" checked={isAdmin} onChange={(e) => setIsAdmin(e.target.checked)} className="mt-0.5 w-3.5 h-3.5 accent-red-600" />
+        <span>
+          <span className="font-bold text-red-700">Admin — receive every notification</span>
+          <span className="block text-gray-500">All sheets, normal and abnormal, new entries and edits. Ignores the choices below.</span>
+        </span>
+      </label>
+
+      <div className={isAdmin ? 'opacity-40 pointer-events-none' : ''}>
+        <label className="flex items-start gap-2 text-xs cursor-pointer select-none mb-3">
+          <input type="checkbox" checked={alertsOnly} onChange={(e) => setAlertsOnly(e.target.checked)} className="mt-0.5 w-3.5 h-3.5 accent-amber-600" />
+          <span>
+            <span className="font-bold text-gray-700">Alerts only</span>
+            <span className="block text-gray-500">Only send when something is abnormal (e.g. a motor current above its max).</span>
+          </span>
+        </label>
+
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs font-bold text-gray-600 uppercase tracking-wide">SMS sheet notifications</p>
+          <button type="button" onClick={() => setSelected(allSelected ? new Set() : new Set(SMS_NOTIFY_SHEETS.map((t) => t.key)))}
+            className="text-xs text-blue-600 hover:underline font-medium">
+            {allSelected ? 'Deselect All' : 'Select All'}
+          </button>
+        </div>
+        <div className="grid grid-cols-2 gap-1.5">
+          {SMS_NOTIFY_SHEETS.map(({ key, label }) => (
+            <label key={key}
+              className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border cursor-pointer text-xs font-medium select-none ${
+                selected.has(key) ? 'bg-amber-50 border-amber-300 text-amber-800' : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
+              }`}>
+              <input type="checkbox" checked={selected.has(key)} onChange={() => toggle(key)} className="w-3 h-3 accent-amber-600" />
+              {label}
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex gap-2">
+        <button type="button" onClick={handleSave} disabled={saving}
+          className="flex-1 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors">
+          {saving ? 'Saving…' : 'Save SMS Settings'}
+        </button>
+        <button type="button" onClick={onClose}
+          className="px-4 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-lg transition-colors">
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Subscription Pills (read-only) ──────────────────────────────────────────
 function SubscriptionPills({ checksheetTypes }) {
   if (!checksheetTypes) {
@@ -141,6 +229,7 @@ function TelegramSettings() {
   const [adding, setAdding]         = useState(false);
   const [testingId, setTestingId]   = useState(null);
   const [editingId, setEditingId]   = useState(null);
+  const [smsEditingId, setSmsEditingId] = useState(null);
   const [sending, setSending]           = useState(false);
   const [sendResult, setSendResult]     = useState(null);
   const [notifDate, setNotifDate]       = useState(new Date().toLocaleDateString('en-CA'));
@@ -415,6 +504,20 @@ function TelegramSettings() {
                     </span>
                     {/* Which checksheets this recipient gets */}
                     <SubscriptionPills checksheetTypes={r.checksheet_types} />
+                    {/* SMS options summary */}
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {r.is_admin && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-semibold">Admin · gets everything</span>
+                      )}
+                      {!r.is_admin && r.alerts_only && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold">Alerts only</span>
+                      )}
+                      {!r.is_admin && (r.sms_sheets || []).length > 0 && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 font-medium">
+                          SMS: {r.sms_sheets.length} sheet{r.sms_sheets.length > 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Action buttons */}
@@ -441,12 +544,29 @@ function TelegramSettings() {
                       }`}>
                       Sheets
                     </button>
+                    <button
+                      onClick={() => setSmsEditingId(smsEditingId === r.id ? null : r.id)}
+                      className={`text-xs px-2.5 py-1.5 rounded-lg font-medium ${
+                        smsEditingId === r.id
+                          ? 'bg-amber-600 text-white'
+                          : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                      }`}>
+                      SMS
+                    </button>
                     <button onClick={() => handleDelete(r.id)}
                       className="text-xs px-2.5 py-1.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 font-medium">
                       Delete
                     </button>
                   </div>
                 </div>
+
+                {smsEditingId === r.id && (
+                  <SmsOptionsEditor
+                    recipient={r}
+                    onSaved={() => { fetchRecipients(); setSmsEditingId(null); }}
+                    onClose={() => setSmsEditingId(null)}
+                  />
+                )}
 
                 {/* Inline subscription editor */}
                 {editingId === r.id && (

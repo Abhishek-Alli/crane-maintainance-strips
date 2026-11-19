@@ -223,6 +223,7 @@ export const telegramAPI = {
   addRecipient: (data) => api.post('/telegram/recipients', data),
   toggleRecipient: (id) => api.put(`/telegram/recipients/${id}/toggle`),
   updateRecipientChecksheets: (id, checksheet_types) => api.put(`/telegram/recipients/${id}/checksheets`, { checksheet_types }),
+  updateRecipientSettings: (id, data) => api.put(`/telegram/recipients/${id}/settings`, data),
   deleteRecipient: (id) => api.delete(`/telegram/recipients/${id}`),
   sendTest: (data) => api.post('/telegram/test', data),
 };

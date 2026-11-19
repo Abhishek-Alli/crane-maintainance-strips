@@ -1044,6 +1044,7 @@ module.exports = {
   sendTestMessage,
   sendToChat,
   sendLongMessage,
+  sendLongMessageToIds,
   sendHbmChecksheetNotification,
   sendCoolingBedNotification,
   sendMillMechNotification,
