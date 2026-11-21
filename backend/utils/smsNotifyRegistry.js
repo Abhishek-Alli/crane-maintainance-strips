@@ -93,10 +93,44 @@ function ptmChecksheetRows(record) {
   }).filter((r) => r.value !== '');
 }
 
+const escHtml = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const hoursMinutes = (m) => (m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min`);
+
+/** PTM Breakdown Report: one block per mill with its pieces, downtime and a breakdown table */
+function ptmBreakdownFormat(record) {
+  const slots = [...(record.slots || [])].sort((a, b) => (a.slot_order || 0) - (b.slot_order || 0));
+  let total = 0;
+  const blocks = slots.map((slot) => {
+    const entries = slot.entries || [];
+    const minutes = entries.reduce((sum, e) => sum + (Number(e.breakdown_minutes) || 0), 0);
+    total += minutes;
+    const facts = [
+      `${slot.pipe_pieces ?? '—'} pcs`,
+      `${slot.pipe_length_m ?? '—'} m`,
+      Number(slot.miss_roll) ? `${slot.miss_roll} miss roll` : null,
+    ].filter(Boolean).join(' · ');
+    const head = `<b>${escHtml(slot.slot_label || 'Mill')}</b>  ${escHtml(facts)}\n⏱ Breakdown: <b>${hoursMinutes(minutes)}</b>`;
+    if (!entries.length) return `${head}\n<i>No breakdowns</i>`;
+    const typeW = Math.min(12, Math.max(4, ...entries.map((e) => String(e.breakdown_type || '').length)));
+    const lines = entries.map((e) => {
+      const reason = String(e.breakdown_reason || '').trim();
+      return `${String(e.breakdown_type || '—').slice(0, typeW).padEnd(typeW)} ${String(e.breakdown_minutes ?? '').padStart(4)}  ${reason.length > 30 ? `${reason.slice(0, 29)}…` : reason}`;
+    });
+    return `${head}\n<pre>${escHtml(lines.join('\n'))}</pre>`;
+  });
+
+  const summary =
+    (record.size ? `📏 Size: <b>${escHtml(record.size)}</b>\n` : '') +
+    (total > 0
+      ? `⚠️ Total breakdown: <b>${hoursMinutes(total)}</b> across ${slots.length} mill${slots.length === 1 ? '' : 's'}\n`
+      : `✅ No breakdowns recorded\n`);
+  return { html: `${summary}\n${blocks.join('\n\n')}`, hasAlert: total > 0 };
+}
+
 // PTM sheets (Monthly Register is a read-only view, so it has nothing to notify about).
 const PTM_NOTIFY_REGISTRY = {
   logs: { key: 'ptm:checksheet', label: 'PTM Checksheet', controller: PtmController, method: 'getLogById', rows: ptmChecksheetRows },
-  breakdown: { key: 'ptm:breakdown', label: 'Breakdown Report', table: 'ptm_breakdown_logs', controller: PtmController, method: 'getBreakdownLogById' },
+  breakdown: { key: 'ptm:breakdown', label: 'Breakdown Report', table: 'ptm_breakdown_logs', controller: PtmController, method: 'getBreakdownLogById', format: ptmBreakdownFormat },
 };
 
 const CRANE_NOTIFY_SHEETS = [{ key: 'crane:inspection', label: 'Crane Inspection' }];

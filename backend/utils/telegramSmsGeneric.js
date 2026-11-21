@@ -49,7 +49,24 @@ function flatten(node, prefix, out) {
       const text = node.filter((x) => x !== null && x !== '').join(', ');
       if (text) out.push({ label: prefix, value: text, remark: '', bad: false });
     } else {
-      node.forEach((item, i) => flatten(item, `${prefix} ${i + 1}`, out));
+      node.forEach((item, i) => {
+        if (item && typeof item === 'object' && !Array.isArray(item)) {
+          const fields = Object.entries(item).filter(([k]) => !SKIP_KEYS.has(k) && !/(^|_)id$/.test(k));
+          if (fields.length && fields.every(([, v]) => v === null || typeof v !== 'object')) {
+            const text = fields.map(([, v]) => v).filter((v) => v !== null && v !== '').join(' · ');
+            if (text) {
+              out.push({
+                label: `${prefix} ${i + 1}`,
+                value: text,
+                remark: '',
+                bad: fields.some(([k, v]) => isBad(k, v)),
+              });
+            }
+            return;
+          }
+        }
+        flatten(item, `${prefix} ${i + 1}`, out);
+      });
     }
     return out;
   }
@@ -68,7 +85,7 @@ function flatten(node, prefix, out) {
       return out;
     }
     Object.entries(node).forEach(([k, v]) => {
-      if (SKIP_KEYS.has(k)) return;
+      if (SKIP_KEYS.has(k) || /(^|_)id$/.test(k)) return;
       flatten(v, prefix ? `${prefix} › ${prettify(k)}` : prettify(k), out);
     });
     return out;
@@ -88,8 +105,8 @@ const fmtDate = (d) => {
 };
 const fmtNow = () => new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: false });
 
-function buildMessage({ label, record, action, actorName, customRows }) {
-  const rows = (customRows || flatten(record, '', [])).filter((r) => r.label);
+function buildMessage({ label, record, action, actorName, customRows, custom }) {
+  const rows = custom ? [] : (customRows || flatten(record, '', [])).filter((r) => r.label);
   const bad = rows.filter((r) => r.bad);
   const updated = action === 'updated';
   const date = record.report_date || record.date || record.log_date || record.breakdown_date
@@ -101,10 +118,17 @@ function buildMessage({ label, record, action, actorName, customRows }) {
     (date ? `📅 <b>${fmtDate(date)}</b>\n` : '') +
     (record.recorded_by ? `👤 Recorded By: <b>${esc(record.recorded_by)}</b>\n` : '') +
     `${updated ? '✏️ Edited By' : '📝 Filled By'}: <b>${esc(actorName || record.filled_by_name || '—')}</b>\n` +
-    `🕐 ${updated ? 'Edited' : 'Submitted'}: <b>${fmtNow()}</b>\n` +
-    (bad.length
-      ? `⚠️ <b>${bad.length} abnormal item${bad.length > 1 ? 's' : ''}</b>\n`
-      : `✅ No abnormal items\n`);
+    `🕐 ${updated ? 'Edited' : 'Submitted'}: <b>${fmtNow()}</b>\n`;
+
+  // A sheet can supply its own body (see entry.format in smsNotifyRegistry.js)
+  if (custom) {
+    msg += `${custom.html}`;
+    return { msg, hasAlert: Boolean(custom.hasAlert) };
+  }
+
+  msg += bad.length
+    ? `⚠️ <b>${bad.length} abnormal item${bad.length > 1 ? 's' : ''}</b>\n`
+    : `✅ No abnormal items\n`;
 
   if (bad.length) {
     msg += `\n<b>Abnormal</b>\n` + bad.slice(0, 25).map((r) =>
@@ -116,7 +140,7 @@ function buildMessage({ label, record, action, actorName, customRows }) {
   const rest = rows.filter((r) => !r.bad);
   if (rest.length) {
     const MAX = 60;
-    const lines = rest.slice(0, MAX).map((r) => `${truncate(r.label, 34)}: ${truncate(r.value, 28)}`);
+    const lines = rest.slice(0, MAX).map((r) => `${truncate(r.label, 30)}: ${truncate(r.value, 40)}`);
     if (rest.length > MAX) lines.push(`… ${rest.length - MAX} more fields`);
     msg += `\n\n<b>Details</b>\n<pre>${esc(lines.join('\n'))}</pre>`;
   }
@@ -150,7 +174,8 @@ async function dispatch(entry, id, action, user) {
     const record = await loadRecord(entry.controller, entry.method || 'getById', id, user);
     if (!record || typeof record !== 'object') return false;
     const customRows = entry.rows ? entry.rows(record) : null;
-    const { msg, hasAlert } = buildMessage({ label: entry.label, record, action, actorName: user?.username, customRows });
+    const custom = entry.format ? entry.format(record) : null;
+    const { msg, hasAlert } = buildMessage({ label: entry.label, record, action, actorName: user?.username, customRows, custom });
     const chatIds = await getSmsRecipientIds(entry.key, hasAlert);
     if (chatIds.length) await sendLongMessageToIds(chatIds, msg);
     return true;
@@ -165,6 +190,7 @@ async function dispatch(entry, id, action, user) {
  * `key` is the subscription key used on the Telegram settings screen.
  * `method` is the controller's by-id loader (default getById).
  * `rows(record)` optionally turns the record into [{ label, value, remark, bad }] for a nicer message.
+ * `format(record)` optionally returns { html, hasAlert } to replace the whole message body.
  */
 function smsNotifyMiddleware(registry) {
   return (req, res, next) => {
