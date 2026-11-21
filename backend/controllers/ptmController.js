@@ -397,7 +397,7 @@ class PtmController {
 
   static async getBreakdownLogs(req, res) {
     try {
-      const { date_from, date_to, page: pg, limit: lim } = req.query;
+      const { date_from, date_to, mill_id, page: pg, limit: lim } = req.query;
       const limit = parseInt(lim) || 20;
       const page = Math.max(1, parseInt(pg) || 1);
       const offset = (page - 1) * limit;
@@ -407,6 +407,14 @@ class PtmController {
 
       if (date_from) { conditions.push(`bl.log_date >= $${idx++}`); params.push(date_from); }
       if (date_to)   { conditions.push(`bl.log_date <= $${idx++}`); params.push(date_to); }
+      if (mill_id) {
+        // logs that have a block for this mill (slots store the mill's name as slot_label)
+        conditions.push(
+          `EXISTS (SELECT 1 FROM ptm_breakdown_slots fs JOIN ptm_mills fm ON fm.name = fs.slot_label
+                   WHERE fs.log_id = bl.id AND fm.id = $${idx++})`
+        );
+        params.push(parseInt(mill_id, 10) || 0);
+      }
 
       const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
 
@@ -422,13 +430,14 @@ class PtmController {
       const dataParams = [...params, limit, offset];
 
       const result = await query(
-        `SELECT bl.id, bl.log_date, bl.shift, bl.created_at,
+        `SELECT bl.id, bl.log_date, bl.created_at,
+                NULLIF(STRING_AGG(DISTINCT to_jsonb(be)->>'shift', ', '), '') AS shift,
                 u.username as filled_by,
                 COALESCE(SUM(be.breakdown_minutes),0) as total_breakdown_minutes,
                 ARRAY_AGG(DISTINCT bs.slot_label) FILTER (WHERE bs.slot_label IS NOT NULL) as mills,
                 (EXTRACT(EPOCH FROM (NOW() - bl.created_at)) < 86400) as can_modify
          FROM ptm_breakdown_logs bl
-         JOIN users u ON u.id = bl.filled_by
+         LEFT JOIN users u ON u.id = bl.filled_by
          LEFT JOIN ptm_breakdown_slots bs ON bs.log_id = bl.id
          LEFT JOIN ptm_breakdown_entries be ON be.slot_id = bs.id
          ${where}
