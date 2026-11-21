@@ -90,6 +90,27 @@ async function getAllChatIds() {
   return [...s];
 }
 
+// Recipients for summaries / scheduled reports: admins (+ default chat), and everyone else
+// EXCEPT those on "alerts only" (a summary is not an alert).
+async function getSummaryChatIds() {
+  const s = new Set();
+  if (DEFAULT_CHAT_ID) s.add(DEFAULT_CHAT_ID);
+  try {
+    const { rows } = await query(
+      'SELECT chat_id FROM telegram_recipients WHERE is_active = true AND (is_admin = true OR alerts_only = false)'
+    );
+    rows.forEach((r) => s.add(r.chat_id));
+  } catch (e) {
+    console.error('getSummaryChatIds error, falling back:', e.message);
+    return getAllChatIds();
+  }
+  return [...s];
+}
+
+async function sendReportMessage(message) {
+  return sendToIds(await getSummaryChatIds(), message);
+}
+
 async function getChatIdsForType(typeKey) {
   const s = new Set();
   if (DEFAULT_CHAT_ID) s.add(DEFAULT_CHAT_ID);
@@ -913,7 +934,7 @@ function fmtDateShort(d) {
 }
 
 async function sendDailyStatusSummary(date) {
-  const chatIds = await getAllChatIds();
+  const chatIds = await getSummaryChatIds();
   if (!chatIds.length) return;
 
   const rpad = (s, n) => String(s).substring(0, n).padEnd(n);
@@ -1056,6 +1077,7 @@ module.exports = {
   TYPE_LABEL_TO_KEY,
   runAsUpdate,
   sendTelegramMessage,
+  sendReportMessage,
   sendTestMessage,
   sendToChat,
   sendLongMessage,

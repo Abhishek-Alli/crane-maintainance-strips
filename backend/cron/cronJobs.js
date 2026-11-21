@@ -3,7 +3,7 @@
 
 const dayjs = require('dayjs');
 const { query } = require('../config/database');
-const { sendTelegramMessage } = require('../utils/telegram');
+const { sendReportMessage: sendTelegramMessage } = require('../utils/telegram');
 
 /**
  * JOB 1 – NEXT MAINTENANCE ALERT
