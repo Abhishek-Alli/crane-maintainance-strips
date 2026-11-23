@@ -118,8 +118,23 @@ export default function HbmMonthlyRegister({ allowedSheets }) {
     }
 
     const aoa = [titleRow, dayNumRow, dayAbbRow];
+    const hasBlocks = data.items.some(it => it.block);
+    const regItems = hasBlocks
+      ? [...data.items].map((it, i) => ({ it, i })).sort((a, b) =>
+          String(a.it.block || '').localeCompare(String(b.it.block || '')) ||
+          String(a.it.section || '').localeCompare(String(b.it.section || '')) ||
+          (a.i - b.i)
+        ).map(x => x.it)
+      : data.items;
     let currentSection = null;
-    for (const item of data.items) {
+    let currentBlock = null;
+    for (const item of regItems) {
+      // Stand / block separator row
+      if (hasBlocks && item.block !== currentBlock) {
+        currentBlock = item.block;
+        currentSection = null;
+        aoa.push([item.block || '', '']);
+      }
       const row = [item.section !== currentSection ? item.section : '', item.item];
       currentSection = item.section;
       let notOkCount = 0;
@@ -366,10 +381,28 @@ export default function HbmMonthlyRegister({ allowedSheets }) {
 
       const body = [];
       let lastSec = null;
-      for (const item of data.items) {
+      let lastBlk = null;
+      const pdfHasBlocks = data.items.some(it => it.block);
+      const pdfItems = pdfHasBlocks
+        ? [...data.items].map((it, i) => ({ it, i })).sort((a, b) =>
+            String(a.it.block || '').localeCompare(String(b.it.block || '')) ||
+            String(a.it.section || '').localeCompare(String(b.it.section || '')) ||
+            (a.i - b.i)
+          ).map(x => x.it)
+        : data.items;
+      const span = 1 + data.days.length + (data.paramType ? 0 : 1);
+      for (const item of pdfItems) {
+        if (pdfHasBlocks && item.block !== lastBlk) {
+          lastBlk = item.block;
+          lastSec = null;
+          body.push([{
+            content: item.block,
+            colSpan: span,
+            styles: { fontStyle: 'bold', fillColor: [5, 150, 105], textColor: 255, fontSize: 6 },
+          }]);
+        }
         if (item.section !== lastSec) {
           lastSec = item.section;
-          const span = 1 + data.days.length + (data.paramType ? 0 : 1);
           body.push([{
             content: item.section,
             colSpan: span,
@@ -647,15 +680,38 @@ export default function HbmMonthlyRegister({ allowedSheets }) {
                     <tbody>
                       {(() => {
                         let lastSection = null;
+                        let lastBlock = null;
                         const rows = [];
-                        data.items.forEach((item, idx) => {
+                        // If any item has a block (e.g. DC Motor stands), group Block → Section → Items
+                        const hasBlocks = data.items.some(it => it.block);
+                        const orderedItems = hasBlocks
+                          ? [...data.items].map((it, i) => ({ it, i })).sort((a, b) =>
+                              String(a.it.block || '').localeCompare(String(b.it.block || '')) ||
+                              String(a.it.section || '').localeCompare(String(b.it.section || '')) ||
+                              (a.i - b.i)
+                            ).map(x => x.it)
+                          : data.items;
+                        orderedItems.forEach((item, idx) => {
+                          const totalDayCols = data.days.length + (isBreakdown ? 1 : 0);
+                          // Stand / block band (DC Motor etc.)
+                          const isNewBlock = hasBlocks && item.block !== lastBlock;
+                          if (isNewBlock && !isBreakdown) {
+                            rows.push(
+                              <tr key={`blk-${idx}`} className="bg-emerald-600 border-t-2 border-emerald-700">
+                                <td colSpan={1 + totalDayCols} className="border border-emerald-700 px-3 py-1.5 text-[11px] font-bold text-white uppercase tracking-wide sticky left-0 bg-emerald-600 z-10">
+                                  {item.block}
+                                </td>
+                              </tr>
+                            );
+                            lastBlock = item.block;
+                            lastSection = null; // force section band to re-print under each block
+                          }
                           const isNewSection = item.section !== lastSection;
                           lastSection = item.section;
-                          const totalDayCols = data.days.length + (isBreakdown ? 1 : 0);
                           if (isNewSection && !isBreakdown) {
                             rows.push(
                               <tr key={`sec-${idx}`} className="bg-emerald-50 border-t-2 border-emerald-300">
-                                <td colSpan={1 + totalDayCols} className="border border-emerald-200 px-3 py-1 text-[10px] font-bold text-emerald-800 uppercase tracking-wide sticky left-0 bg-emerald-50 z-10">
+                                <td colSpan={1 + totalDayCols} className={`border border-emerald-200 px-3 py-1 text-[10px] font-bold text-emerald-800 uppercase tracking-wide sticky left-0 bg-emerald-50 z-10 ${hasBlocks ? 'pl-6' : ''}`}>
                                   {item.section}
                                 </td>
                               </tr>
@@ -663,7 +719,7 @@ export default function HbmMonthlyRegister({ allowedSheets }) {
                           }
                           rows.push(
                             <tr key={idx}>
-                              <td className="border border-gray-200 px-3 py-1.5 text-gray-800 sticky left-0 bg-white z-10 min-w-[16rem]">{item.item}</td>
+                              <td className={`border border-gray-200 px-3 py-1.5 text-gray-800 sticky left-0 bg-white z-10 min-w-[16rem] ${hasBlocks ? 'pl-8' : ''}`}>{item.item}</td>
                               {data.days.map(day => {
                                 const cell = item.cells[day.date];
                                 if (!day.filled) {
