@@ -4112,18 +4112,49 @@ class HbmController {
         const logIds = logsRes.rows.map(r => r.id);
         const normalized = [];
         if (logIds.length > 0) {
-          const s1 = await query(`SELECT s.log_id, s.unit_name, s.ht_current, s.ht_volt, s.wind_temperature, s.oil_temperature, s.main_tank_oil_level, s.oltc_oil_level, s.silica_gel_color, s.oil_leakage FROM hbm_transformer_sec1 s WHERE s.log_id = ANY($1) ORDER BY s.unit_name`, [logIds]);
+          const s1 = await query(`SELECT s.log_id, s.unit_name, s.rated_current, s.ct_ratio, s.bar_size, s.ht_current, s.ht_volt, s.tap_count_diff, s.tap_position, s.wind_temperature, s.oil_temperature, s.main_tank_oil_level, s.oltc_oil_level, s.silica_gel_color, s.cleaning, s.electric_inspection, s.mech_inspection, s.relay_condition, s.meter_condition, s.indicator, s.announce_meter, s.oil_leakage, s.tnc_operation, s.dc_supply FROM hbm_transformer_sec1 s WHERE s.log_id = ANY($1) ORDER BY s.unit_name`, [logIds]);
           for (const r of s1.rows) {
             const log = logsRes.rows.find(l => l.id === r.log_id);
             const date = String(log.log_date).slice(0, 10);
+            normalized.push({ section: r.unit_name, item: 'Rated Current (A)',    date, value: r.rated_current,        status: null });
+            normalized.push({ section: r.unit_name, item: 'CT Ratio',             date, value: r.ct_ratio,             status: null });
+            normalized.push({ section: r.unit_name, item: 'Bar Size',             date, value: r.bar_size,             status: null });
             normalized.push({ section: r.unit_name, item: 'HT Current (A)',       date, value: r.ht_current,           status: null });
             normalized.push({ section: r.unit_name, item: 'HT Voltage (V)',       date, value: r.ht_volt,              status: null });
+            normalized.push({ section: r.unit_name, item: 'Tap Count Diff',       date, value: r.tap_count_diff,      status: null });
+            normalized.push({ section: r.unit_name, item: 'Tap Position',         date, value: r.tap_position,        status: null });
             normalized.push({ section: r.unit_name, item: 'Winding Temp (°C)',    date, value: r.wind_temperature,     status: null });
             normalized.push({ section: r.unit_name, item: 'Oil Temp (°C)',        date, value: r.oil_temperature,      status: null });
             normalized.push({ section: r.unit_name, item: 'Main Tank Oil Level',  date, value: r.main_tank_oil_level,  status: null });
             normalized.push({ section: r.unit_name, item: 'OLTC Oil Level',       date, value: r.oltc_oil_level,       status: null });
             normalized.push({ section: r.unit_name, item: 'Silica Gel Color',     date, value: r.silica_gel_color,     status: null });
             normalized.push({ section: r.unit_name, item: 'Oil Leakage',          date, value: r.oil_leakage,          status: r.oil_leakage === 'YES' ? 'NOT_OK' : 'OK' });
+
+            // Status / inspection checks — map raw value to OK / NOT_OK for colouring
+            const badStatus = new Set(['NOT_OK', 'Not_Checked', 'YES']);
+            const stat = (v) => (v == null || v === '') ? null : (badStatus.has(v) ? 'NOT_OK' : 'OK');
+            const statusFields = [
+              ['Cleaning',            r.cleaning],
+              ['Electric Inspection', r.electric_inspection],
+              ['Mech. Inspection',    r.mech_inspection],
+              ['Relay Condition',     r.relay_condition],
+              ['Meter Condition',     r.meter_condition],
+              ['Indicator',           r.indicator],
+              ['Announce Meter',      r.announce_meter],
+              ['TNC Operation',       r.tnc_operation],
+              ['DC Supply',           r.dc_supply],
+            ];
+            for (const [itemLabel, raw] of statusFields) {
+              normalized.push({ section: r.unit_name, item: itemLabel, date, value: raw, status: stat(raw) });
+            }
+          }
+          const s2 = await query(`SELECT s.log_id, s.unit_name, s.today_tap_count, s.yesterday_tap_count, s.difference FROM hbm_transformer_sec2 s WHERE s.log_id = ANY($1) ORDER BY s.unit_name`, [logIds]);
+          for (const r of s2.rows) {
+            const log = logsRes.rows.find(l => l.id === r.log_id);
+            const date = String(log.log_date).slice(0, 10);
+            normalized.push({ section: r.unit_name + ' (OLTC)', item: 'Today Tap Count',     date, value: r.today_tap_count,     status: null });
+            normalized.push({ section: r.unit_name + ' (OLTC)', item: 'Yesterday Tap Count', date, value: r.yesterday_tap_count, status: null });
+            normalized.push({ section: r.unit_name + ' (OLTC)', item: 'Tap Difference',      date, value: r.difference,          status: null });
           }
           const s3 = await query(`SELECT s.log_id, s.unit_name, s.diff_kwh, s.diff_kvah FROM hbm_transformer_sec3 s WHERE s.log_id = ANY($1) ORDER BY s.unit_name`, [logIds]);
           for (const r of s3.rows) {
