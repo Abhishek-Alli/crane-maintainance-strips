@@ -7,7 +7,7 @@ import ChecksheetPreviewModal, { PreviewSection, PreviewGrid } from './Checkshee
 // ─── BLOCK CONFIGURATION ───────────────────────────────────────────────────
 const blockConfig = {
   'ROUGHING MOTOR': {
-    'INTERNAL MOTOR': ['CARBON BRUSH', 'HOLDER', 'STATOR'],
+    'INTERNAL MOTOR': ['CARBON BRUSH', 'NO. OF CARBON BRUSH USED', 'HOLDER', 'STATOR'],
     'CLEANING': ['MOTOR'],
     'CONNECTION': ['STATOR', 'ROTOR', 'JUNCTION BOX'],
   },
