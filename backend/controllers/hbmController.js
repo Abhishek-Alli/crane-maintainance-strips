@@ -550,9 +550,9 @@ class HbmController {
 
         for (const item of items) {
           await client.query(
-            `INSERT INTO hbm_dc_motor_items (log_id, block_name, section_name, item_name, status, remark, action_taken)
-             VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-            [log.id, item.block_name, item.section_name, item.item_name, item.status, item.remark || null, item.action_taken || null]
+            `INSERT INTO hbm_dc_motor_items (log_id, block_name, section_name, item_name, status, remark, action_taken, item_value)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+            [log.id, item.block_name, item.section_name, item.item_name, item.status, item.remark || null, item.action_taken || null, item.item_value === '' || item.item_value == null ? null : String(item.item_value)]
           );
         }
       });
@@ -4605,7 +4605,7 @@ class HbmController {
           await client.query(`UPDATE hbm_dc_motor_logs SET log_date=$1, log_time=$2, shift=$3, heat_start=$4, heat_end=$5, remarks=$6, updated_at=NOW() WHERE id=$7`, [log_date, log_time, shift, n(heat_start), n(heat_end), n(remarks), id]);
           await client.query(`DELETE FROM hbm_dc_motor_items WHERE log_id=$1`, [id]);
           for (const item of (items || [])) {
-            await client.query(`INSERT INTO hbm_dc_motor_items (log_id, block_name, section_name, item_name, status, remark, action_taken) VALUES ($1,$2,$3,$4,$5,$6,$7)`, [id, item.block_name, item.section_name, item.item_name, item.status, n(item.remark), n(item.action_taken)]);
+            await client.query(`INSERT INTO hbm_dc_motor_items (log_id, block_name, section_name, item_name, status, remark, action_taken, item_value) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`, [id, item.block_name, item.section_name, item.item_name, item.status, n(item.remark), n(item.action_taken), n(item.item_value)]);
           }
         } else if (type === 'cooling-bed') {
           const { log_date, log_time, shift, sec1_remark, sec1_result, sec1_checked_by, sec2_remark, sec2_result, sec2_checked_by, sec3_remark, sec3_result, sec3_checked_by, sec4_remark, sec4_result, sec4_checked_by, sec5_remark, sec5_result, sec5_checked_by, sec6_remark, sec6_result, sec6_checked_by, items } = req.body;

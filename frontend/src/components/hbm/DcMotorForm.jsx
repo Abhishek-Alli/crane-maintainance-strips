@@ -75,6 +75,9 @@ const defaultSections = {
   'COOLING': ['FRONT COVER', 'BACK COVER', 'DRIVE PANEL'],
 };
 
+// Items that also take a number typed next to the OK / NOT OK / OFF buttons
+const VALUE_ITEMS = { 'NO. OF CARBON BRUSH USED': 'Nos.' };
+
 const getBlockSections = (block) => blockConfig[block] || defaultSections;
 
 // ─── Single Item Row ───────────────────────────────────────────────────────
@@ -86,10 +89,17 @@ const ItemRow = ({ block, section, item, value, onChange }) => {
     <div className={`border-b border-gray-100 last:border-0 px-4 py-3 ${isNotOk ? 'bg-red-50' : ''}`}>
       <div className="flex flex-col sm:flex-row sm:items-center gap-2">
         <p className="flex-1 text-sm font-medium text-gray-800">{item}</p>
-        <div className="flex gap-2 flex-shrink-0">
+        <div className="flex gap-2 flex-shrink-0 items-center">
+          {VALUE_ITEMS[item] && (
+            <input type="number" min="0" step="1" inputMode="numeric"
+              value={value?.item_value ?? ''}
+              onChange={e => onChange(key, { ...value, status: value?.status || 'OK', item_value: e.target.value })}
+              placeholder={VALUE_ITEMS[item]}
+              className="w-24 px-3 py-1.5 border-2 border-gray-300 rounded-lg text-sm font-semibold text-center bg-white focus:outline-none focus:border-emerald-500" />
+          )}
           {['OK', 'NOT_OK', 'OFF'].map((s) => (
             <button key={s} type="button"
-              onClick={() => onChange(key, { status: s, remark: s === 'NOT_OK' ? (value?.remark || '') : '', action_taken: s === 'NOT_OK' ? (value?.action_taken || '') : '' })}
+              onClick={() => onChange(key, { status: s, item_value: value?.item_value ?? '', remark: s === 'NOT_OK' ? (value?.remark || '') : '', action_taken: s === 'NOT_OK' ? (value?.action_taken || '') : '' })}
               className={`px-4 py-1.5 rounded-lg text-sm font-bold border-2 transition-all ${
                 value?.status === s
                   ? s === 'OK' ? 'bg-green-500 border-green-500 text-white shadow-sm'
@@ -160,7 +170,7 @@ const DcMotorForm = () => {
         const vals = {};
         editData.items.forEach(item => {
           const key = `${item.block_name}__${item.section_name}__${item.item_name}`;
-          vals[key] = { status: item.status, remark: item.remark || '', action_taken: item.action_taken || '' };
+          vals[key] = { status: item.status, remark: item.remark || '', action_taken: item.action_taken || '', item_value: item.item_value ?? '' };
         });
         setItemValues(vals);
       }
@@ -184,7 +194,7 @@ const DcMotorForm = () => {
         if (!val.remark?.trim()) { toast.error(`Remark is compulsory for: ${item} (${block} - ${section})`); throw new Error('stop'); }
         if (!val.action_taken?.trim()) { toast.error(`Action Taken is compulsory for: ${item} (${block} - ${section})`); throw new Error('stop'); }
       }
-      items.push({ block_name: block, section_name: section, item_name: item, status: val.status, remark: val.remark || '', action_taken: val.action_taken || '' });
+      items.push({ block_name: block, section_name: section, item_name: item, status: val.status, remark: val.remark || '', action_taken: val.action_taken || '', item_value: val.item_value ?? '' });
     }
     return items;
   };
