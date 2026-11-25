@@ -81,6 +81,8 @@ export default function HbmMonthlyRegister({ allowedSheets }) {
   // Collect all NOT OK issues across all items and dates
   const getNotOkIssues = () => {
     if (!data) return [];
+    // HBM Transformer: the NOT OK issues list is not wanted (screen, Excel and PDF)
+    if (type === 'transformer') return [];
     const issues = [];
     for (const day of data.days) {
       if (!day.filled) continue;
@@ -202,10 +204,12 @@ export default function HbmMonthlyRegister({ allowedSheets }) {
     }
     if (issues.length === 0) detailAoa.push(['No NOT OK items found for this month', '', '', '', '', '']);
 
-    const ws2 = XLSX.utils.aoa_to_sheet(detailAoa);
-    ws2['!cols'] = [{ wch: 14 }, { wch: 10 }, { wch: 28 }, { wch: 36 }, { wch: 40 }, { wch: 40 }];
-    ws2['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }];
-    XLSX.utils.book_append_sheet(wb, ws2, 'NOT OK Details');
+    if (type !== 'transformer') {
+      const ws2 = XLSX.utils.aoa_to_sheet(detailAoa);
+      ws2['!cols'] = [{ wch: 14 }, { wch: 10 }, { wch: 28 }, { wch: 36 }, { wch: 40 }, { wch: 40 }];
+      ws2['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }];
+      XLSX.utils.book_append_sheet(wb, ws2, 'NOT OK Details');
+    }
 
     // ── Sheet 3: Not-filled dates ────────────────────────────────
     const notFilledAoa = [
