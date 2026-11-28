@@ -14,6 +14,7 @@ function selfOrAdmin(req, res, next) {
 router.use(authenticate);
 
 // Own permissions (or admin reading another user)
+router.get('/:id/all-permissions', selfOrAdmin, UserController.getAllPermissions);
 router.get('/:id/hbm-permissions', selfOrAdmin, UserController.getPermissions);
 router.get('/:id/crane-permissions', selfOrAdmin, UserController.getCranePermissions);
 router.get('/:id/hod-permissions', selfOrAdmin, UserController.getHodPermissions);

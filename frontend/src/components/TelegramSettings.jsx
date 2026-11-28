@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-toastify';
-import { telegramAPI, hbmAPI } from '../services/api';
+import { telegramAPI, hbmAPI, userAPI } from '../services/api';
 import { SMS_DOWNLOAD_SHEETS } from './sms/smsDownloadConfig';
 
 const ALL_CHECKSHEET_TYPES = [
@@ -227,6 +227,10 @@ function TelegramSettings() {
   const [label, setLabel]           = useState('');
   const [loading, setLoading]       = useState(false);
   const [adding, setAdding]         = useState(false);
+  const [users, setUsers]           = useState([]);
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const [fetchingPerms, setFetchingPerms]   = useState(false);
+  const [importedPerms, setImportedPerms]   = useState(null);
   const [testingId, setTestingId]   = useState(null);
   const [editingId, setEditingId]   = useState(null);
   const [extraSheets, setExtraSheets] = useState({});
@@ -251,6 +255,32 @@ function TelegramSettings() {
 
   useEffect(() => { fetchRecipients(); }, [fetchRecipients]);
 
+  // Load all users for the "Import from User" dropdown
+  useEffect(() => {
+    userAPI.getAll().then((res) => {
+      setUsers(res.data?.data || res.data || []);
+    }).catch(() => {});
+  }, []);
+
+  // When a user is selected, fetch their permissions and pre-select sheets in RecipientEditor
+  const handleUserSelect = async (userId) => {
+    setSelectedUserId(userId);
+    if (!userId) return;
+    const user = users.find((u) => String(u.id) === String(userId));
+    if (user) setLabel(user.username || '');
+    setFetchingPerms(true);
+    try {
+      const res = await userAPI.getAllPermissions(userId);
+      const perms = res.data?.data || res.data || {};
+      // Store fetched permissions in state so RecipientEditor can use them
+      setImportedPerms(perms);
+    } catch {
+      toast.error('Failed to fetch user permissions');
+    } finally {
+      setFetchingPerms(false);
+    }
+  };
+
   // Live list of notifiable sheets (HBM + SMS) from the backend
   useEffect(() => {
     telegramAPI.getSheets().then((res) => {
@@ -265,10 +295,35 @@ function TelegramSettings() {
     if (!chatId.trim() || !label.trim()) { toast.warn('Both fields are required'); return; }
     setAdding(true);
     try {
-      await telegramAPI.addRecipient({ chat_id: chatId.trim(), label: label.trim() });
-      toast.success('Recipient added — subscribed to all checksheets by default');
+      const res = await telegramAPI.addRecipient({ chat_id: chatId.trim(), label: label.trim() });
+      const newId = res.recipient?.id;
+
+      // If user permissions were imported, apply them automatically
+      if (newId && importedPerms) {
+        try {
+          // HBM: null = all sheets
+          await telegramAPI.updateRecipientChecksheets(newId, importedPerms.hbm ?? null);
+          // SMS/HSM/PTM/Crane: combine into sms_sheets array
+          const smsSheetKeys = Array.isArray(importedPerms.sms) ? importedPerms.sms : [];
+          const hsmSheetKeys = Array.isArray(importedPerms.hsm) ? importedPerms.hsm.map(k => `hsm:${k}`) : [];
+          const ptmSheetKeys = Array.isArray(importedPerms.ptm) ? importedPerms.ptm.map(k => `ptm:${k}`) : [];
+          const craneKeys    = Array.isArray(importedPerms.crane) ? importedPerms.crane.map(k => `crane:${k}`) : [];
+          const allSmsSheets = [...smsSheetKeys, ...hsmSheetKeys, ...ptmSheetKeys, ...craneKeys];
+          if (allSmsSheets.length > 0) {
+            await telegramAPI.updateRecipientSettings(newId, { sms_sheets: allSmsSheets });
+          }
+          toast.success('Recipient added with user permissions applied');
+        } catch {
+          toast.success('Recipient added — but permissions could not be applied automatically');
+        }
+      } else {
+        toast.success('Recipient added — subscribed to all checksheets by default');
+      }
+
       setChatId('');
       setLabel('');
+      setSelectedUserId('');
+      setImportedPerms(null);
       fetchRecipients();
     } catch (err) {
       toast.error(err?.message || 'Failed to add recipient');
@@ -476,6 +531,34 @@ function TelegramSettings() {
           Add Recipient
         </h2>
         <div className="space-y-3">
+
+          {/* Import from User */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Import Permissions from User <span className="text-xs text-gray-400">(optional)</span>
+            </label>
+            <select
+              value={selectedUserId}
+              onChange={(e) => handleUserSelect(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
+            >
+              <option value="">-- Select user to auto-fill permissions --</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.username} ({u.user_type || u.role})
+                </option>
+              ))}
+            </select>
+            {fetchingPerms && (
+              <p className="text-xs text-blue-500 mt-1">Fetching permissions…</p>
+            )}
+            {importedPerms && !fetchingPerms && (
+              <p className="text-xs text-emerald-600 mt-1">
+                ✓ Permissions loaded — sheets will be pre-selected after adding
+              </p>
+            )}
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Chat ID</label>
             <input type="text" value={chatId} onChange={e => setChatId(e.target.value)}
@@ -488,7 +571,7 @@ function TelegramSettings() {
               placeholder="e.g. Maintenance Head"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
           </div>
-          <button type="submit" disabled={adding}
+          <button type="submit" disabled={adding || fetchingPerms}
             className="w-full bg-blue-600 text-white py-2.5 rounded-lg font-medium text-sm hover:bg-blue-700 disabled:bg-gray-400 transition-colors">
             {adding ? 'Adding…' : 'Add Recipient'}
           </button>

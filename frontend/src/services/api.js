@@ -389,6 +389,7 @@ export const userAPI = {
   updatePtmPermissions: (id, data) => api.put(`/users/${id}/ptm-permissions`, data),
   getSmsPermissions: (id) => api.get(`/users/${id}/sms-permissions`),
   updateSmsPermissions: (id, data) => api.put(`/users/${id}/sms-permissions`, data),
+  getAllPermissions: (id) => api.get(`/users/${id}/all-permissions`),
 };
 
 export const permissionListsAPI = {

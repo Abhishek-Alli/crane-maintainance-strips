@@ -645,6 +645,35 @@ class UserController {
       });
     }
   }
+
+  /** GET /api/users/:id/all-permissions — all module permissions in one call */
+  static async getAllPermissions(req, res) {
+    try {
+      const { id } = req.params;
+
+      const [hbm, sms, hsm, ptm, crane] = await Promise.all([
+        query(`SELECT allowed_checksheets FROM hbm_user_permissions WHERE user_id = $1`, [id]),
+        query(`SELECT allowed_checksheets FROM sms_user_permissions WHERE user_id = $1`, [id]),
+        query(`SELECT allowed_checksheets FROM hsm_user_permissions WHERE user_id = $1`, [id]),
+        query(`SELECT allowed_checksheets FROM ptm_user_permissions WHERE user_id = $1`, [id]),
+        query(`SELECT allowed_sections FROM crane_user_permissions WHERE user_id = $1`, [id]),
+      ]);
+
+      res.json({
+        success: true,
+        data: {
+          hbm:   hbm.rows[0]?.allowed_checksheets   ?? null,
+          sms:   sms.rows[0]?.allowed_checksheets   ?? null,
+          hsm:   hsm.rows[0]?.allowed_checksheets   ?? null,
+          ptm:   ptm.rows[0]?.allowed_checksheets   ?? null,
+          crane: crane.rows[0]?.allowed_sections    ?? null,
+        }
+      });
+    } catch (error) {
+      console.error('Get all permissions error:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch permissions' });
+    }
+  }
 }
 
 module.exports = UserController;
