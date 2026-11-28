@@ -301,8 +301,11 @@ function TelegramSettings() {
       // If user permissions were imported, apply them automatically
       if (newId && importedPerms) {
         try {
-          // HBM: null = all sheets
-          await telegramAPI.updateRecipientChecksheets(newId, importedPerms.hbm ?? null);
+          // HBM: only HBM_CHECKSHEETS users should receive HBM sheets; others get __none__ to block HBM
+          const selectedUser = users.find((u) => String(u.id) === String(selectedUserId));
+          const isHbmUser = selectedUser?.user_type === 'HBM_CHECKSHEETS';
+          const hbmToApply = isHbmUser ? (importedPerms.hbm ?? null) : ['__none__'];
+          await telegramAPI.updateRecipientChecksheets(newId, hbmToApply);
           // SMS/HSM/PTM/Crane: combine into sms_sheets array
           const smsSheetKeys = Array.isArray(importedPerms.sms) ? importedPerms.sms : [];
           const hsmSheetKeys = Array.isArray(importedPerms.hsm) ? importedPerms.hsm.map(k => `hsm:${k}`) : [];
