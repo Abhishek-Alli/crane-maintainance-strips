@@ -1,10 +1,24 @@
 /** SMS CCM Motor check sheet — keep in sync with backend/utils/smsCcmMotorConfig.js */
 
+export const CCM_STANDS = [
+  'BILLET - ST-1',
+  'BILLET - ST-2',
+  'SLAB - ST-1',
+  'SLAB - ST-2',
+  'COMMON - COMMON',
+];
+
+export const CCM_MOTORS = [
+  'ENTRY TOP MOTOR (5 HP)',
+  'ENTRY BOTTOM MOTOR (5 HP)',
+  'WITHDRWAL (EXIT) MOTOR (5 HP)',
+];
+
 export const CCM_MOTOR_CHECKS = [
   { key: 'panel_air_cleaning', label: 'Panel Air Cleaning', options: ['OKAY', 'NOT OKAY'] },
   { key: 'drive_status', label: 'Drive Status', options: ['OKAY', 'NOT OKAY'] },
   { key: 'motor_condition', label: 'Motor Condition', options: ['OKAY', 'NOT OKAY'] },
-  { key: 'motor_temperature', label: 'Motor Temperature', options: ['NORMAL', 'NOT NORMAL'] },
+  { key: 'motor_temperature', label: 'Motor Temperature', options: ['NORMAL', 'ABNORMAL'] },
   { key: 'any_abnormality', label: 'Any Abnormality', options: ['NO', 'YES'] },
   { key: 'starter_condition', label: 'Starter Condition', options: ['OKAY', 'NOT OKAY'] },
 ];
@@ -14,7 +28,7 @@ export const isBadValue = (check, value) => Boolean(value) && value !== check.op
 
 export function emptyCcmMotorForm() {
   const checks = {};
-  CCM_MOTOR_CHECKS.forEach((c) => { checks[c.key] = { value: c.options[0], remark: '' }; });
+  CCM_MOTOR_CHECKS.forEach((c) => { checks[c.key] = { value: '', remark: '' }; });
   return {
     report_date: new Date().toISOString().slice(0, 10),
     recorded_by: '',
