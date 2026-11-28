@@ -580,6 +580,358 @@ export default function HbmMonthlyRegister({ allowedSheets }) {
     doc.save(`HBM-${type}-Details-${MONTH_NAMES[month-1]}-${year}.pdf`);
   };
 
+  const downloadMonthlySummaryPDF = () => {
+    if (!data || !data.items.length) return;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const margin = 36;
+    const usableW = pageW - margin * 2;
+    const monthLabel = MONTH_NAMES[month - 1];
+    const issues = getNotOkIssues();
+    const filledDays = data.days.filter(d => d.filled).length;
+    const notFilledDays = data.days.filter(d => !d.filled);
+
+    const addPageNumber = () => {
+      const pg = doc.internal.getCurrentPageInfo().pageNumber;
+      doc.setFontSize(7);
+      doc.setTextColor(160);
+      doc.text(`Page ${pg}`, pageW - margin, pageH - 16, { align: 'right' });
+      doc.text(`SRJ Steel — HBM Checksheets`, margin, pageH - 16);
+      doc.setTextColor(0);
+    };
+
+    // ── PAGE 1: Cover / Summary ──────────────────────────────────
+    // Header band
+    doc.setFillColor(22, 163, 74);
+    doc.rect(0, 0, pageW, 70, 'F');
+    doc.setFontSize(18);
+    doc.setTextColor(255);
+    doc.setFont('helvetica', 'bold');
+    doc.text('HBM Monthly Summary Report', pageW / 2, 30, { align: 'center' });
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`${label}  ·  ${monthLabel} ${year}`, pageW / 2, 52, { align: 'center' });
+    doc.setTextColor(0);
+
+    let y = 95;
+
+    // Key stats boxes (2×2 grid)
+    const stats = [
+      { label: 'Days Filled', value: `${filledDays} / ${data.daysInMonth}`, color: [22, 163, 74] },
+      { label: 'Days Not Filled', value: String(notFilledDays.length), color: notFilledDays.length > 0 ? [220, 38, 38] : [22, 163, 74] },
+      { label: 'NOT OK Issues', value: String(issues.length), color: issues.length > 0 ? [234, 88, 12] : [22, 163, 74] },
+      { label: 'Total Items Checked', value: String(data.items.length), color: [37, 99, 235] },
+    ];
+    const boxW = (usableW - 12) / 2;
+    const boxH = 52;
+    stats.forEach((s, i) => {
+      const bx = margin + (i % 2) * (boxW + 12);
+      const by = y + Math.floor(i / 2) * (boxH + 10);
+      doc.setFillColor(...s.color);
+      doc.roundedRect(bx, by, boxW, boxH, 4, 4, 'F');
+      doc.setTextColor(255);
+      doc.setFontSize(22);
+      doc.setFont('helvetica', 'bold');
+      doc.text(s.value, bx + boxW / 2, by + 30, { align: 'center' });
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.text(s.label.toUpperCase(), bx + boxW / 2, by + 44, { align: 'center' });
+      doc.setTextColor(0);
+    });
+    y += 2 * (boxH + 10) + 20;
+
+    // Compliance rate
+    const compliance = Math.round((filledDays / data.daysInMonth) * 100);
+    doc.setFontSize(9);
+    doc.setTextColor(80);
+    doc.text(`Filling Compliance: ${compliance}%`, margin, y);
+    doc.setDrawColor(220);
+    doc.setFillColor(220, 252, 231);
+    doc.roundedRect(margin, y + 6, usableW, 10, 2, 2, 'FD');
+    doc.setFillColor(22, 163, 74);
+    doc.roundedRect(margin, y + 6, usableW * (compliance / 100), 10, 2, 2, 'F');
+    doc.setTextColor(0);
+    y += 32;
+
+    // Section-wise NOT OK breakdown table (if applicable)
+    if (issues.length > 0 && !isBreakdown) {
+      const sectionMap = {};
+      for (const iss of issues) {
+        sectionMap[iss.section] = (sectionMap[iss.section] || 0) + 1;
+      }
+      const sectionRows = Object.entries(sectionMap).sort((a, b) => b[1] - a[1]);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(220, 38, 38);
+      doc.text(`NOT OK Issues by Section`, margin, y + 12);
+      doc.setTextColor(0);
+      doc.setFont('helvetica', 'normal');
+      autoTable(doc, {
+        head: [['Section', 'NOT OK Count']],
+        body: sectionRows.map(([sec, cnt]) => [sec, cnt]),
+        startY: y + 18,
+        margin: { left: margin, right: margin },
+        styles: { fontSize: 8, cellPadding: 3 },
+        headStyles: { fillColor: [220, 38, 38], textColor: 255, fontStyle: 'bold' },
+        columnStyles: { 1: { halign: 'center', fontStyle: 'bold' } },
+        tableWidth: usableW,
+      });
+      y = doc.lastAutoTable.finalY + 16;
+    }
+
+    // Breakdown type-wise summary (for breakdown checksheet)
+    if (isBreakdown) {
+      const typeMap = {};
+      for (const item of data.items) {
+        const total = data.days.reduce((s, d) => s + parseMins(item.cells[d.date]?.value), 0);
+        if (total > 0) typeMap[item.item] = total;
+      }
+      const typeRows = Object.entries(typeMap).sort((a, b) => b[1] - a[1]);
+      const grandTotal = typeRows.reduce((s, [, v]) => s + v, 0);
+      if (typeRows.length > 0) {
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(185, 28, 28);
+        doc.text('Breakdown Type-wise Total (minutes)', margin, y + 12);
+        doc.setTextColor(0);
+        doc.setFont('helvetica', 'normal');
+        autoTable(doc, {
+          head: [['Breakdown Type', 'Total (min)', '% Share']],
+          body: [
+            ...typeRows.map(([t, v]) => [t, v, `${Math.round((v / grandTotal) * 100)}%`]),
+            [{ content: 'Grand Total', styles: { fontStyle: 'bold' } }, { content: grandTotal, styles: { fontStyle: 'bold' } }, '100%'],
+          ],
+          startY: y + 18,
+          margin: { left: margin, right: margin },
+          styles: { fontSize: 8, cellPadding: 3 },
+          headStyles: { fillColor: [185, 28, 28], textColor: 255, fontStyle: 'bold' },
+          columnStyles: { 1: { halign: 'center' }, 2: { halign: 'center' } },
+          tableWidth: usableW,
+        });
+        y = doc.lastAutoTable.finalY + 16;
+      }
+    }
+
+    addPageNumber();
+
+    // ── PAGE 2: Monthly Register Grid ───────────────────────────
+    doc.addPage();
+    doc.setFillColor(22, 163, 74);
+    doc.rect(0, 0, pageW, 36, 'F');
+    doc.setFontSize(12);
+    doc.setTextColor(255);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Monthly Register Grid — ${label} — ${monthLabel} ${year}`, pageW / 2, 24, { align: 'center' });
+    doc.setTextColor(0);
+    doc.setFont('helvetica', 'normal');
+
+    // For breakdown: portrait with 3 chunks; for others: landscape-style split into two halves
+    if (isBreakdown) {
+      const chunks = [
+        data.days.filter(d => d.day <= 10),
+        data.days.filter(d => d.day >= 11 && d.day <= 20),
+        data.days.filter(d => d.day >= 21),
+      ];
+      const grandTotal = Object.values(dayTotals).reduce((a, b) => a + b, 0);
+      const typeColW = 140;
+      let curY = 48;
+      let renderedCount = 0;
+
+      chunks.forEach((chunkDays, ci) => {
+        if (!chunkDays.length) return;
+        const isLast = renderedCount === chunks.filter(c => c.length > 0).length - 1;
+        renderedCount++;
+        const extraColW = isLast ? 30 : 0;
+        const dayColW = Math.floor((usableW - typeColW - 24 - extraColW) / chunkDays.length);
+        const chunkLabel = ci === 0 ? '1–10' : ci === 1 ? '11–20' : `21–${data.daysInMonth}`;
+
+        const head = [[
+          { content: 'Breakdown Type', styles: { halign: 'left' } },
+          ...chunkDays.map(d => ({ content: `${d.day}\n${SHORT_DAY[new Date(d.date + 'T00:00:00').getDay()]}`, styles: { halign: 'center' } })),
+          { content: `Total\n${chunkLabel}`, styles: { halign: 'center' } },
+          ...(isLast ? [{ content: 'Grand\nTotal', styles: { halign: 'center', fillColor: [254, 215, 170], textColor: [154, 52, 18] } }] : []),
+        ]];
+
+        const body = data.items.map(item => {
+          const chunkTotal = chunkDays.reduce((s, d) => s + parseMins(item.cells[d.date]?.value), 0);
+          const monthTotal = data.days.reduce((s, d) => s + parseMins(item.cells[d.date]?.value), 0);
+          return [
+            item.item,
+            ...chunkDays.map(day => {
+              const c = item.cells[day.date];
+              if (!day.filled || !c) return { content: '—', styles: { textColor: [200, 200, 200] } };
+              const mins = parseMins(c.value);
+              return mins > 0 ? { content: String(mins), styles: { textColor: [185, 28, 28], fontStyle: 'bold' } } : { content: '—', styles: { textColor: [200, 200, 200] } };
+            }),
+            { content: chunkTotal > 0 ? String(chunkTotal) : '—', styles: { fontStyle: 'bold', textColor: chunkTotal > 0 ? [194, 65, 12] : [180, 180, 180] } },
+            ...(isLast ? [{ content: monthTotal > 0 ? String(monthTotal) : '—', styles: { fontStyle: 'bold', fillColor: [254, 243, 199], textColor: monthTotal > 0 ? [154, 52, 18] : [180, 180, 180] } }] : []),
+          ];
+        });
+
+        const chunkDayTotal = chunkDays.reduce((s, d) => s + (dayTotals[d.date] || 0), 0);
+        body.push([
+          { content: 'Daily Total (min)', styles: { fontStyle: 'bold', fillColor: [255, 237, 213], textColor: [154, 52, 18] } },
+          ...chunkDays.map(day => ({
+            content: dayTotals[day.date] > 0 ? String(dayTotals[day.date]) : '—',
+            styles: { fontStyle: 'bold', fillColor: [255, 237, 213], textColor: dayTotals[day.date] > 0 ? [185, 28, 28] : [180, 180, 180] },
+          })),
+          { content: String(chunkDayTotal), styles: { fontStyle: 'bold', fillColor: [254, 215, 170], textColor: [154, 52, 18] } },
+          ...(isLast ? [{ content: String(grandTotal), styles: { fontStyle: 'bold', fillColor: [253, 186, 116], textColor: [154, 52, 18] } }] : []),
+        ]);
+
+        autoTable(doc, {
+          head, body,
+          startY: curY,
+          margin: { left: margin, right: margin },
+          styles: { fontSize: 7, cellPadding: 2, overflow: 'ellipsize' },
+          headStyles: { fillColor: [185, 28, 28], textColor: 255, fontStyle: 'bold', fontSize: 7, halign: 'center', minCellHeight: 18 },
+          columnStyles: {
+            0: { cellWidth: typeColW, halign: 'left' },
+            ...Object.fromEntries(chunkDays.map((_, i) => [i + 1, { cellWidth: dayColW, halign: 'center' }])),
+            [chunkDays.length + 1]: { cellWidth: 24, halign: 'center' },
+            ...(isLast ? { [chunkDays.length + 2]: { cellWidth: 30, halign: 'center' } } : {}),
+          },
+        });
+        curY = doc.lastAutoTable.finalY + 12;
+      });
+    } else {
+      // Non-breakdown: split days into two halves to fit portrait
+      const half = Math.ceil(data.days.length / 2);
+      const halves = [data.days.slice(0, half), data.days.slice(half)];
+      const itemColW = 160;
+      let curY = 48;
+
+      halves.forEach((halfDays) => {
+        if (!halfDays.length) return;
+        const dayColW = Math.max(10, Math.floor((usableW - itemColW - 20) / halfDays.length));
+
+        const head = [[
+          { content: 'Item', styles: { halign: 'left' } },
+          ...halfDays.map(d => ({ content: `${d.day}\n${SHORT_DAY[new Date(d.date + 'T00:00:00').getDay()]}`, styles: { halign: 'center', textColor: d.filled ? 255 : [180, 180, 180] } })),
+          { content: 'NOT\nOK', styles: { halign: 'center' } },
+        ]];
+
+        const body = [];
+        let lastSec = null;
+        const span = 1 + halfDays.length + 1;
+        for (const item of data.items) {
+          if (item.section !== lastSec) {
+            lastSec = item.section;
+            body.push([{ content: item.section, colSpan: span, styles: { fontStyle: 'bold', fillColor: [209, 250, 229], textColor: [6, 95, 70], fontSize: 6 } }]);
+          }
+          const notOkCnt = halfDays.filter(d => item.cells[d.date]?.status === 'NOT_OK').length;
+          body.push([
+            { content: item.item, styles: { halign: 'left' } },
+            ...halfDays.map(day => {
+              const c = item.cells[day.date];
+              if (!day.filled) return { content: '-', styles: { textColor: [200, 200, 200], halign: 'center' } };
+              if (!c) return { content: '', styles: { halign: 'center' } };
+              return c.status === 'NOT_OK'
+                ? { content: 'NO', styles: { textColor: [185, 28, 28], fontStyle: 'bold', fillColor: [254, 226, 226], halign: 'center' } }
+                : { content: 'OK', styles: { textColor: [21, 128, 61], fillColor: [220, 252, 231], halign: 'center' } };
+            }),
+            { content: notOkCnt || '', styles: { halign: 'center', fontStyle: 'bold', textColor: notOkCnt ? [185, 28, 28] : [150, 150, 150] } },
+          ]);
+        }
+        // Not-filled footer
+        body.push([
+          { content: 'NOT FILLED', styles: { fontStyle: 'bold', fillColor: [254, 226, 226], textColor: [185, 28, 28] } },
+          ...halfDays.map(d => ({
+            content: d.filled ? '' : '✗',
+            styles: { halign: 'center', fillColor: d.filled ? [255, 255, 255] : [254, 226, 226], textColor: [185, 28, 28], fontStyle: 'bold' },
+          })),
+          { content: `${halfDays.filter(d => !d.filled).length}`, styles: { halign: 'center', fontStyle: 'bold', textColor: [185, 28, 28] } },
+        ]);
+
+        autoTable(doc, {
+          head, body,
+          startY: curY,
+          margin: { left: margin, right: margin },
+          styles: { fontSize: 6, cellPadding: 1.5, overflow: 'ellipsize' },
+          headStyles: { fillColor: [22, 163, 74], textColor: 255, fontStyle: 'bold', fontSize: 6.5, halign: 'center', minCellHeight: 16 },
+          columnStyles: {
+            0: { cellWidth: itemColW, halign: 'left' },
+            ...Object.fromEntries(halfDays.map((_, i) => [i + 1, { cellWidth: dayColW, halign: 'center' }])),
+            [halfDays.length + 1]: { cellWidth: 20, halign: 'center' },
+          },
+        });
+        curY = doc.lastAutoTable.finalY + 14;
+      });
+    }
+
+    addPageNumber();
+
+    // ── PAGE 3: NOT OK Issues ────────────────────────────────────
+    if (issues.length > 0) {
+      doc.addPage();
+      doc.setFillColor(220, 38, 38);
+      doc.rect(0, 0, pageW, 36, 'F');
+      doc.setFontSize(12);
+      doc.setTextColor(255);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`NOT OK Issues — ${issues.length} item(s) — ${monthLabel} ${year}`, pageW / 2, 24, { align: 'center' });
+      doc.setTextColor(0);
+      doc.setFont('helvetica', 'normal');
+
+      autoTable(doc, {
+        head: [['Date', 'Section', 'Item / Parameter', 'Remark / Cause', 'Action Taken']],
+        body: issues.map(iss => {
+          const d = new Date(iss.date + 'T00:00:00');
+          return [
+            `${iss.day} ${SHORT_DAY[d.getDay()]}\n${monthLabel.slice(0, 3)} ${year}`,
+            iss.section || '',
+            iss.item || '',
+            iss.remark || '—',
+            iss.action  || '—',
+          ];
+        }),
+        startY: 48,
+        margin: { left: margin, right: margin },
+        styles: { fontSize: 7.5, cellPadding: 3, overflow: 'linebreak' },
+        headStyles: { fillColor: [220, 38, 38], textColor: 255, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [255, 245, 245] },
+        columnStyles: {
+          0: { cellWidth: 44 },
+          1: { cellWidth: 70 },
+          2: { cellWidth: 100 },
+          3: { cellWidth: 'auto' },
+          4: { cellWidth: 'auto' },
+        },
+      });
+      addPageNumber();
+    }
+
+    // ── PAGE 4: Not Filled Days ──────────────────────────────────
+    if (notFilledDays.length > 0) {
+      doc.addPage();
+      doc.setFillColor(107, 114, 128);
+      doc.rect(0, 0, pageW, 36, 'F');
+      doc.setFontSize(12);
+      doc.setTextColor(255);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Days Not Filled — ${notFilledDays.length} day(s) — ${monthLabel} ${year}`, pageW / 2, 24, { align: 'center' });
+      doc.setTextColor(0);
+      doc.setFont('helvetica', 'normal');
+
+      autoTable(doc, {
+        head: [['Date', 'Day', 'Weekday']],
+        body: notFilledDays.map(d => {
+          const wd = new Date(d.date + 'T00:00:00');
+          return [d.date, d.day, SHORT_DAY[wd.getDay()]];
+        }),
+        startY: 48,
+        margin: { left: margin, right: margin },
+        styles: { fontSize: 9, cellPadding: 4 },
+        headStyles: { fillColor: [107, 114, 128], textColor: 255, fontStyle: 'bold' },
+        columnStyles: { 0: { cellWidth: 100 }, 1: { cellWidth: 60, halign: 'center' }, 2: { cellWidth: 80, halign: 'center' } },
+      });
+      addPageNumber();
+    }
+
+    doc.save(`HBM-${type}-MonthlySummary-${monthLabel}-${year}.pdf`);
+  };
+
   const notOkIssues = data ? getNotOkIssues() : [];
 
   return (
@@ -631,6 +983,11 @@ export default function HbmMonthlyRegister({ allowedSheets }) {
                 className="bg-red-700 hover:bg-red-800 text-white font-semibold px-4 py-2 rounded-lg text-sm flex items-center gap-1.5">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                 PDF
+              </button>
+              <button onClick={downloadMonthlySummaryPDF}
+                className="bg-purple-700 hover:bg-purple-800 text-white font-semibold px-4 py-2 rounded-lg text-sm flex items-center gap-1.5">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                Summary Report
               </button>
             </div>
           )}
